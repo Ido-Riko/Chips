@@ -7,7 +7,7 @@ import java.util.Properties
 
 android {
     val properties = Properties()
-    val localProps = project.rootProject.file("../local.properties")
+    val localProps = project.rootProject.file("local.properties")
     if (localProps.exists()) {
         properties.load(localProps.inputStream())
     }

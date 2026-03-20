@@ -384,4 +384,4 @@ REDIS_URL=redis://localhost:6379
 - [ ] Backend stubs transcription, calls Claude, returns response
 - [ ] Response displayed in session UI
 - [ ] Voice log saved to Postgres
-- [ ] Backend runs as an OpenRC service on the Mi 9T, accessible from main phone over local network
+- [x] Backend runs as an OpenRC service on the Mi 9T, accessible from main phone over local network
