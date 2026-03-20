@@ -1,12 +1,12 @@
 package com.chips.ui
 
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.chips.audio.AudioRecorder
@@ -25,6 +25,37 @@ fun AssistantOverlayContent(onDismiss: () -> Unit) {
     
     var responseText by remember { mutableStateOf("Ready to listen...") }
     var isRecording by remember { mutableStateOf(false) }
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    LaunchedEffect(isPressed) {
+        if (isPressed) {
+            isRecording = true
+            responseText = "Listening..."
+            audioRecorder.startRecording()
+        } else {
+            if (isRecording) { // Means it was just released
+                isRecording = false
+                responseText = "Processing..."
+                val audioFile = audioRecorder.stopRecording()
+                
+                if (audioFile != null) {
+                    coroutineScope.launch(Dispatchers.IO) {
+                        val response = apiClient.sendAudio(audioFile)
+                        responseText = response
+                        // Auto dismiss after 5 seconds
+                        delay(5000)
+                        launch(Dispatchers.Main) {
+                            onDismiss()
+                        }
+                    }
+                } else {
+                    responseText = "Failed to record audio. Ready."
+                }
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier
@@ -49,39 +80,8 @@ fun AssistantOverlayContent(onDismiss: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = { /* Handled by pointer input */ },
-                modifier = Modifier.pointerInput(Unit) {
-                    detectTapGestures(
-                        onPress = {
-                            isRecording = true
-                            responseText = "Listening..."
-                            audioRecorder.startRecording()
-                            
-                            try {
-                                awaitRelease()
-                            } finally {
-                                isRecording = false
-                                responseText = "Processing..."
-                                val audioFile = audioRecorder.stopRecording()
-                                
-                                if (audioFile != null) {
-                                    coroutineScope.launch(Dispatchers.IO) {
-                                        val response = apiClient.sendAudio(audioFile)
-                                        responseText = response
-                                        // Auto dismiss after 5 seconds
-                                        delay(5000)
-                                        // Call from UI thread
-                                        launch(Dispatchers.Main) {
-                                            onDismiss()
-                                        }
-                                    }
-                                } else {
-                                    responseText = "Failed to record audio. Ready."
-                                }
-                            }
-                        }
-                    )
-                }
+                onClick = { },
+                interactionSource = interactionSource
             ) {
                 Text(if (isRecording) "Release to Send" else "Hold to Speak")
             }
