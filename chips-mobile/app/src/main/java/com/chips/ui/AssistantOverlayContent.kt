@@ -66,39 +66,49 @@ fun AssistantOverlayContent(onDismiss: () -> Unit) {
         }
     }
 
-    Surface(
+    Box(
         modifier = Modifier
-            .fillMaxWidth()
-            .height(250.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        shape = MaterialTheme.shapes.large
+            .fillMaxSize()
+            .systemBarsPadding(),
+        contentAlignment = Alignment.BottomCenter
     ) {
-        Column(
+        Surface(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                // Add a large bottom margin to completely clear the under-display fingerprint sensor
+                .padding(bottom = 120.dp)
+                .wrapContentHeight(),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = MaterialTheme.shapes.large,
+            tonalElevation = 8.dp
         ) {
-            Text(
-                text = responseText, 
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.weight(1f)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { },
-                interactionSource = interactionSource
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(if (isRecording) "Release to Send" else "Hold to Speak")
-            }
+                Text(
+                    text = responseText, 
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { },
+                    interactionSource = interactionSource,
+                    modifier = Modifier.fillMaxWidth().height(56.dp)
+                ) {
+                    Text(if (isRecording) "Release to Send" else "Hold to Speak")
+                }
 
-            TextButton(onClick = onDismiss) {
-                Text("Dismiss")
+                Spacer(modifier = Modifier.height(12.dp))
+
+                TextButton(onClick = onDismiss) {
+                    Text("Dismiss")
+                }
             }
         }
     }
