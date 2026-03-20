@@ -381,7 +381,7 @@ REDIS_URL=redis://localhost:6379
 - [x] Once set as default, home long-press triggers CHIPS session from lockscreen
 - [x] Session UI shows mic button
 - [x] Hold mic → records audio → release → sends to backend
-- [ ] Backend stubs transcription, calls Claude, returns response
-- [ ] Response displayed in session UI
-- [ ] Voice log saved to Postgres
+- [x] Backend stubs transcription, calls Claude, returns response
+- [x] Response displayed in session UI
+- [x] Voice log saved to Postgres
 - [x] Backend runs as an OpenRC service on the Mi 9T, accessible from main phone over local network
