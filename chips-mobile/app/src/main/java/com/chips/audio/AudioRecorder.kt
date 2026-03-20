@@ -36,9 +36,14 @@ class AudioRecorder(private val context: Context) {
         recorder?.apply {
             try {
                 stop()
-                release()
             } catch (e: Exception) {
                 e.printStackTrace()
+            } finally {
+                try {
+                    release()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
         }
         recorder = null

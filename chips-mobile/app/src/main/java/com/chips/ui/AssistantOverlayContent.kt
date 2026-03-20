@@ -26,6 +26,15 @@ fun AssistantOverlayContent(onDismiss: () -> Unit) {
     var responseText by remember { mutableStateOf("Ready to listen...") }
     var isRecording by remember { mutableStateOf(false) }
 
+    // Crucial: Clean up the recorder if the Android system suddenly hides our session window
+    // while the person is still holding the button!
+    DisposableEffect(Unit) {
+        onDispose {
+            audioRecorder.stopRecording()
+            isRecording = false
+        }
+    }
+
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
