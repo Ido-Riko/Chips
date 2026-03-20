@@ -14,15 +14,15 @@
 - Target SDK: 34 (Android 14)
 - Build: Gradle (Kotlin DSL)
 
-### Backend (Server = rooted Android phone)
-- Environment: Termux + proot-distro (Debian)
+### Backend (Server = Xiaomi Mi 9T running postmarketOS)
+- OS: postmarketOS 25.06 (Alpine Linux, native — no compatibility layer)
 - Python 3.11
 - FastAPI 0.111
 - PostgreSQL 15
 - Redis 7
 - Uvicorn (ASGI server)
-- supervisord (process manager — replaces Docker Compose)
-- No Docker. Not feasible on ARM/Android without major pain.
+- systemd (process manager — native on postmarketOS 25.06)
+- No Docker needed.
 
 ### Dependencies (Android)
 ```kotlin
@@ -80,7 +80,7 @@ chips-android/
 └── build.gradle.kts
 ```
 
-### Backend (lives on rooted phone at `~/chips-backend`)
+### Backend (lives on Mi 9T at `~/chips-backend`)
 ```
 chips-backend/
 ├── app/
@@ -99,7 +99,7 @@ chips-backend/
 │   └── schemas/
 │       └── voice.py
 ├── alembic/
-├── supervisord.conf                      # Replaces docker-compose.yml
+├── chips-api.service                     # systemd unit file
 ├── .env
 └── requirements.txt
 ```
@@ -293,21 +293,18 @@ async def get_response(user_message: str, system_prompt: str) -> str:
 
 ---
 
-### 11. Backend: Server Setup (Termux + proot-distro)
+### 11. Backend: Server Setup (postmarketOS)
 
-**One-time setup on the rooted phone (run in Termux):**
+**One-time setup — SSH into the Mi 9T and run:**
 ```bash
-# Install proot-distro and spin up Debian
-pkg install proot-distro
-proot-distro install debian
-proot-distro login debian
+# Install dependencies
+apk add python3 py3-pip postgresql15 postgresql15-contrib redis
 
-# Inside Debian:
-apt update && apt install -y python3.11 python3-pip postgresql redis supervisor
-
-# Start Postgres and Redis
-pg_ctlcluster 15 main start
-redis-server --daemonize yes
+# Enable and start Postgres + Redis
+rc-service postgresql start
+rc-update add postgresql default
+rc-service redis start
+rc-update add redis default
 
 # Create DB and user
 sudo -u postgres psql -c "CREATE USER chips WITH PASSWORD 'chips';"
@@ -325,23 +322,32 @@ CREATE TABLE voice_logs (
 );
 ```
 
-**`supervisord.conf`** — keeps FastAPI alive, auto-restarts on crash:
-```ini
-[supervisord]
-nodaemon=true
-
-[program:chips-api]
-command=uvicorn app.main:app --host 0.0.0.0 --port 8000
-directory=/root/chips-backend
-autostart=true
-autorestart=true
-stderr_logfile=/var/log/chips-api.err.log
-stdout_logfile=/var/log/chips-api.out.log
+**Install Python dependencies:**
+```bash
+pip install -r requirements.txt
 ```
 
-**Start everything:**
+**`/etc/systemd/system/chips-api.service`** — keeps FastAPI alive, auto-starts on boot:
+```ini
+[Unit]
+Description=CHIPS FastAPI Backend
+After=network.target postgresql.service redis.service
+
+[Service]
+User=chips
+WorkingDirectory=/home/chips/chips-backend
+EnvironmentFile=/home/chips/chips-backend/.env
+ExecStart=uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Enable and start:**
 ```bash
-supervisord -c /root/chips-backend/supervisord.conf
+systemctl enable chips-api
+systemctl start chips-api
 ```
 
 **`.env`:**
@@ -352,7 +358,7 @@ REDIS_URL=redis://localhost:6379
 ```
 
 **Network access from your main phone:**
-- Both phones on same WiFi → use server phone's local IP (e.g. `192.168.x.x:8000`)
+- Same WiFi → use Mi 9T's local IP (e.g. `192.168.x.x:8000`)
 - Outside home network → Tailscale (easiest) or Cloudflare Tunnel (free)
 
 ---
@@ -376,4 +382,4 @@ REDIS_URL=redis://localhost:6379
 - [ ] Backend stubs transcription, calls Claude, returns response
 - [ ] Response displayed in session UI
 - [ ] Voice log saved to Postgres
-- [ ] Backend runs via supervisord on the rooted phone, accessible from main phone over local network
+- [ ] Backend runs as a systemd service on the Mi 9T, accessible from main phone over local network
