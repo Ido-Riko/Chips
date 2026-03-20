@@ -32,10 +32,21 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.service.voice.VoiceInteractionService"/>
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <meta-data
                 android:name="android.voice_interaction"
                 android:resource="@xml/interaction_service"/>
+        </service>
+
+        <service
+            android:name=".assistant.ChipsRecognitionService"
+            android:label="CHIPS Recognition"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.speech.RecognitionService" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </service>
 
         <service
