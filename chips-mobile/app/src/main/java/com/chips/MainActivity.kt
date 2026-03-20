@@ -1,20 +1,36 @@
 package com.chips
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 
 class MainActivity : ComponentActivity() {
+
+    private var micPermissionGranted by mutableStateOf(false)
+    private var isAssistant by mutableStateOf(false)
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        micPermissionGranted = isGranted
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        updateStates()
         
         setContent {
             MaterialTheme {
@@ -36,23 +52,72 @@ class MainActivity : ComponentActivity() {
                         
                         Spacer(modifier = Modifier.height(32.dp))
                         
-                        Text(
-                            text = "To use CHIPS from your home button or lockscreen, you must set it as your default Digital Assistant app.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            textAlign = TextAlign.Center
-                        )
+                        if (isAssistant && micPermissionGranted) {
+                            Text(
+                                text = "✅ CHIPS is ready to use!\nLong-press the home button or swipe from the corner to activate.",
+                                style = MaterialTheme.typography.bodyLarge,
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            if (!isAssistant) {
+                                Text(
+                                    text = "To use CHIPS, you must set it as your default Digital Assistant app.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                Button(onClick = {
+                                    val intent = Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)
+                                    startActivity(intent)
+                                }) {
+                                    Text("Open Assistant Settings")
+                                }
+                                
+                                Spacer(modifier = Modifier.height(32.dp))
+                            }
+
+                            if (!micPermissionGranted) {
+                                Text(
+                                    text = "CHIPS needs microphone access to hear your requests.",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    textAlign = TextAlign.Center
+                                )
+                                
+                                Spacer(modifier = Modifier.height(16.dp))
+                                
+                                Button(onClick = {
+                                    requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                }) {
+                                    Text("Grant Microphone Permission")
+                                }
+                            }
+                        }
                         
                         Spacer(modifier = Modifier.height(32.dp))
-                        
-                        Button(onClick = {
-                            val intent = Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)
-                            startActivity(intent)
-                        }) {
-                            Text("Open Assistant Settings")
+                        TextButton(onClick = { updateStates() }) {
+                            Text("Refresh Status")
                         }
                     }
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateStates()
+    }
+
+    private fun updateStates() {
+        val assistant = Settings.Secure.getString(contentResolver, "voice_interaction_service")
+        isAssistant = assistant?.startsWith(packageName) == true
+        
+        micPermissionGranted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
     }
 }
