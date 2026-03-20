@@ -37,7 +37,7 @@ async def get_response(user_message: str, system_prompt: str) -> str:
     elif settings.gemini_api_key:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key={settings.gemini_api_key}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={settings.gemini_api_key}",
                 json={
                     "system_instruction": {"parts": [{"text": system_prompt}]},
                     "contents": [{"parts": [{"text": user_message}]}],
