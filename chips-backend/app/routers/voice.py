@@ -4,7 +4,7 @@ from fastapi import APIRouter, UploadFile, File, Depends
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 import app.services.stt as stt_service
-import app.services.claude as claude_service
+import app.services.llm as llm_service
 from app.database import get_db
 from app.models.daily_log import VoiceLog
 
@@ -26,19 +26,19 @@ async def process_voice_log(
         # Phase 0: STT Stub
         transcription = await stt_service.transcribe_audio(temp_path)
 
-        # Call Claude
-        claude_response = await claude_service.get_response(transcription, SYSTEM_PROMPT)
+        # Call chosen AI provider
+        llm_response = await llm_service.get_response(transcription, SYSTEM_PROMPT)
 
         # Save to DB
         voice_log = VoiceLog(
             transcription=transcription,
-            response=claude_response,
+            response=llm_response,
             confidence=0.0
         )
         db.add(voice_log)
         await db.commit()
 
-        return claude_response
+        return llm_response
     except Exception as e:
         # TODO: Handle error beyond basic try/catch
         raise e
