@@ -99,7 +99,7 @@ chips-backend/
 │   └── schemas/
 │       └── voice.py
 ├── alembic/
-├── chips-api.service                     # systemd unit file
+├── chips-api.openrc                      # OpenRC init script template
 ├── .env
 └── requirements.txt
 ```
@@ -327,27 +327,29 @@ CREATE TABLE voice_logs (
 pip install -r requirements.txt
 ```
 
-**`/etc/systemd/system/chips-api.service`** — keeps FastAPI alive, auto-starts on boot:
-```ini
-[Unit]
-Description=CHIPS FastAPI Backend
-After=network.target postgresql.service redis.service
+**`/etc/init.d/chips-api`** — OpenRC init script, keeps FastAPI alive, auto-starts on boot:
+```bash
+#!/sbin/openrc-run
 
-[Service]
-User=chips
-WorkingDirectory=/home/chips/chips-backend
-EnvironmentFile=/home/chips/chips-backend/.env
-ExecStart=uvicorn app.main:app --host 0.0.0.0 --port 8000
-Restart=always
+name="chips-api"
+description="CHIPS FastAPI Backend"
+command="uvicorn"
+command_args="app.main:app --host 0.0.0.0 --port 8000"
+command_user="chips"
+directory="/home/chips/chips-backend"
+pidfile="/run/chips-api.pid"
+command_background=true
 
-[Install]
-WantedBy=multi-user.target
+depend() {
+    need net postgresql redis
+}
 ```
 
-**Enable and start:**
+**Make executable and enable:**
 ```bash
-systemctl enable chips-api
-systemctl start chips-api
+chmod +x /etc/init.d/chips-api
+rc-update add chips-api default
+rc-service chips-api start
 ```
 
 **`.env`:**
@@ -382,4 +384,4 @@ REDIS_URL=redis://localhost:6379
 - [ ] Backend stubs transcription, calls Claude, returns response
 - [ ] Response displayed in session UI
 - [ ] Voice log saved to Postgres
-- [ ] Backend runs as a systemd service on the Mi 9T, accessible from main phone over local network
+- [ ] Backend runs as an OpenRC service on the Mi 9T, accessible from main phone over local network

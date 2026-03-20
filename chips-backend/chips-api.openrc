@@ -1,0 +1,14 @@
+#!/sbin/openrc-run
+
+name="chips-api"
+description="CHIPS FastAPI Backend"
+command="uvicorn"
+command_args="app.main:app --host 0.0.0.0 --port 8000"
+command_user="chips"
+directory="/home/chips/chips-backend"
+pidfile="/run/chips-api.pid"
+command_background=true
+
+depend() {
+    need net postgresql redis
+}
