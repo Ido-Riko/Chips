@@ -39,6 +39,9 @@ async def process_voice_log(
         await db.commit()
 
         return claude_response
+    except Exception as e:
+        # TODO: Handle error beyond basic try/catch
+        raise e
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
