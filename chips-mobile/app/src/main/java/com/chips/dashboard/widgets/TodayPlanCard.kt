@@ -1,13 +1,15 @@
 package com.chips.dashboard.widgets
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.chips.dashboard.MockData
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayPlanCard(plan: List<MockData.PlanItem>, onLogActivity: (String) -> Unit) {
     Card(
@@ -17,7 +19,8 @@ fun TodayPlanCard(plan: List<MockData.PlanItem>, onLogActivity: (String) -> Unit
         Column(modifier = Modifier.padding(16.dp)) {
             Text("Today", style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(8.dp))
-            FlowRow(
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 plan.forEach { item ->
