@@ -16,6 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.chips.dashboard.DashboardScreen
+import com.chips.dashboard.DashboardViewModel
+import com.chips.ui.theme.ChipsTheme
 
 class MainActivity : ComponentActivity() {
 
@@ -33,33 +36,28 @@ class MainActivity : ComponentActivity() {
         updateStates()
         
         setContent {
-            MaterialTheme {
+            ChipsTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "CHIPS Assistant Setup",
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        if (isAssistant && micPermissionGranted) {
+                    if (isAssistant && micPermissionGranted) {
+                        val viewModel = remember { DashboardViewModel() }
+                        DashboardScreen(viewModel)
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
                             Text(
-                                text = "✅ CHIPS is ready to use!\nLong-press the home button or swipe from the corner to activate.",
-                                style = MaterialTheme.typography.bodyLarge,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.primary
+                                text = "CHIPS Assistant Setup",
+                                style = MaterialTheme.typography.headlineMedium
                             )
-                        } else {
+                            
+                            Spacer(modifier = Modifier.height(32.dp))
                             if (!isAssistant) {
                                 Text(
                                     text = "To use CHIPS, you must set it as your default Digital Assistant app.",
@@ -94,11 +92,11 @@ class MainActivity : ComponentActivity() {
                                     Text("Grant Microphone Permission")
                                 }
                             }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        TextButton(onClick = { updateStates() }) {
-                            Text("Refresh Status")
+                            
+                            Spacer(modifier = Modifier.height(32.dp))
+                            TextButton(onClick = { updateStates() }) {
+                                Text("Refresh Status")
+                            }
                         }
                     }
                 }
