@@ -3,6 +3,7 @@ package com.chips.dashboard.widgets
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -27,7 +28,7 @@ fun SleepCard(score: Int, duration: String, restingHR: Int, sparkline: List<Floa
             Text("$score", style = MaterialTheme.typography.displayLarge, color = scoreColor)
             Text("$duration · $restingHR bpm", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(16.dp))
-            val chartEntryModel = entryModelOf(*sparkline.toTypedArray())
+            val chartEntryModel = remember(sparkline) { entryModelOf(*sparkline.toTypedArray()) }
             Chart(
                 chart = lineChart(),
                 model = chartEntryModel,

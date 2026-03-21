@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chips.dashboard.DashboardScreen
 import com.chips.dashboard.DashboardViewModel
 import com.chips.ui.theme.ChipsTheme
@@ -42,7 +43,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     if (isAssistant && micPermissionGranted) {
-                        val viewModel = remember { DashboardViewModel() }
+                        val viewModel: DashboardViewModel = viewModel()
                         DashboardScreen(viewModel)
                     } else {
                         Column(

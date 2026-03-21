@@ -3,6 +3,7 @@ package com.chips.dashboard.widgets
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.chips.ui.theme.TextSecondary
@@ -28,7 +29,7 @@ fun BeatSaberCard(accuracyData: List<Float>, targetSkill: String, lastScore: Str
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            val chartEntryModel = entryModelOf(*accuracyData.toTypedArray())
+            val chartEntryModel = remember(accuracyData) { entryModelOf(*accuracyData.toTypedArray()) }
             Chart(
                 chart = lineChart(),
                 model = chartEntryModel,

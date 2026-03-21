@@ -14,10 +14,12 @@ import java.io.IOException
 import java.util.concurrent.TimeUnit
 
 class ApiClient {
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .build()
+    companion object {
+        private val client = OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .build()
+    }
 
     // Using BASE_URL injected from local.properties via BuildConfig
     private val BASE_URL = BuildConfig.BASE_URL
