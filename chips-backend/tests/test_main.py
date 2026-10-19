@@ -18,7 +18,7 @@ def test_health_check():
     assert response.json() == {"status": "ok"}
 
 @patch("app.routers.voice.stt_service.transcribe_audio", new_callable=AsyncMock)
-@patch("app.routers.voice.claude_service.get_response", new_callable=AsyncMock)
+@patch("app.routers.voice.llm_service.get_response", new_callable=AsyncMock)
 def test_process_voice_log(mock_claude, mock_stt):
     # Setup mocks
     mock_stt.return_value = "This is a test transcription"

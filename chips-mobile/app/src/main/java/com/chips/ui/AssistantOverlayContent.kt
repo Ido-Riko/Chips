@@ -11,8 +11,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.chips.audio.AudioRecorder
 import com.chips.network.ApiClient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 @Composable
@@ -25,13 +27,27 @@ fun AssistantOverlayContent(onDismiss: () -> Unit) {
     
     var responseText by remember { mutableStateOf("Ready to listen...") }
     var isRecording by remember { mutableStateOf(false) }
+    var isProcessing by remember { mutableStateOf(false) }
+    var requestJob by remember { mutableStateOf<Job?>(null) }
+    val lifecycleOwner = LocalLifecycleOwner.current
 
     // Crucial: Clean up the recorder if the Android system suddenly hides our session window
     // while the person is still holding the button!
-    DisposableEffect(Unit) {
-        onDispose {
-            audioRecorder.stopRecording()
+    DisposableEffect(lifecycleOwner) {
+        val stop = {
+            requestJob?.cancel()
+            if (isRecording) audioRecorder.stopRecording()?.delete()
             isRecording = false
+            isProcessing = false
+            responseText = "Ready to listen..."
+        }
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) stop()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            stop()
         }
     }
 
@@ -39,7 +55,7 @@ fun AssistantOverlayContent(onDismiss: () -> Unit) {
     val isPressed by interactionSource.collectIsPressedAsState()
 
     LaunchedEffect(isPressed) {
-        if (isPressed) {
+        if (isPressed && !isProcessing) {
             isRecording = true
             responseText = "Listening..."
             audioRecorder.startRecording()
@@ -50,13 +66,13 @@ fun AssistantOverlayContent(onDismiss: () -> Unit) {
                 val audioFile = audioRecorder.stopRecording()
                 
                 if (audioFile != null) {
-                    coroutineScope.launch(Dispatchers.IO) {
-                        val response = apiClient.sendAudio(audioFile)
-                        responseText = response
-                        // Auto dismiss after 5 seconds
-                        delay(5000)
-                        launch(Dispatchers.Main) {
-                            onDismiss()
+                    isProcessing = true
+                    requestJob = coroutineScope.launch {
+                        try {
+                            responseText = apiClient.sendAudio(audioFile)
+                        } finally {
+                            audioFile.delete()
+                            isProcessing = false
                         }
                     }
                 } else {
@@ -98,6 +114,7 @@ fun AssistantOverlayContent(onDismiss: () -> Unit) {
 
                 Button(
                     onClick = { },
+                    enabled = !isProcessing,
                     interactionSource = interactionSource,
                     modifier = Modifier.fillMaxWidth().height(56.dp)
                 ) {
