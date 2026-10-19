@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -58,7 +59,7 @@ fun ChipsApp(
                             modifier = Modifier.testTag("nav-${target.name}"),
                             selected = destination == target,
                             onClick = { destination = target },
-                            icon = { Text(target.symbol) },
+                            icon = { Text(target.symbol, modifier = Modifier.clearAndSetSemantics { }) },
                             label = { Text(target.label) }
                         )
                     }
