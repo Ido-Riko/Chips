@@ -44,4 +44,4 @@ To use the overlay, select CHIPS as the device assistant from Settings. To try v
 
 Source restored from GitHub commit `46f0c8510f0bdf2d1c55a779b23a62bb9cd9d857` on 19 October 2026. After Android Studio installation, the local debug build, lint and all four unit tests passed on 20 October with Gradle 9.6.0, AGP 9.4.1 and bundled JBR 25. Lint reported zero errors and 29 warnings; those warnings remain follow-up work.
 
-An earlier CI revision passed all three instrumentation tests on an API 35 emulator. CI is rechecking the latest revision. No physical-device or lock-screen acceptance result has been recorded; M1 remains open until the Poco checks above are complete.
+All three instrumentation tests also passed locally on the Android 17 / API 37 emulator using the standard `connectedDebugAndroidTest` task. Espresso was updated to 3.7.0 and AndroidX JUnit to 1.3.0 after the old Espresso version failed on a removed platform method. An earlier CI revision passed the same three tests on API 35; CI is rechecking the latest revision. No physical-device or lock-screen acceptance result has been recorded; M1 remains open until the Poco checks above are complete.
