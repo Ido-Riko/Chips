@@ -33,7 +33,7 @@ To use the overlay, select CHIPS as the device assistant from Settings. To try v
 ## Manual acceptance checks
 
 - Fresh launch opens Today without a permission prompt or assistant requirement.
-- All seven dashboard cards scroll; Quick Log stays pinned. Verify at large font sizes and both gesture/button navigation on the Poco X6 Pro.
+- All dashboard sections scroll; Quick Log stays pinned. Activity buttons use a two-column grid at normal text size and stack at larger text sizes. Verify both gesture/button navigation on the Poco X6 Pro.
 - Normal mode has no fictional scores. Settings → Show preview data explicitly enables sample values and charts.
 - Today and Quick Log preview actions share completion state, say nothing was saved, and never create history. Turning preview off clears those completions.
 - Ask CHIPS without microphone permission opens Settings. Denial leaves normal navigation usable; permanent denial has an App settings route.

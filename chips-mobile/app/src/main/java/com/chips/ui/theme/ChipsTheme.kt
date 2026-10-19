@@ -4,10 +4,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.Typography
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 
-val ChipsAccent = Color(0xFFAAA5FF)
-val ChipsMint = Color(0xFF62E5C0)
-val ChipsWarning = Color(0xFFFFC875)
+val ChipsAccent = Color(0xFFB5A7F8)
+val ChipsMint = Color(0xFF9BD5BE)
+val ChipsWarning = Color(0xFFE4BE89)
 
 private val ChipsColors = darkColorScheme(
     primary = ChipsAccent,
@@ -15,17 +19,28 @@ private val ChipsColors = darkColorScheme(
     secondary = ChipsMint,
     onSecondary = Color(0xFF00382B),
     tertiary = ChipsWarning,
-    background = Color(0xFF0A0A0F),
-    onBackground = Color(0xFFEEEEF5),
-    surface = Color(0xFF13131A),
-    onSurface = Color(0xFFEEEEF5),
-    surfaceVariant = Color(0xFF1C1C27),
-    onSurfaceVariant = Color(0xFFB5B5CA),
-    outline = Color(0xFF76768C),
+    background = Color(0xFF101115),
+    onBackground = Color(0xFFF4F1EB),
+    surface = Color(0xFF191B21),
+    onSurface = Color(0xFFF4F1EB),
+    surfaceVariant = Color(0xFF23252D),
+    onSurfaceVariant = Color(0xFFA8A8B5),
+    outline = Color(0xFF72727F),
     error = Color(0xFFFFB4B9)
+)
+
+private val ChipsTypography = Typography(
+    headlineLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 38.sp, lineHeight = 42.sp, letterSpacing = (-1.4).sp),
+    headlineMedium = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 34.sp, letterSpacing = (-0.8).sp),
+    titleLarge = TextStyle(fontWeight = FontWeight.Medium, fontSize = 20.sp, lineHeight = 26.sp, letterSpacing = (-0.4).sp),
+    titleMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 22.sp),
+    bodyLarge = TextStyle(fontSize = 15.sp, lineHeight = 23.sp),
+    bodyMedium = TextStyle(fontSize = 13.sp, lineHeight = 19.sp),
+    labelLarge = TextStyle(fontWeight = FontWeight.Medium, fontSize = 13.sp, lineHeight = 18.sp),
+    labelMedium = TextStyle(fontWeight = FontWeight.Medium, fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.3.sp)
 )
 
 @Composable
 fun ChipsTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = ChipsColors, content = content)
+    MaterialTheme(colorScheme = ChipsColors, typography = ChipsTypography, content = content)
 }

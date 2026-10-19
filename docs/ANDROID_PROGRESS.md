@@ -21,3 +21,11 @@ Aligned the Compose compiler with AGP 9's built-in Kotlin version; added the exp
 - M2–M5 remain open. No activity persistence, synchronization, real transcription, or live dashboard integrations are claimed.
 
 Use `ANDROID_ROADMAP.md` for the full acceptance criteria and `chips-mobile/README.md` for build and manual test instructions.
+
+## Visual refinement — 20 October 2026
+
+Reworked the first dashboard after visual review: deliberate typography and a dated header, one prominent voice action, a sleep summary with score ring, a compact activity grid, paired Beat Saber/Japanese cards, smaller streak rings, grouped meal/drawing summaries, and slimmer Quick Log/navigation areas. Replaced text-symbol icons with a consistent set of native line icons. Settings and History use the same visual language.
+
+The dark palette uses warm neutral text with restrained violet, sage, amber and rose accents. Empty states stay honest; sample values still require explicit preview mode and are labeled as fictional. Preview actions and persistence behavior are unchanged. Accessibility labels describe missing scores without announcing zero-percent data; paired layouts stack when text is enlarged.
+
+Validated the normal and 1.5× text layouts visually on the local API 37 emulator; restored its original 1.0 font setting afterward. The redesigned UI passed build, lint, four unit tests and three instrumentation tests. The instrumentation assertion was adapted to the new Quick Log status label. After the final accessibility-label refinement, build/lint/unit checks passed again, but the emulator disconnected during test installation; that Gradle invocation reported success without producing device results and is not counted as a device-test pass. A temporary headless emulator also crashed at startup, so latest-source UI verification is left to CI or the next available device. Physical-device acceptance remains pending.

@@ -11,7 +11,8 @@ class AppNavigationTest {
     @Test
     fun dashboardIsUsableWithoutAssistantSetup() {
         compose.onNodeWithText("Your day, at a glance").assertIsDisplayed()
-        compose.onNodeWithText("Quick Log · saving not available yet").assertIsDisplayed()
+        compose.onNodeWithText("Quick log").assertIsDisplayed()
+        compose.onNodeWithTag("quick-log-status").assertTextEquals("Not connected").assertIsDisplayed()
         compose.onNodeWithTag("nav-HISTORY").performClick()
         compose.onNodeWithText("No saved entries yet").assertIsDisplayed()
         compose.onNodeWithTag("nav-SETTINGS").performClick()
