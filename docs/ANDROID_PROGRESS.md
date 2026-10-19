@@ -12,7 +12,10 @@ Aligned the Compose compiler with AGP 9's built-in Kotlin version; added the exp
 
 - Remote source revision: `46f0c8510f0bdf2d1c55a779b23a62bb9cd9d857`; source files restored through the GitHub connector because shell GitHub DNS failed.
 - Local Gradle command attempted: `bash ./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest`.
-- Result: Java missing, so no compilation or Android tests executed. SDK/device also unavailable here.
+- Initial result: Java was missing. The owner subsequently installed Android Studio and updated local Gradle to 9.6.0 and AGP to 9.4.1; those changes are preserved.
+- Local validation on 20 October: debug APK built, lint passed with zero errors and 29 warnings, all four unit tests passed (three preview-isolation tests and the existing example). Bundled JBR 25 and SDK Platform 36 were used. The offline attempt first reported an uncached Kotlin dependency; allowing normal dependency download resolved it.
+- CI run `39322919423` passed all three API 35 instrumentation tests. That run's lint failure identified an API 27-only system-bar XML setting, which was removed; local lint now passes. Latest CI results are still pending.
+- The Android Studio unsupported-module notice came from an IDE-created plain Java module; its Remove unsupported modules and re-sync action was advised. The JDK warning was historical: `.gradle/config.properties` now contains the bundled JDK path. No local IDE or SDK paths are included in the PR.
 - M1 remains open until build/lint/unit/device tests pass and the Poco acceptance checks in `chips-mobile/README.md` are recorded.
 - M2–M5 remain open. No activity persistence, synchronization, real transcription, or live dashboard integrations are claimed.
 

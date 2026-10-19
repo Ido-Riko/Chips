@@ -4,9 +4,9 @@ The app opens to Today, with History and Settings available from the bottom navi
 
 ## Build
 
-Use Android Studio with support for Android Gradle Plugin 9.0.1, JDK 17, and Android SDK Platform 36. The checked-in Gradle wrapper uses Gradle 9.1.0. AGP supplies Kotlin 2.2.10; the Compose compiler plugin uses the same version.
+Use Android Studio with support for Android Gradle Plugin 9.4.1 and Android SDK Platform 36. The checked-in Gradle wrapper uses Gradle 9.6.0. CI uses JDK 17; the local build also passed with Android Studio's bundled JBR 25. Kotlin and the Compose compiler use version 2.2.10.
 
-Toolchain references: [AGP 9.0 compatibility](https://developer.android.com/build/releases/agp-9-0-0-release-notes) and [Compose compiler configuration](https://kotlinlang.org/docs/compose-compiler-migration-guide.html).
+The Gradle and AGP versions include the updates applied during Android Studio setup. Keep the [Compose compiler version aligned with Kotlin](https://kotlinlang.org/docs/compose-compiler-migration-guide.html).
 
 Open this directory in Android Studio, let it create `local.properties` with your `sdk.dir`, then run:
 
@@ -42,4 +42,6 @@ To use the overlay, select CHIPS as the device assistant from Settings. To try v
 
 ## Validation status
 
-Source restored from GitHub commit `46f0c8510f0bdf2d1c55a779b23a62bb9cd9d857` on 19 October 2026. This workspace has no JDK or Android SDK. The local Gradle invocation stops before configuration because Java is absent. No APK, passing Android test run or physical-device result has yet been produced here; consult CI results once the change is pushed.
+Source restored from GitHub commit `46f0c8510f0bdf2d1c55a779b23a62bb9cd9d857` on 19 October 2026. After Android Studio installation, the local debug build, lint and all four unit tests passed on 20 October with Gradle 9.6.0, AGP 9.4.1 and bundled JBR 25. Lint reported zero errors and 29 warnings; those warnings remain follow-up work.
+
+An earlier CI revision passed all three instrumentation tests on an API 35 emulator. CI is rechecking the latest revision. No physical-device or lock-screen acceptance result has been recorded; M1 remains open until the Poco checks above are complete.
