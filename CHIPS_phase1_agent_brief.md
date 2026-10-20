@@ -1,6 +1,8 @@
-# CHIPS — Phase 1 Results and Android Agent Brief
+# CHIPS — M1 (formerly Phase 1) Results and Android Agent Brief
 
 Updated 20 October 2026. **Phase 1 / milestone 1 is complete.** This document replaces the original mock-dashboard build instructions with the accepted implementation, its evidence, and the revised delivery order.
+
+Use **M1–M5** in new chats, issues and implementation work. This historical filename is retained for continuity. The canonical numbering, status table and retired-phase mapping are in [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md#milestone-names-and-current-plan); do not maintain a parallel Phase 2–8 schedule.
 
 ## Read this before continuing
 

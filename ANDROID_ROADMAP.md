@@ -1,6 +1,6 @@
 # CHIPS Android: demo to daily-use app
 
-Prepared 19 October 2026. Status: proposed implementation plan; no implementation milestones are complete.
+Prepared 19 October 2026. Status: M1 complete on 20 October 2026; M2 implementation and acceptance checks in progress.
 
 ## Outcome and scope
 
@@ -8,11 +8,37 @@ Build a personal Android assistant and daily dashboard that can be used every da
 
 Planning assumption: the first release is for the owner on the Poco X6 Pro named in the existing brief. A public, multi-user release is a later decision. Android is the primary workstream; backend changes below are dependencies required to make Android features real.
 
-Keep Kotlin, Jetpack Compose, and the existing Android assistant integration. Build incrementally in `chips-mobile/`. Preserve the eight-widget dashboard intent from `CHIPS_phase1_agent_brief.md`, but replace its silent failures and mock-only completion criteria with durable behavior. Wake-word listening, autonomous phone actions, iOS, billing, and public account registration are outside the first release.
+Keep Kotlin, Jetpack Compose, and the existing Android assistant integration. Build incrementally in `chips-mobile/`. Preserve the eight-widget dashboard intent from the original brief; its silent-failure and mock-only instructions have been superseded in [CHIPS_phase1_agent_brief.md](CHIPS_phase1_agent_brief.md). Wake-word listening, autonomous phone actions, iOS, billing, and public account registration are outside the first release.
 
-## Evidence and current gaps
+## Milestone names and current plan
 
-Inspected GitHub `Ido-Riko/Chips`, default branch `master`, at commit `46f0c8510f0bdf2d1c55a779b23a62bb9cd9d857`. The local workspace contains an empty Git repository with no source checkout, so this assessment uses the remote source. No build, device behavior, deployed service, or credentials were verified.
+Use **M1–M5** as the only current delivery numbering. "Phase 1" is a historical alias for M1; the filename `CHIPS_phase1_agent_brief.md` is retained for continuity. The old Phases 2–8 are retired, not extra milestones to execute after M5. The product domains remain in scope; their delivery order and grouping changed.
+
+| Current milestone | Deliverable | Status on 20 October 2026 |
+| --- | --- | --- |
+| M1 — Useful Android home | Dashboard, navigation, preview, optional assistant setup, build/tests/CI | Complete; PR #1 merged, Poco checks passed, Poco large-text test explicitly waived |
+| M2 — Trustworthy daily logging | Durable offline activity records, History, undo/edit/delete, real streaks and authenticated synchronization | Implemented in the local workspace; still needs Poco/deployed HTTPS acceptance, publication/review and M2 CI |
+| M3 — Reliable real voice | Actual transcription and answers, safe recording/cancellation, recoverable errors and saved conversations | Not complete; transcription is still a fixed test string |
+| M4 — Real dashboard integrations | Japanese, drawing, Beat Saber, sleep and meals/pantry connected to actual personal data | Not complete; deliver and accept one integration at a time |
+| M5 — Dependable personal beta | Safe updates and recovery, export/deletion, diagnostics, device coverage and seven-day owner trial | Not complete |
+
+| Retired phase | Where its work now belongs |
+| --- | --- |
+| Phase 1: dashboard shell | M1 — complete |
+| Phase 2: Beat Saber | M4 — Beat Saber integration |
+| Phase 3: sleep | M4 — sleep integration |
+| Phase 4: pantry/meals | M4 — pantry and meal integration |
+| Phase 5: real streaks | M2 — derived from durable activity records |
+| Phase 6: drawing analysis/uploads | M4 — drawing integration |
+| Phases 7/8: kanji reviews/SRS | M4 — Japanese integration |
+
+M3 makes the existing voice prototype reliable and real; M5 adds a release/acceptance gate. Neither is a renaming of an old individual integration phase. Immediate work is to accept and publish the existing M2 implementation, not restart it or begin the old "Phase 2" Beat Saber work.
+
+M1 is on `master`. M2 code and its later progress/evidence files are local and unpublished at this audit; their implementation/testing is not proof of deployed-service acceptance. Inspect the actual worktree and [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) before continuing.
+
+## Initial baseline — historical, 19 October 2026
+
+The following table describes the starting snapshot, **not the current implementation or remaining task list**. The original inspection used GitHub `Ido-Riko/Chips` at commit `46f0c8510f0bdf2d1c55a779b23a62bb9cd9d857` because the local Git repository had no source checkout. No build/device/deployment verification had been performed at that initial point. Use the current milestone status above and dated progress entries for subsequent results.
 
 | Area | Observed source | Implication |
 | --- | --- | --- |
@@ -49,13 +75,15 @@ Complete the milestones in order. Each produces a reviewable Android build; a mi
 
 **Done when:** a clean setup builds and installs; the owner can navigate the dashboard, history and settings on the Poco; all widgets are reachable without overlap at large font sizes; permission denial leaves the dashboard usable; CI checks pass. Demo data is visibly distinguished from personal data.
 
-Acceptance update, 20 October 2026: the owner confirmed Dashboard/History/Settings navigation, usable dashboard after microphone denial, and refreshed status after returning from assistant settings on the Poco. The owner waived large-text testing on the Poco as unnecessary; the earlier 1.5× emulator visual check remains recorded. The latest assistant-button fix is awaiting its CI result before M1 closes.
+Acceptance update, 20 October 2026: the owner confirmed Dashboard/History/Settings navigation, usable dashboard after microphone denial, and refreshed status after returning from assistant settings on the Poco. The owner waived large-text testing on the Poco as unnecessary; the earlier 1.5× emulator visual check remains recorded. The latest PR #1 head, `7f1f34fb0dae85ae78d08bfd70517ad80852c635`, passed build/lint/unit and API 35 UI jobs in [CI run 39483379703](https://github.com/Ido-Riko/Chips/actions/runs/39483379703). M1 is complete; the Poco large-text check is explicitly waived.
 
 ### M2 — Daily logging that can be trusted
 
+Implementation update, 20 October 2026: durable local logging, undo/edit/delete, real streaks, background sync, device enrollment and owned backend contract are implemented. Debug/release builds, seven unit tests, nine emulator tests, twelve backend tests (including PostgreSQL) and an offline force-stop/relaunch check passed locally. M2 remains open for Poco and deployed HTTPS reconnect/retry/revocation acceptance; see `docs/ANDROID_PROGRESS.md` and `docs/ACTIVITY_SYNC.md`.
+
 **User result:** log Workout, Beat Saber, Drawing, or Japanese, see Today and streaks update, and retain those records after closing the app—even offline.
 
-- Add a local database (proposed: Room) for activity records, voice history, and pending synchronization. Use stable record IDs, timestamps, activity types and explicit sync status.
+- Keep the implemented native SQLite database for activity records and pending synchronization. Room was an initial proposal, not a migration requirement. The reserved voice-history schema does not imply persisted conversations; that behavior is M3. Use stable record IDs, timestamps, activity types and explicit sync status.
 - Define completion and streak rules: one daily completion per activity for streaks, multiple sessions allowed in history; use an explicit local-day/timezone policy and test midnight boundaries.
 - Implement log, undo/edit, history and deletion. Drive Today, streaks and Quick Log from the same stored records.
 - Save locally before reporting success. Show pending/synced/failed states and retry controls. Retry automatically with persistent background work when connectivity returns; make repeated sends idempotent.
@@ -116,29 +144,31 @@ Use manual entry/import where a source integration is unavailable, clearly marke
 
 Android remains the product focus. Keep the existing monorepo and add only the backend functionality needed by the current Android milestone. Avoid a platform rewrite or speculative services.
 
-Suggested Android boundaries: Compose screens → ViewModels/controllers → repositories → Room and API client. The local database drives visible saved data. Background synchronization updates it; network callbacks do not own screen state. Settings hold configuration separately from activity/history records. Inject recorder/network/storage interfaces so failure paths are testable.
+Android boundaries: Compose screens → ViewModels/controllers → storage/repository interfaces → native SQLite and API client. The local database drives visible saved data. Background synchronization updates it; network callbacks do not own screen state. Settings hold configuration separately from activity/history records. Inject recorder/network/storage interfaces so failure paths are testable.
 
 Dependency order: M1 → M2 → M3 → M4 → M5. CI, authentication, error handling, privacy and device checks enter with their associated features; M5 is the final release gate, not the first time those concerns are addressed.
 
 Product choices to settle during the relevant milestone, without blocking M1: spoken languages; preferred STT/answer provider; actual sleep hardware and Beat Saber account/source; whether spoken replies are desired; whether this stays personal or eventually supports other users. This plan assumes text replies for the first release, matching the existing app.
 
-## First implementation batch
+## Completed first batch — M1 history
 
-1. Check out the inspected source and establish the build/toolchain baseline; update setup documentation from actual commands and results.
-2. Repair the stale test references, add CI, and record the initial Poco install/invocation result.
-3. Add app theme and dashboard/history/settings navigation, keeping assistant setup accessible from settings.
-4. Render all eight cards with explicit empty/demo states and no false saved-state feedback.
-5. Review the M1 build on the Poco, then implement M2 starting with one durable Workout log before extending the shared path to all four activities.
+1. Restored the inspected source and established Android Studio/build setup with documented commands and results.
+2. Repaired stale test references and added Android CI and meaningful foundation tests.
+3. Added the accepted theme and dashboard/history/settings navigation, with optional assistant setup in Settings.
+4. Represented all eight dashboard areas with explicit empty/preview states and no false saved-state feedback.
+5. Recorded Poco navigation, microphone-denial and setup-status acceptance, the large-text test waiver, green CI and PR #1 merge.
+
+These steps are history, not a fresh implementation queue. M2 was subsequently implemented locally; continue from its remaining acceptance gates above.
 
 No calendar estimates are committed before a source build and first device run establish the baseline. Track progress by the acceptance evidence above, with small implementation PRs within each milestone.
 
 ## Progress ledger
 
 - [x] Inspect current remote source and existing product brief; identify gaps and write this plan.
-- [ ] M1: installable app and useful home; attach build/CI/device evidence.
+- [x] M1: installable app and useful home; build/CI/Poco evidence recorded in `docs/ANDROID_PROGRESS.md`, with owner waiver of Poco large-text testing.
 - [ ] M2: trustworthy daily logging; attach persistence/sync/boundary evidence.
 - [ ] M3: real voice assistant; attach transcription and interruption evidence.
 - [ ] M4: personal dashboard integrations; attach evidence per source/widget.
 - [ ] M5: personal beta; attach upgrade/recovery and seven-day trial results.
 
-Planning is complete when the baseline, intermediate goals, dependencies, acceptance gates and first implementation batch are documented. Shipping the app is a separate execution objective; this plan does not claim those milestones have been achieved.
+Each milestone closes against its own recorded acceptance evidence. M1 is closed; M2–M5 remain open. A documented plan or successful local build alone does not establish deployment acceptance or completion of the full app.
