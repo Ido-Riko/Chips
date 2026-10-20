@@ -2,6 +2,7 @@ package com.chips.network
 
 import com.chips.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -40,6 +41,8 @@ class ApiClient {
                 if (!response.isSuccessful) throw IOException("Unexpected code $response")
                 response.body?.string() ?: "Empty response"
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             e.printStackTrace()
             "Error: ${e.localizedMessage}"

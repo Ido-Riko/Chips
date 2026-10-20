@@ -1,13 +1,15 @@
 # CHIPS (Conversational Humanlike Intelligence for Programming Simplification)
 
-**CHIPS** is an Android Digital Assistant application designed to act as a system-level assist app triggerable directly from the home button (even on the lockscreen). Phase 0 focuses on capturing audio, routing it to a backend for transcription, querying Claude (Anthropic), and presenting a short text-based response.
+**CHIPS** is a personal Android dashboard and Digital Assistant in development. The app opens to Today, with History and Settings navigation. Assistant enrollment is optional for browsing; voice can also be opened in the app. Lock-screen behavior still needs device verification.
+
+Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity persistence, real transcription and live data integrations remain planned work.
 
 ## Repository Structure
 
 This is a mono-repo containing both the mobile client and the Python backend services.
 
 - **`chips-mobile/`**: The Android project built with Kotlin and Jetpack Compose. Contains the `VoiceInteractionService` to register as the default device assistant.
-- **`chips-backend/`**: A Python FastAPI service that processes audio input, interacts with an STT service (stubbed in Phase 0), forwards queries to Claude 3.5 Sonnet, and responds with plain text. Handled locally via Docker.
+- **`chips-backend/`**: A Python FastAPI service with PostgreSQL storage, stubbed transcription, configurable answer providers, and a plain-text voice response. The repository includes an OpenRC service definition and a deployment script.
 
 ## Setup & Architecture
 
@@ -15,7 +17,7 @@ This is a mono-repo containing both the mobile client and the Python backend ser
 - **Language**: Kotlin
 - **UI Framework**: Jetpack Compose (Material 3)
 - **Minimum SDK**: Android 8.0 (API 26)
-- **Target SDK**: Android 14 (API 34)
+- **Target SDK**: API 36
 - **Key Features**: 
   - Overlays a recording button via `VoiceInteractionSession`. 
   - Captures `AAC` audio using the device microphone.
@@ -24,17 +26,14 @@ This is a mono-repo containing both the mobile client and the Python backend ser
 ### Backend Sever (`chips-backend`)
 - **Language**: Python 3.11
 - **Framework**: FastAPI (Served via Uvicorn)
-- **Database**: PostgreSQL 15 & Redis 7
-- **LLM Integration**: Anthropic SDK (Claude 3.5 Sonnet)
-- **Deployment**: Docker Compose for easy local testing.
+- **Database**: PostgreSQL via SQLAlchemy
+- **LLM Integration**: Anthropic, OpenAI, or Gemini, selected from backend configuration
+- **Deployment**: OpenRC service definition; no Docker Compose setup is checked in
 
 ## Getting Started
 
-1. **Backend**: Navigate to `chips-backend/`, copy `.env.example` to `.env`, input your Anthropic API Key, and run:
-   ```bash
-   docker compose up --build
-   ```
-2. **Mobile App**: Open `chips-mobile/` in Android Studio and build the project. Ensure your emulator or physical device has the assistant app set to "CHIPS" in Settings > Default Apps > Digital Assistant.
+1. **Mobile App**: Follow [chips-mobile/README.md](chips-mobile/README.md). The dashboard works without a backend or device-assistant enrollment.
+2. **Voice demo backend**: Install `chips-backend/requirements.txt` in a virtual environment, configure the settings in `chips-backend/app/config.py`, prepare the database tables, and run `uvicorn app.main:app` from `chips-backend/`. Database migrations and a reproducible full backend setup remain roadmap work.
 
 ---
 

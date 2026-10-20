@@ -14,6 +14,7 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.chips.ui.AssistantOverlayContent
+import com.chips.ui.theme.ChipsTheme
 
 class ChipsVoiceInteractionSession(context: Context) : VoiceInteractionSession(context), LifecycleOwner, SavedStateRegistryOwner {
 
@@ -43,14 +44,19 @@ class ChipsVoiceInteractionSession(context: Context) : VoiceInteractionSession(c
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
     }
 
+    override fun onDestroy() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        super.onDestroy()
+    }
+
     override fun onCreateContentView(): View {
         return ComposeView(context).apply {
             setViewTreeLifecycleOwner(this@ChipsVoiceInteractionSession)
             setViewTreeSavedStateRegistryOwner(this@ChipsVoiceInteractionSession)
             setContent {
-                AssistantOverlayContent(
-                    onDismiss = { hide() }
-                )
+                ChipsTheme {
+                    AssistantOverlayContent(onDismiss = { hide() })
+                }
             }
         }
     }

@@ -1,107 +1,56 @@
 package com.chips
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import com.chips.assistant.ChipsVoiceInteractionService
+import com.chips.ui.ChipsApp
+import com.chips.ui.theme.ChipsTheme
 
 class MainActivity : ComponentActivity() {
-
     private var micPermissionGranted by mutableStateOf(false)
     private var isAssistant by mutableStateOf(false)
+    private var settingsError by mutableStateOf<String?>(null)
 
-    private val requestPermissionLauncher = registerForActivityResult(
+    private val requestMicrophone = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        micPermissionGranted = isGranted
-    }
+    ) { micPermissionGranted = it }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
+        )
         updateStates()
-        
         setContent {
-            MaterialTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "CHIPS Assistant Setup",
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        
-                        if (isAssistant && micPermissionGranted) {
-                            Text(
-                                text = "✅ CHIPS is ready to use!\nLong-press the home button or swipe from the corner to activate.",
-                                style = MaterialTheme.typography.bodyLarge,
-                                textAlign = TextAlign.Center,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        } else {
-                            if (!isAssistant) {
-                                Text(
-                                    text = "To use CHIPS, you must set it as your default Digital Assistant app.",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    textAlign = TextAlign.Center
-                                )
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                Button(onClick = {
-                                    val intent = Intent(Settings.ACTION_VOICE_INPUT_SETTINGS)
-                                    startActivity(intent)
-                                }) {
-                                    Text("Open Assistant Settings")
-                                }
-                                
-                                Spacer(modifier = Modifier.height(32.dp))
-                            }
-
-                            if (!micPermissionGranted) {
-                                Text(
-                                    text = "CHIPS needs microphone access to hear your requests.",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    textAlign = TextAlign.Center
-                                )
-                                
-                                Spacer(modifier = Modifier.height(16.dp))
-                                
-                                Button(onClick = {
-                                    requestPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                }) {
-                                    Text("Grant Microphone Permission")
-                                }
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(32.dp))
-                        TextButton(onClick = { updateStates() }) {
-                            Text("Refresh Status")
-                        }
+            ChipsTheme {
+                ChipsApp(
+                    micPermissionGranted = micPermissionGranted,
+                    isAssistant = isAssistant,
+                    settingsError = settingsError,
+                    onRequestMicrophone = {
+                        requestMicrophone.launch(Manifest.permission.RECORD_AUDIO)
+                    },
+                    onAssistantSettings = ::openAssistantSettings,
+                    onAppSettings = {
+                        openSettings(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = android.net.Uri.parse("package:$packageName")
+                        })
                     }
-                }
+                )
             }
         }
     }
@@ -112,12 +61,42 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun updateStates() {
-        val assistant = Settings.Secure.getString(contentResolver, "voice_interaction_service")
-        isAssistant = assistant?.startsWith(packageName) == true
-        
+        val activeService = Settings.Secure.getString(contentResolver, "voice_interaction_service")
+        isAssistant = ComponentName.unflattenFromString(activeService.orEmpty()) ==
+            ComponentName(this, ChipsVoiceInteractionService::class.java)
         micPermissionGranted = ContextCompat.checkSelfPermission(
-            this,
-            Manifest.permission.RECORD_AUDIO
+            this, Manifest.permission.RECORD_AUDIO
         ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun openAssistantSettings() {
+        settingsError = null
+        // ASSISTANT is not a requestable role on standard Android. A role request
+        // can immediately return canceled without displaying a picker.
+        for (action in listOf(
+            Settings.ACTION_VOICE_INPUT_SETTINGS,
+            Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS
+        )) {
+            try {
+                startActivity(Intent(action))
+                return
+            } catch (_: android.content.ActivityNotFoundException) {
+                // Some manufacturers omit the dedicated assistant screen.
+            } catch (_: SecurityException) {
+                // Try the public Default apps screen if this route is restricted.
+            }
+        }
+        settingsError = "Open Android Settings → Apps → Default apps → Digital assistant app, then choose CHIPS."
+    }
+
+    private fun openSettings(intent: Intent) {
+        settingsError = null
+        try {
+            startActivity(intent)
+        } catch (_: android.content.ActivityNotFoundException) {
+            settingsError = "Open Android Settings → Apps → Default apps to select CHIPS."
+        } catch (_: SecurityException) {
+            settingsError = "Android could not open this setting. Open it from your device Settings app."
+        }
     }
 }
