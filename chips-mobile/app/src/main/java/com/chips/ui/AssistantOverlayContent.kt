@@ -23,7 +23,7 @@ fun AssistantOverlayContent(onDismiss: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
     
     val audioRecorder = remember { AudioRecorder(context) }
-    val apiClient = remember { ApiClient() }
+    val apiClient = remember { ApiClient(context.applicationContext) }
     
     var responseText by remember { mutableStateOf("Ready to listen...") }
     var isRecording by remember { mutableStateOf(false) }

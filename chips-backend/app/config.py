@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = None
     gemini_api_key: Optional[str] = None
     database_url: str
+    allow_insecure_local: bool = False
     redis_url: str
 
     class Config:

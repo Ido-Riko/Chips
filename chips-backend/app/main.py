@@ -1,8 +1,9 @@
 from fastapi import FastAPI
-from app.routers import voice, health
+from app.routers import voice, health, activities
 
 app = FastAPI(title="CHIPS Backend Phase 0")
 
+app.include_router(activities.router)
 app.include_router(voice.router)
 app.include_router(health.router)
 

@@ -7,6 +7,8 @@ import app.services.stt as stt_service
 import app.services.llm as llm_service
 from app.database import get_db
 from app.models.daily_log import VoiceLog
+from app.auth import require_device
+from app.models.activity import Device
 
 router = APIRouter()
 
@@ -15,6 +17,7 @@ SYSTEM_PROMPT = "You are CHIPS, a personal AI assistant. The user is speaking to
 @router.post("/api/v1/voice-log", response_class=PlainTextResponse)
 async def process_voice_log(
     audio: UploadFile = File(...),
+    device: Device = Depends(require_device),
     db: AsyncSession = Depends(get_db)
 ):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".aac") as temp_audio:
@@ -31,6 +34,7 @@ async def process_voice_log(
 
         # Save to DB
         voice_log = VoiceLog(
+            owner_id=device.owner_id,
             transcription=transcription,
             response=llm_response,
             confidence=0.0

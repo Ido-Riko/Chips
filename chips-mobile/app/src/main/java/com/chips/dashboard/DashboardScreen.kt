@@ -51,8 +51,8 @@ fun DashboardScreen(state: DashboardUiState, onLog: (ActivityType) -> Unit, onVo
                     Text("Your day, at a glance", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text(LocalDate.now().format(DateTimeFormatter.ofPattern("dd", Locale.getDefault())), style = MaterialTheme.typography.headlineMedium)
-                    Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEE · MMM", Locale.getDefault())), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                    Text(state.today.format(DateTimeFormatter.ofPattern("dd", Locale.getDefault())), style = MaterialTheme.typography.headlineMedium)
+                    Text(state.today.format(DateTimeFormatter.ofPattern("EEE · MMM", Locale.getDefault())), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
                 }
             }
         }
@@ -79,9 +79,10 @@ fun DashboardScreen(state: DashboardUiState, onLog: (ActivityType) -> Unit, onVo
                 ChipsIcon(ChipsSymbol.ARROW, ChipsAccent)
             }
         }
+        if (state.storageError != null) item { Text(state.storageError, color = MaterialTheme.colorScheme.error) }
         item { SleepCard(state.demoMode) }
         item {
-            DashboardCard("Your rhythm", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "Not connected") {
+            DashboardCard("Your rhythm", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "${state.completed.size} / 4 today") {
                 AdaptivePair(
                     first = { ActivityTile(ActivityType.WORKOUT, state, onLog) },
                     second = { ActivityTile(ActivityType.BEAT_SABER, state, onLog) }
@@ -121,10 +122,10 @@ fun DashboardScreen(state: DashboardUiState, onLog: (ActivityType) -> Unit, onVo
             )
         }
         item {
-            DashboardCard("Keep showing up", trailing = if (state.demoMode) "Preview streaks" else "No activity history") {
+            DashboardCard("Keep showing up", trailing = if (state.demoMode) "Preview streaks" else "Daily streaks") {
                 if (LocalDensity.current.fontScale > 1.3f) {
-                    ActivityType.entries.chunked(2).forEach { pair -> StreakRow(pair, state.demoMode) }
-                } else StreakRow(ActivityType.entries, state.demoMode)
+                    ActivityType.entries.chunked(2).forEach { pair -> StreakRow(pair, state) }
+                } else StreakRow(ActivityType.entries, state)
             }
         }
         item {
@@ -176,7 +177,7 @@ private fun SleepCard(demo: Boolean) {
 
 @Composable
 private fun ActivityTile(type: ActivityType, state: DashboardUiState, onLog: (ActivityType) -> Unit) {
-    val completed = type in state.previewCompleted
+    val completed = type in state.completed
     val color = activityColor(type)
     Surface(
         onClick = { onLog(type) }, shape = RoundedCornerShape(14.dp),
@@ -192,13 +193,13 @@ private fun ActivityTile(type: ActivityType, state: DashboardUiState, onLog: (Ac
 }
 
 @Composable
-private fun StreakRow(types: List<ActivityType>, demo: Boolean) {
+private fun StreakRow(types: List<ActivityType>, state: DashboardUiState) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         types.forEach { type ->
-            val days = if (demo) DemoData.streaks.getValue(type) else null
+            val days = if (state.demoMode) DemoData.streaks.getValue(type) else state.streak(type)
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.size(48.dp).clearAndSetSemantics {
-                    contentDescription = if (days == null) "${type.label}, no history" else "${type.label}, $days day preview streak"
+                    contentDescription = if (days == null) "${type.label}, no history" else "${type.label}, $days day ${if (state.demoMode) "preview " else ""}streak"
                 }, contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
                         progress = { (days ?: 0).coerceAtMost(7) / 7f },
@@ -232,7 +233,7 @@ fun QuickLogBar(demoMode: Boolean, onLog: (ActivityType) -> Unit) {
             HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
             Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Quick log", style = MaterialTheme.typography.labelMedium)
-                Text(if (demoMode) "Preview only" else "Not connected", modifier = Modifier.testTag("quick-log-status"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                Text(if (demoMode) "Preview only" else "Saved on this phone", modifier = Modifier.testTag("quick-log-status"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp)) {
                 ActivityType.entries.forEach { type ->

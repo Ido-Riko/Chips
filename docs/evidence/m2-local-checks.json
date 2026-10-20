@@ -1,0 +1,23 @@
+{
+  "unit": {
+    "tests": 7,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "instrumentation": {
+    "tests": 9,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint": {
+    "Warning": 34
+  },
+  "backend": {
+    "tests": 12,
+    "failures": 0,
+    "postgresql": 16
+  },
+  "offline_workout_force_stop": "passed; see m2-offline-workout.json"
+}

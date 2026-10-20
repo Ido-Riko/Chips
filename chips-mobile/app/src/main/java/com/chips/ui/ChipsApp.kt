@@ -9,6 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.chips.data.*
+import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -37,21 +42,35 @@ fun ChipsApp(
     onRequestMicrophone: () -> Unit,
     onAssistantSettings: () -> Unit,
     onAppSettings: () -> Unit,
-    dashboard: DashboardViewModel = viewModel()
+    dashboard: DashboardViewModel = viewModel(factory = viewModelFactory {
+        initializer { DashboardViewModel(ActivityStore.get(this[androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]!!)) }
+    })
 ) {
     val state by dashboard.state.collectAsStateWithLifecycle()
     var destination by rememberSaveable { mutableStateOf(Destination.DASHBOARD) }
     var showVoice by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    LaunchedEffect(Unit) { ActivitySyncWorker.schedule(context) }
     val onLog: (ActivityType) -> Unit = { type ->
-        if (state.demoMode) dashboard.previewActivity(type)
-        scope.launch {
-            snackbar.currentSnackbarData?.dismiss()
-            snackbar.showSnackbar(
-                if (state.demoMode) "${type.label}: preview changed. Nothing saved."
-                else "Logging is not available yet. No activity was saved."
-            )
+        if (state.demoMode) {
+            dashboard.previewActivity(type)
+            scope.launch {
+                snackbar.currentSnackbarData?.dismiss()
+                snackbar.showSnackbar("${type.label}: preview changed. Nothing saved.")
+            }
+        } else scope.launch {
+            try {
+                val saved = dashboard.log(type)
+                runCatching { ActivitySyncWorker.schedule(context) }
+                snackbar.currentSnackbarData?.dismiss()
+                if (snackbar.showSnackbar("${type.label} saved on this phone", "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
+                    dashboard.delete(saved.id)
+                    ActivitySyncWorker.schedule(context)
+                }
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { snackbar.showSnackbar("Could not save this change. Try again.") }
         }
     }
     Scaffold(
@@ -89,17 +108,7 @@ fun ChipsApp(
                 Destination.DASHBOARD -> DashboardScreen(state, onLog) {
                     if (micPermissionGranted) showVoice = true else destination = Destination.SETTINGS
                 }
-                Destination.HISTORY -> Column(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("History", style = MaterialTheme.typography.headlineMedium)
-                    Spacer(Modifier.height(36.dp))
-                    ChipsIcon(ChipsSymbol.HISTORY, ChipsAccent, Modifier.size(36.dp))
-                    Text("No saved entries yet", style = MaterialTheme.typography.titleLarge)
-                    Text("A place for the little things you do, and the thoughts you share.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Saving isn't connected yet. Dashboard previews stay temporary.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                Destination.HISTORY -> ActivityHistoryScreen(state, dashboard)
                 Destination.SETTINGS -> SettingsScreen(
                     micPermissionGranted, isAssistant, settingsError, state.demoMode,
                     onRequestMicrophone, onAssistantSettings, onAppSettings, dashboard::setDemoMode
@@ -143,6 +152,7 @@ private fun SettingsScreen(
                 )
             }
         }
+        SyncSettingsCard()
         DashboardCard("Microphone") {
             Text(if (microphoneGranted) "Microphone access granted" else "Microphone access is off")
             Text("Needed only when speaking to CHIPS. You can use the dashboard without it.")

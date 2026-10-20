@@ -15,18 +15,19 @@ bash ./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest
 bash ./gradlew :app:connectedDebugAndroidTest
 ```
 
-The second command requires an emulator or USB-connected device with debugging enabled. The app supports API 26 and later and currently targets API 36. CI builds, lints, runs unit tests, and runs navigation/preview instrumentation on an API 35 emulator. Minimum-API, target-API and Poco device checks are still required before the milestone can close.
+The second command requires an emulator or USB-connected device with debugging enabled. The app supports API 26 and later and currently targets API 36. CI builds, lints, runs unit tests, and runs navigation/preview instrumentation on an API 35 emulator. M1 passed CI and the owner’s Poco acceptance checks; Poco large-text testing was explicitly waived. Minimum/target API coverage remains a later release gate.
 
-## Voice development service
+## Daily logging and synchronization
 
-The existing voice path remains a demo: backend transcription is a stub. Dashboard and history do not require the service. To try voice, run the FastAPI service with its database/provider configuration, then set an endpoint in `local.properties`:
+Today and Quick Log save Workout, Beat Saber, Drawing and Japanese to SQLite before confirming success. History, Today and streaks use those same records. Each tap adds a session; multiple sessions count once for a daily streak. The Undo snackbar removes only the session just added. History supports editing the activity, date and note, and confirmed deletion.
 
-```properties
-# Keep the quotes: this value becomes a generated Java String literal.
-BASE_URL="http://10.0.2.2:8000/api/v1"
-```
+The calendar date and IANA timezone are captured with each session. Travel does not reassign old sessions to another date. Today follows the phone’s current local date and updates while the app stays open. A streak counts consecutive completed dates ending today, or yesterday if today is incomplete. An explicit date correction in History changes completion/streak attribution without changing the original capture timestamp.
 
-`10.0.2.2` reaches the development host from an Android emulator. A physical phone needs a reachable server address. `local.properties` is ignored by Git. Provider keys belong on the backend. Release authentication, encrypted transport, real transcription and persistent voice history remain roadmap work.
+Local logging needs no network or enrollment. Sync requires an operator-enrolled device token and an HTTPS endpoint ending in `/api/v1`. Enter both in Settings → Synchronization. See [service setup and contract](../docs/ACTIVITY_SYNC.md). Pending/synced/failed states appear in History; retries run through persistent WorkManager jobs, with a manual Retry sync action. A force-stopped app resumes its work after it is opened again. Disconnect removes the credential and cancels background sync while retaining activities.
+
+## Voice service
+
+Transcription remains a stub; saved transcripts and full voice reliability are M3 work. The existing voice path now uses the same enrolled HTTPS service and bearer token. Set up Synchronization before trying it. Provider keys remain on the backend. Release builds disable cleartext traffic. Debug builds retain `BASE_URL` in `local.properties` for local development, but the backend requires device authentication even in local HTTP mode.
 
 To use the overlay, select CHIPS as the device assistant from Settings. To try voice without changing the device assistant, grant microphone access and tap Ask CHIPS on Today. Results remain visible until dismissed; they are not saved yet.
 
@@ -45,4 +46,15 @@ To use the overlay, select CHIPS as the device assistant from Settings. To try v
 
 Source restored from GitHub commit `46f0c8510f0bdf2d1c55a779b23a62bb9cd9d857` on 19 October 2026. After Android Studio installation, the local debug build, lint and all four unit tests passed on 20 October with Gradle 9.6.0, AGP 9.4.1 and bundled JBR 25. Lint reported zero errors and 29 warnings; those warnings remain follow-up work.
 
-All three instrumentation tests also passed locally on the Android 17 / API 37 emulator using the standard `connectedDebugAndroidTest` task. Espresso was updated to 3.7.0 and AndroidX JUnit to 1.3.0 after the old Espresso version failed on a removed platform method. An earlier CI revision passed the same three tests on API 35; CI is rechecking the latest revision. No physical-device or lock-screen acceptance result has been recorded; M1 remains open until the Poco checks above are complete.
+All three instrumentation tests also passed locally on the Android 17 / API 37 emulator using the standard `connectedDebugAndroidTest` task. Espresso was updated to 3.7.0 and AndroidX JUnit to 1.3.0 after the old Espresso version failed on a removed platform method. PR #1’s latest head passed build and API 35 UI jobs in CI run 39483379703. The owner confirmed the M1 Poco checks and waived large-text testing; M1 is closed. Lock-screen invocation remains M3 work. Current M2 validation is recorded in `docs/ANDROID_PROGRESS.md`.
+
+## M2 device acceptance
+
+1. Turn off Wi-Fi/mobile data. Log Workout from Quick Log; confirm Today, History and streaks agree. Undo a second session and confirm the first remains.
+2. Force-stop CHIPS from Android App settings, reopen it, and confirm the first session remains. Repeat for the other activities.
+3. In History, edit an activity/date/note, then delete it. Restart while offline and confirm each change persists.
+4. Enroll the device against the migrated HTTPS service. Reconnect, retry repeatedly and restart during sync. Each stable ID must appear once on the server, with the latest revision and no restored deletions.
+5. Observe Today across local midnight, including sessions around midnight; confirm yesterday keeps a streak alive only until the next incomplete day. Changing timezone must retain each session’s recorded date.
+6. Revoke the device token on the server. Read/write requests must fail; local logging remains usable. Rotate the token for the same device UUID and retry pending changes.
+
+These are M2 acceptance checks, separate from the completed M1 Poco checks. See the progress ledger for executed evidence.

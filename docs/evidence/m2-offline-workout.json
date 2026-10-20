@@ -1,0 +1,34 @@
+{
+  "device": "temporary API 37 emulator, ANGLE renderer",
+  "wifi_disabled": true,
+  "mobile_data_disabled": true,
+  "offline_workout_before_force_stop": [
+    {
+      "id": "1eb582ca-df43-4b75-b418-5ff989381938",
+      "type": "WORKOUT",
+      "occurred_at": 1792525501908,
+      "zone_id": "Asia/Jerusalem",
+      "local_day": "2026-10-20",
+      "note": "",
+      "revision": 1,
+      "deleted": 0,
+      "sync_status": "PENDING",
+      "error": ""
+    }
+  ],
+  "after_force_stop": [
+    {
+      "id": "1eb582ca-df43-4b75-b418-5ff989381938",
+      "type": "WORKOUT",
+      "occurred_at": 1792525501908,
+      "zone_id": "Asia/Jerusalem",
+      "local_day": "2026-10-20",
+      "note": "",
+      "revision": 1,
+      "deleted": 0,
+      "sync_status": "PENDING",
+      "error": ""
+    }
+  ],
+  "history_visible_after_relaunch": true
+}
