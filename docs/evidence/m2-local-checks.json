@@ -20,5 +20,21 @@
     "postgresql": 16
   },
   "offline_workout_force_stop": "passed; see m2-offline-workout.json",
-  "android_follow_up": "Your rhythm toggle; debug/lint/unit and API 37 instrumentation passed on 20 October 2026. Backend evidence is unchanged from the initial M2 run."
+  "android_follow_up": "Your rhythm toggle; debug/lint/unit and API 37 instrumentation passed on 20 October 2026. Backend evidence is unchanged from the initial M2 run.",
+  "rhythm_compact_screen_fix": {
+    "baseline_reproduced": true,
+    "viewport": "320x640 @ 160 dpi",
+    "cause": "Saved snackbar overlapped rhythm tile and intercepted the second touch",
+    "test_changed": false,
+    "compact_suite": {
+      "tests": 11,
+      "failures": 0
+    },
+    "large_suite": {
+      "tests": 11,
+      "failures": 0
+    },
+    "unit_tests": 7,
+    "lint_errors": 0
+  }
 }

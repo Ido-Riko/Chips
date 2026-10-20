@@ -56,8 +56,8 @@ fun ChipsApp(
     val onActivity: (ActivityType, Boolean) -> Unit = { type, toggle ->
         if (state.demoMode) {
             dashboard.previewActivity(type)
-            scope.launch {
-                snackbar.currentSnackbarData?.dismiss()
+            snackbar.currentSnackbarData?.dismiss()
+            if (!toggle) scope.launch {
                 snackbar.showSnackbar("${type.label}: preview changed. Nothing saved.")
             }
         } else scope.launch {
@@ -65,9 +65,9 @@ fun ChipsApp(
                 val saved = if (toggle) dashboard.toggleToday(type) else dashboard.log(type)
                 runCatching { ActivitySyncWorker.schedule(context) }
                 snackbar.currentSnackbarData?.dismiss()
-                if (saved == null) {
-                    snackbar.showSnackbar("${type.label} unchecked for today")
-                } else if (snackbar.showSnackbar("${type.label} saved on this phone", "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
+                // The checked tile itself confirms a rhythm toggle. A snackbar can cover
+                // that same tile on compact screens and intercept the next tap.
+                if (!toggle && saved != null && snackbar.showSnackbar("${type.label} saved on this phone", "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
                     dashboard.delete(saved.id)
                     ActivitySyncWorker.schedule(context)
                 }
