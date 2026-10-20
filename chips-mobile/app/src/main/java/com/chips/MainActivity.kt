@@ -1,11 +1,9 @@
 package com.chips
 
 import android.Manifest
-import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.ComponentActivity
@@ -72,14 +70,23 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun openAssistantSettings() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roles = getSystemService(RoleManager::class.java)
-            if (roles != null && roles.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) {
-                openSettings(roles.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT))
+        settingsError = null
+        // ASSISTANT is not a requestable role on standard Android. A role request
+        // can immediately return canceled without displaying a picker.
+        for (action in listOf(
+            Settings.ACTION_VOICE_INPUT_SETTINGS,
+            Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS
+        )) {
+            try {
+                startActivity(Intent(action))
                 return
+            } catch (_: android.content.ActivityNotFoundException) {
+                // Some manufacturers omit the dedicated assistant screen.
+            } catch (_: SecurityException) {
+                // Try the public Default apps screen if this route is restricted.
             }
         }
-        openSettings(Intent(Settings.ACTION_VOICE_INPUT_SETTINGS))
+        settingsError = "Open Android Settings → Apps → Default apps → Digital assistant app, then choose CHIPS."
     }
 
     private fun openSettings(intent: Intent) {

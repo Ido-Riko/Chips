@@ -38,6 +38,7 @@ To use the overlay, select CHIPS as the device assistant from Settings. To try v
 - Today and Quick Log preview actions share completion state, say nothing was saved, and never create history. Turning preview off clears those completions.
 - Ask CHIPS without microphone permission opens Settings. Denial leaves normal navigation usable; permanent denial has an App settings route.
 - Returning from Android settings refreshes permission/assistant status. Check in-app and system-overlay recording separately.
+- Choose device assistant opens the system assistant-settings screen, with a Default apps fallback if the manufacturer omits that screen. The assistant-button regression test intercepts the outgoing intent and never changes the selected assistant.
 - Background/dismiss during recording releases the microphone. Real transcription, transport cancellation and recorder-failure coverage are tracked under M3.
 
 ## Validation status

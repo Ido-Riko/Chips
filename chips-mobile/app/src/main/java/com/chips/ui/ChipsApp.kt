@@ -154,7 +154,8 @@ private fun SettingsScreen(
         }
         DashboardCard("Device assistant") {
             Text(if (assistantSelected) "CHIPS is your selected assistant" else "CHIPS is not your selected assistant")
-            Text("Optional. You can also open voice from Today. Device gestures and lock-screen support need verification on your phone.")
+            Text("On the next screen, open Digital assistant app and select CHIPS.")
+            Text("Optional. You can also speak from Today without changing your device assistant.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = onAssistantSettings) { Text("Choose device assistant") }
             if (error != null) Text(error, color = MaterialTheme.colorScheme.error)
         }
