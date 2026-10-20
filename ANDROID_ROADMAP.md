@@ -49,6 +49,8 @@ Complete the milestones in order. Each produces a reviewable Android build; a mi
 
 **Done when:** a clean setup builds and installs; the owner can navigate the dashboard, history and settings on the Poco; all widgets are reachable without overlap at large font sizes; permission denial leaves the dashboard usable; CI checks pass. Demo data is visibly distinguished from personal data.
 
+Acceptance update, 20 October 2026: the owner confirmed Dashboard/History/Settings navigation, usable dashboard after microphone denial, and refreshed status after returning from assistant settings on the Poco. The owner waived large-text testing on the Poco as unnecessary; the earlier 1.5× emulator visual check remains recorded. The latest assistant-button fix is awaiting its CI result before M1 closes.
+
 ### M2 — Daily logging that can be trusted
 
 **User result:** log Workout, Beat Saber, Drawing, or Japanese, see Today and streaks update, and retain those records after closing the app—even offline.
