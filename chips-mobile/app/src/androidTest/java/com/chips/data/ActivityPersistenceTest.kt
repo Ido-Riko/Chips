@@ -8,6 +8,35 @@ import java.time.*
 import java.util.UUID
 
 class ActivityPersistenceTest {
+    @Test fun rhythmUncheckPersistsTombstonesForOnlyTheSelectedActivityAndDay() {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val name = "rhythm-${UUID.randomUUID()}.db"
+        var store = ActivityStore(context, name)
+        val now = Instant.parse("2026-10-20T12:00:00Z")
+        val zone = ZoneId.of("Asia/Jerusalem")
+        try {
+            val yesterday = store.log(ActivityType.WORKOUT, now.minusSeconds(86400), zone)
+            val drawing = store.log(ActivityType.DRAWING, now, zone)
+            val first = store.toggleToday(ActivityType.WORKOUT, now, zone)!!
+            val second = store.log(ActivityType.WORKOUT, now, zone)
+            assertNull(store.toggleToday(ActivityType.WORKOUT, now, zone))
+            store.close()
+            store = ActivityStore(context, name)
+            val rows = store.load()
+            for (id in listOf(first.id, second.id)) {
+                val removed = rows.first { it.id == id }
+                assertTrue(removed.deleted)
+                assertEquals(2L, removed.revision)
+                assertEquals("PENDING", removed.syncStatus)
+            }
+            assertFalse(rows.first { it.id == yesterday.id }.deleted)
+            assertFalse(rows.first { it.id == drawing.id }.deleted)
+            val next = store.toggleToday(ActivityType.WORKOUT, now, zone)!!
+            assertNotEquals(first.id, next.id)
+            assertEquals(setOf(ActivityType.WORKOUT, ActivityType.DRAWING), ActivityRules.completed(store.load(), LocalDate.parse("2026-10-20")))
+        } finally { store.close(); context.deleteDatabase(name) }
+    }
+
     @Test fun offlineWorkoutSurvivesReopenEditUndoAndStaleAcknowledgement() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val name = "persistence-${UUID.randomUUID()}.db"

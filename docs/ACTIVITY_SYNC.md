@@ -4,7 +4,7 @@ M2 implements local-first activity logging for the first personal deployment. An
 
 ## Rules and conflict policy
 
-- Every tap creates a separate session. Today and streaks count each activity once per recorded calendar date, excluding deleted sessions.
+- Quick Log taps create separate sessions. Your rhythm tiles toggle daily completion: an unchecked tile creates one session; a checked tile atomically tombstones all sessions for that activity on the phone’s current local date. Other activities and dates remain unchanged. Today and streaks count each activity once per recorded calendar date, excluding deleted sessions.
 - The capture timestamp is UTC epoch milliseconds. The phone’s IANA timezone and calendar date are recorded together. Existing sessions retain that date during travel. History can explicitly correct the completion date, type and note while retaining the capture timestamp.
 - A current streak ends today, or yesterday when today has no completion. A missing date breaks it. Dates are compared as calendar dates rather than 24-hour durations, including daylight-saving transitions. Future entries do not extend today’s streak.
 - The originating enrolled device is the only writer for a record. It increases the record’s integer revision for each edit/delete. Other devices belonging to that owner can read the snapshot, but cannot edit the record. This is an explicit first-personal-deployment limitation, not general multi-device editing support.

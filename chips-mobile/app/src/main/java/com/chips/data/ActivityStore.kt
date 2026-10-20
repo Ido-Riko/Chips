@@ -56,6 +56,22 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
         put(record)
         return record
     }
+    /** Rhythm toggles today's completion; Quick Log still creates individual sessions. */
+    @Synchronized fun toggleToday(type: ActivityType, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): ActivityRecord? {
+        val day = ActivityRules.day(now, zone)
+        if (load().none { !it.deleted && it.type == type && it.localDay == day }) return log(type, now, zone)
+        // Clear every matching session atomically, so repeated logs cannot leave the tile checked.
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.execSQL("""UPDATE activities SET deleted=1, note='', revision=revision+1,
+                sync_status='PENDING', error='' WHERE type=? AND local_day=? AND deleted=0""",
+                arrayOf(type.name, day))
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+        load()
+        return null
+    }
     @Synchronized fun edit(id: String, type: ActivityType, note: String, day: String) {
         LocalDateValidation.validate(day)
         require(note.length <= 2000) { "Notes can contain up to 2000 characters" }

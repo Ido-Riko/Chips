@@ -53,7 +53,7 @@ fun ChipsApp(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     LaunchedEffect(Unit) { ActivitySyncWorker.schedule(context) }
-    val onLog: (ActivityType) -> Unit = { type ->
+    val onActivity: (ActivityType, Boolean) -> Unit = { type, toggle ->
         if (state.demoMode) {
             dashboard.previewActivity(type)
             scope.launch {
@@ -62,10 +62,12 @@ fun ChipsApp(
             }
         } else scope.launch {
             try {
-                val saved = dashboard.log(type)
+                val saved = if (toggle) dashboard.toggleToday(type) else dashboard.log(type)
                 runCatching { ActivitySyncWorker.schedule(context) }
                 snackbar.currentSnackbarData?.dismiss()
-                if (snackbar.showSnackbar("${type.label} saved on this phone", "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
+                if (saved == null) {
+                    snackbar.showSnackbar("${type.label} unchecked for today")
+                } else if (snackbar.showSnackbar("${type.label} saved on this phone", "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
                     dashboard.delete(saved.id)
                     ActivitySyncWorker.schedule(context)
                 }
@@ -77,7 +79,7 @@ fun ChipsApp(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             Column {
-                if (destination == Destination.DASHBOARD) QuickLogBar(state.demoMode, onLog)
+                if (destination == Destination.DASHBOARD) QuickLogBar(state.demoMode) { onActivity(it, false) }
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column {
                         HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
@@ -105,7 +107,7 @@ fun ChipsApp(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                Destination.DASHBOARD -> DashboardScreen(state, onLog) {
+                Destination.DASHBOARD -> DashboardScreen(state, { onActivity(it, true) }) {
                     if (micPermissionGranted) showVoice = true else destination = Destination.SETTINGS
                 }
                 Destination.HISTORY -> ActivityHistoryScreen(state, dashboard)

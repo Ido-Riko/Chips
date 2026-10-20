@@ -19,7 +19,7 @@ The second command requires an emulator or USB-connected device with debugging e
 
 ## Daily logging and synchronization
 
-Today and Quick Log save Workout, Beat Saber, Drawing and Japanese to SQLite before confirming success. History, Today and streaks use those same records. Each tap adds a session; multiple sessions count once for a daily streak. The Undo snackbar removes only the session just added. History supports editing the activity, date and note, and confirmed deletion.
+Today and Quick Log save Workout, Beat Saber, Drawing and Japanese to SQLite before confirming success. History, Today and streaks use those same records. Your rhythm tiles toggle the activity for today: tapping a checked tile removes all of today’s sessions for that activity, and tapping it again creates a new session. Quick Log adds individual sessions; multiple sessions count once for a daily streak. The Undo snackbar removes only the session just added. History supports editing the activity, date and note, and confirmed deletion.
 
 The calendar date and IANA timezone are captured with each session. Travel does not reassign old sessions to another date. Today follows the phone’s current local date and updates while the app stays open. A streak counts consecutive completed dates ending today, or yesterday if today is incomplete. An explicit date correction in History changes completion/streak attribution without changing the original capture timestamp.
 
@@ -50,7 +50,7 @@ All three instrumentation tests also passed locally on the Android 17 / API 37 e
 
 ## M2 device acceptance
 
-1. Turn off Wi-Fi/mobile data. Log Workout from Quick Log; confirm Today, History and streaks agree. Undo a second session and confirm the first remains.
+1. Turn off Wi-Fi/mobile data. Tap Workout in Your rhythm, then tap it again to uncheck it. Confirm Today, History and streaks agree. Repeat for each activity. Add two Workout sessions through Quick Log, then uncheck Workout in Your rhythm: both of today’s Workout sessions should disappear while other activities and earlier days remain. Separately, Undo a new Quick Log session and confirm the earlier one remains.
 2. Force-stop CHIPS from Android App settings, reopen it, and confirm the first session remains. Repeat for the other activities.
 3. In History, edit an activity/date/note, then delete it. Restart while offline and confirm each change persists.
 4. Enroll the device against the migrated HTTPS service. Reconnect, retry repeatedly and restart during sync. Each stable ID must appear once on the server, with the latest revision and no restored deletions.

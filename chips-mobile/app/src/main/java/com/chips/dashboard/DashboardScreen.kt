@@ -21,6 +21,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
@@ -37,7 +40,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun DashboardScreen(state: DashboardUiState, onLog: (ActivityType) -> Unit, onVoice: () -> Unit) {
+fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) -> Unit, onVoice: () -> Unit) {
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -83,13 +86,14 @@ fun DashboardScreen(state: DashboardUiState, onLog: (ActivityType) -> Unit, onVo
         item { SleepCard(state.demoMode) }
         item {
             DashboardCard("Your rhythm", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "${state.completed.size} / 4 today") {
+                Text(if (state.demoMode) "Tap an activity to toggle its preview." else "Tap a checked activity to remove today's sessions.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 AdaptivePair(
-                    first = { ActivityTile(ActivityType.WORKOUT, state, onLog) },
-                    second = { ActivityTile(ActivityType.BEAT_SABER, state, onLog) }
+                    first = { ActivityTile(ActivityType.WORKOUT, state, onToggleActivity) },
+                    second = { ActivityTile(ActivityType.BEAT_SABER, state, onToggleActivity) }
                 )
                 AdaptivePair(
-                    first = { ActivityTile(ActivityType.DRAWING, state, onLog) },
-                    second = { ActivityTile(ActivityType.JAPANESE, state, onLog) }
+                    first = { ActivityTile(ActivityType.DRAWING, state, onToggleActivity) },
+                    second = { ActivityTile(ActivityType.JAPANESE, state, onToggleActivity) }
                 )
             }
         }
@@ -182,7 +186,10 @@ private fun ActivityTile(type: ActivityType, state: DashboardUiState, onLog: (Ac
     Surface(
         onClick = { onLog(type) }, shape = RoundedCornerShape(14.dp),
         color = if (completed) color.copy(alpha = 0.13f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().testTag("rhythm-${type.name}").semantics {
+            role = Role.Checkbox
+            toggleableState = if (completed) ToggleableState.On else ToggleableState.Off
+        }
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ChipsIcon(activitySymbol(type), color, Modifier.size(19.dp))

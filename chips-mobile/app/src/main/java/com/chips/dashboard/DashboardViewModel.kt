@@ -56,6 +56,9 @@ class DashboardViewModel(private val store: ActivityStore? = null) : ViewModel()
     suspend fun log(type: ActivityType): ActivityRecord = withContext(Dispatchers.IO) {
         checkNotNull(store).log(type)
     }
+    suspend fun toggleToday(type: ActivityType): ActivityRecord? = withContext(Dispatchers.IO) {
+        checkNotNull(store).toggleToday(type)
+    }
     suspend fun delete(id: String) = withContext(Dispatchers.IO) { checkNotNull(store).delete(id) }
     suspend fun edit(id: String, type: ActivityType, note: String, day: String) = withContext(Dispatchers.IO) {
         checkNotNull(store).edit(id, type, note, day)
