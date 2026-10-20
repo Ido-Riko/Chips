@@ -1,0 +1,16 @@
+{
+  "source": "extracted offline archive",
+  "upstream": "loopback Uvicorn",
+  "proxy": "local Caddy with verified temporary localhost certificate",
+  "database": "disposable PostgreSQL 16",
+  "https_health": true,
+  "missing_token_rejected": true,
+  "plaintext_personal_request_rejected": true,
+  "enrollment": true,
+  "retry_without_duplicates": true,
+  "latest_revision": true,
+  "terminal_deletion": true,
+  "revocation_blocks_reads_and_writes": true,
+  "same_device_rotation_and_pending_recovery": true,
+  "actual_server_or_phone_tested": false
+}

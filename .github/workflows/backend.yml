@@ -34,4 +34,11 @@ jobs:
           cache: pip
           cache-dependency-path: chips-backend/requirements*.txt
       - run: pip install -r requirements-test.txt
+      - name: Verify deployment tooling
+        run: |
+          command -v pwsh
+          sh -n chips-api.openrc
+          pwsh -NoProfile -NonInteractive -Command '$errors = $null; [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD "deploy.ps1"), [ref]$null, [ref]$errors) > $null; if ($errors.Count) { throw ($errors | Out-String) }'
+      - name: Validate HTTPS proxy template offline
+        run: docker run --rm --network none -v "$PWD/deploy/Caddyfile.example:/etc/caddy/Caddyfile:ro" caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - run: python -m pytest -q

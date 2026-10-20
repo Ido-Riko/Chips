@@ -1,14 +1,31 @@
 #!/sbin/openrc-run
 
 name="chips-api"
-description="CHIPS FastAPI Backend"
-command="/home/idori/chips-backend/.venv/bin/uvicorn"
-command_args="app.main:app --host 0.0.0.0 --port 8000"
-command_user="idori"
-directory="/home/idori/chips-backend"
+description="CHIPS authenticated API (loopback upstream for HTTPS proxy)"
+# Override these two values in /etc/conf.d/chips-api for a different installation.
+directory="${chips_directory:-/home/idori/chips-backend}"
+command_user="${chips_user:-idori}"
+command="${directory}/.venv/bin/uvicorn"
+command_args="app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips 127.0.0.1"
 pidfile="/run/chips-api.pid"
 command_background=true
+output_log="/var/log/chips-api/stdout.log"
+error_log="/var/log/chips-api/stderr.log"
 
 depend() {
-    need net postgresql redis
+    need net
+    # These can be remote services; local instances should start first when present.
+    use postgresql redis
+}
+
+start_pre() {
+    if [ ! -x "$command" ]; then
+        eerror "Install backend dependencies in ${directory}/.venv before starting chips-api."
+        return 1
+    fi
+    if [ ! -r "${directory}/migrations/001_activity_sync.sql" ]; then
+        eerror "Backend migration files are missing. Extract the complete release archive."
+        return 1
+    fi
+    checkpath --directory --mode 0750 --owner "$command_user" /var/log/chips-api
 }

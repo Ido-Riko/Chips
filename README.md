@@ -33,7 +33,7 @@ This is a mono-repo containing both the mobile client and the Python backend ser
 ## Getting Started
 
 1. **Mobile App**: Follow [chips-mobile/README.md](chips-mobile/README.md). The dashboard works without a backend or device-assistant enrollment.
-2. **Voice demo backend**: Install `chips-backend/requirements.txt` in a virtual environment, follow [service setup](docs/ACTIVITY_SYNC.md) to apply the additive migration, enroll a revocable device, and run the service behind HTTPS.
+2. **Voice demo backend**: Install `chips-backend/requirements.txt` in a virtual environment, follow [deployment preparation](chips-backend/DEPLOYMENT.md) and [service setup](docs/ACTIVITY_SYNC.md) to apply the additive migration, enroll a revocable device, and run the service behind HTTPS.
 
 ---
 

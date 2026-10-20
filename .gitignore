@@ -21,3 +21,4 @@ chips-backend/.env
 
 # Local test reports/caches
 .pytest_cache/
+chips-backend/dist/

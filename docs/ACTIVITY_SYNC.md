@@ -14,6 +14,8 @@ M2 implements local-first activity logging for the first personal deployment. An
 
 ## Backend setup
 
+Use [the deployment guide](../chips-backend/DEPLOYMENT.md) for offline packaging, the explicit upload step, OpenRC installation and the HTTPS proxy template. `deploy.ps1` now packages by default; uploading requires `-Upload -ServerIP HOST` and never transfers `.env` or applies a migration. The archive includes the actual `migrations/` directory. The OpenRC service binds only to loopback and trusts forwarded headers only from the same-host proxy.
+
 Use Python 3.12 and PostgreSQL. From `chips-backend/`:
 
 ```sh

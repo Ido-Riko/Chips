@@ -1,0 +1,5 @@
+# Replace this reserved example name with the final DNS name before starting Caddy.
+# Keep this HTTPS name stable: the Android database binds to its enrolled service URL.
+chips.example.com {
+	reverse_proxy 127.0.0.1:8000
+}
