@@ -18,9 +18,10 @@ import kotlinx.coroutines.CancellationException
 fun SyncSettingsCard() {
     val context = LocalContext.current
     val credentials = remember { SyncCredentials(context) }
+    val savedConfig = remember { runCatching { credentials.read() }.getOrNull() }
     var configured by remember { mutableStateOf(credentials.configured()) }
-    var endpoint by remember { mutableStateOf("") }
-    var token by remember { mutableStateOf("") }
+    var endpoint by remember { mutableStateOf(savedConfig?.endpoint.orEmpty()) }
+    var token by remember { mutableStateOf(savedConfig?.token.orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -36,14 +37,14 @@ fun SyncSettingsCard() {
         Text("Enter the HTTPS address ending in /api/v1 and your revocable device token. This installation keeps the same owner and device identity.")
         syncError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         OutlinedTextField(value = endpoint, onValueChange = { endpoint = it }, label = { Text("HTTPS service URL") }, singleLine = true)
-        OutlinedTextField(value = token, onValueChange = { token = it }, label = { Text("Device token") }, singleLine = true, visualTransformation = PasswordVisualTransformation())
+        OutlinedTextField(value = token, onValueChange = { token = it }, label = { Text("Device token") }, singleLine = true, visualTransformation = PasswordVisualTransformation(mask = '*'))
         if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error)
         Button(enabled = !busy, onClick = {
             busy = true
             scope.launch {
                 try {
                     withContext(Dispatchers.IO) { credentials.save(endpoint, token) }
-                    token = ""; configured = true; error = null
+                    token = token.trim(); configured = true; error = null
                     ActivitySyncWorker.schedule(context)
                 } catch (e: CancellationException) { throw e }
                 catch (_: Exception) { error = "Could not save. Check the HTTPS address and enrolled device token." }
@@ -52,7 +53,7 @@ fun SyncSettingsCard() {
         }) { Text(if (busy) "Saving…" else "Save sync settings") }
         if (configured) Row {
             TextButton(onClick = { ActivitySyncWorker.schedule(context, retryNow = true) }) { Text("Retry sync") }
-            TextButton(onClick = { ActivitySyncWorker.disconnect(context); configured = false }) { Text("Disconnect") }
+            TextButton(onClick = { ActivitySyncWorker.disconnect(context); configured = false; token = "" }) { Text("Disconnect") }
         }
     }
 }
