@@ -1,6 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
+from app.auth import require_device
+from app.models.activity import Device
 from app.main import app
 from app.database import get_db
 
@@ -8,9 +10,16 @@ client = TestClient(app)
 
 # Mocked DB session for testing
 async def override_get_db():
-    yield AsyncMock()
+    db = AsyncMock()
+    db.add = Mock()
+    yield db
 
-app.dependency_overrides[get_db] = override_get_db
+@pytest.fixture(autouse=True)
+def mock_database():
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[require_device] = lambda: Device(id="test-device", owner_id="test-owner")
+    yield
+    app.dependency_overrides.clear()
 
 def test_health_check():
     response = client.get("/health")
@@ -35,3 +44,9 @@ def test_process_voice_log(mock_claude, mock_stt):
     
     mock_stt.assert_called_once()
     mock_claude.assert_called_once()
+
+
+def test_voice_rejects_missing_device_credentials():
+    app.dependency_overrides.pop(require_device)
+    response = client.post("https://testserver/api/v1/voice-log", files={"audio": ("test.m4a", b"audio", "audio/mp4")})
+    assert response.status_code == 401

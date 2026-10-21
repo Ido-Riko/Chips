@@ -1,0 +1,131 @@
+{
+  "date": "2026-10-21",
+  "device": "Poco X6 Pro",
+  "app_source_commit": "9f5ce142ffa0c0290d7e01fad584caf57a20d5b9",
+  "status": "awaiting_real_midnight_and_timezone_acceptance",
+  "checks": {
+    "latest_debug_apk_installed_in_place": "passed",
+    "latest_android_and_backend_ci": "passed",
+    "trusted_https_health_and_enrolled_read": "passed",
+    "initial_phone_server_snapshot_agreement": {
+      "result": "passed",
+      "phone_records": 25,
+      "server_records": 25,
+      "active_records": 0,
+      "pending_or_failed_phone_records": 0,
+      "missing_or_different_records": 0,
+      "compared": [
+        "id",
+        "type",
+        "occurred_at",
+        "zone_id",
+        "local_day",
+        "note_hash",
+        "revision",
+        "deleted"
+      ]
+    },
+    "saved_enrollment_present": "passed",
+    "disconnect_retains_masked_token_after_reopen": {
+      "result": "passed",
+      "owner_confirmed": true,
+      "independent_phone_state": {
+        "encrypted_enrollment_saved": true,
+        "sync_enabled": false
+      },
+      "phone_server_snapshot_still_matches": true
+    },
+    "paused_logging_survives_reopen_without_upload": {
+      "result": "passed",
+      "owner_confirmed_reopen": true,
+      "activity": "WORKOUT",
+      "phone_records": 26,
+      "phone_active": 1,
+      "phone_pending": 1,
+      "server_records": 25,
+      "server_active": 0,
+      "sync_enabled": false,
+      "encrypted_enrollment_saved": true
+    },
+    "reconnect_and_retry_delivers_fresh_record_once": {
+      "result": "passed",
+      "same_id_as_paused_workout": true,
+      "phone_records": 26,
+      "server_records": 26,
+      "phone_active": 1,
+      "server_active": 1,
+      "phone_pending_or_failed": 0,
+      "matching_revision": 1,
+      "sync_enabled": true,
+      "record_occurrences_on_server": 1,
+      "all_phone_server_content_matches": true,
+      "owner_prompted_to_retry_and_reopen": true
+    },
+    "paused_edit_survives_reopen_without_upload": {
+      "result": "passed",
+      "same_workout_id": true,
+      "phone_revision": 2,
+      "server_revision": 1,
+      "phone_note_matches_test_marker": true,
+      "phone_sync_status": "PENDING",
+      "sync_enabled": false,
+      "owner_confirmed_reopen": true
+    },
+    "reconnect_delivers_latest_edit_without_duplicate": {
+      "result": "passed",
+      "same_workout_id": true,
+      "phone_revision": 2,
+      "server_revision": 2,
+      "phone_pending_or_failed": 0,
+      "record_occurrences_on_server": 1,
+      "all_phone_server_content_matches": true
+    },
+    "phone_deletion_survives_reopen_and_sync": {
+      "result": "passed",
+      "same_workout_id": true,
+      "phone_revision": 4,
+      "server_revision": 4,
+      "deleted_on_phone_and_server": true,
+      "deleted_note_cleared": true,
+      "phone_pending_or_failed": 0,
+      "all_phone_server_content_matches": true,
+      "owner_confirmed_offline_delete_and_reopen": true
+    },
+    "real_phone_token_revoked_on_server": {
+      "result": "passed",
+      "identity_http_status": 401,
+      "read_http_status": 401,
+      "write_http_status": 401
+    },
+    "phone_rejects_revoked_access_and_retains_local_logs": {
+      "result": "passed",
+      "owner_confirmed": true,
+      "phone_error": "Device access rejected. Check enrollment in Settings.",
+      "pending_or_failed_phone_records": 2,
+      "phone_only_new_records": 2,
+      "server_records_unchanged": 26,
+      "server_active": 0,
+      "revoked_api_http_status": 401,
+      "server_comparison_source": "operator database read while enrolled API access remained rejected",
+      "saved_enrollment_retained": true
+    },
+    "same_device_token_rotation_recovers_pending_logs": {
+      "result": "passed",
+      "same_owner_and_device_verified_on_server": true,
+      "phone_identity_binding_unchanged": true,
+      "old_token_rejected": true,
+      "replacement_token_https_status": 200,
+      "pending_records_recovered_once": 2,
+      "phone_records": 28,
+      "server_records": 28,
+      "phone_pending_or_failed": 0,
+      "all_phone_server_content_matches": true,
+      "original_deleted_workout_remains_deleted": true,
+      "owner_confirmed_save_retry_and_reopen": true
+    }
+  },
+  "pending": [
+    "real local midnight and timezone acceptance"
+  ],
+  "limitations": "Interactive logging, reconnect/retries, edit/delete and revocation/rotation checks are verified. Real midnight and timezone behavior are not yet accepted on the physical phone. Credentials and personal notes are excluded."
+}

@@ -1,0 +1,18 @@
+{
+  "verified_at": "2026-10-21T15:22:17.414915+00:00",
+  "base_url": "private Tailscale HTTPS endpoint (hostname omitted)",
+  "checks": [
+    "trusted HTTPS health and unauthenticated rejection",
+    "repeated create requests produce exactly one activity",
+    "edits survive stale retries; conflicting equal revisions rejected",
+    "owner isolation",
+    "repeated deletion and delayed retries cannot resurrect a deleted record",
+    "revocation blocks reads and writes",
+    "same-device credential rotation restores pending-write delivery without duplicates",
+    "existing voice row count preserved"
+  ],
+  "voice_rows_preserved": 2,
+  "test_devices_revoked": true,
+  "test_records": "isolated owner, retained as terminal tombstones",
+  "phone_acceptance": "not performed"
+}

@@ -2,7 +2,7 @@
 
 **CHIPS** is a personal Android dashboard and Digital Assistant in development. The app opens to Today, with History and Settings navigation. Assistant enrollment is optional for browsing; voice can also be opened in the app. Lock-screen behavior still needs device verification.
 
-Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity persistence, real transcription and live data integrations remain planned work.
+Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity logging, History and streaks now use local SQLite, with an authenticated background sync path. Real transcription and other live dashboard integrations remain planned work.
 
 ## Repository Structure
 
@@ -24,7 +24,7 @@ This is a mono-repo containing both the mobile client and the Python backend ser
   - Sends multipart POST to the backend and renders the returned response asynchronously.
 
 ### Backend Sever (`chips-backend`)
-- **Language**: Python 3.11
+- **Language**: Python 3.12 (validated)
 - **Framework**: FastAPI (Served via Uvicorn)
 - **Database**: PostgreSQL via SQLAlchemy
 - **LLM Integration**: Anthropic, OpenAI, or Gemini, selected from backend configuration
@@ -33,8 +33,8 @@ This is a mono-repo containing both the mobile client and the Python backend ser
 ## Getting Started
 
 1. **Mobile App**: Follow [chips-mobile/README.md](chips-mobile/README.md). The dashboard works without a backend or device-assistant enrollment.
-2. **Voice demo backend**: Install `chips-backend/requirements.txt` in a virtual environment, configure the settings in `chips-backend/app/config.py`, prepare the database tables, and run `uvicorn app.main:app` from `chips-backend/`. Database migrations and a reproducible full backend setup remain roadmap work.
+2. **Voice demo backend**: Install `chips-backend/requirements.txt` in a virtual environment, follow [deployment preparation](chips-backend/DEPLOYMENT.md) and [service setup](docs/ACTIVITY_SYNC.md) to apply the additive migration, enroll a revocable device, and run the service behind HTTPS.
 
 ---
 
-*(Note: Phase 0 does not feature real STT, Wake-Word detection, or User Authentication yet. These are scheduled components for future releases.)*
+Real STT and saved voice history remain M3 work. Wake-word detection remains outside the first release. Backend personal-data routes require an enrolled device credential.

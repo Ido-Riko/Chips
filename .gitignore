@@ -18,3 +18,7 @@ __pycache__/
 # AI Agents
 .agent/
 chips-backend/.env
+
+# Local test reports/caches
+.pytest_cache/
+chips-backend/dist/
