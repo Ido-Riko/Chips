@@ -55,7 +55,7 @@ class ChipsVoiceInteractionSession(context: Context) : VoiceInteractionSession(c
             setViewTreeSavedStateRegistryOwner(this@ChipsVoiceInteractionSession)
             setContent {
                 ChipsTheme {
-                    AssistantOverlayContent(onDismiss = { hide() })
+                    AssistantOverlayContent(onDismiss = { hide() }, reserveFingerprintSpace = true)
                 }
             }
         }

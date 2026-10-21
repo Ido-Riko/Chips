@@ -104,3 +104,29 @@ Validation completed locally:
 - Executed `deploy.ps1` in its default offline mode and produced `chips-backend/dist/chips-backend.tar.gz`. No real server upload, database change, proxy/service installation, restart or phone operation was performed.
 
 Backend CI now checks PowerShell/POSIX tooling and validates the proxy template offline before the full test suite. These changes extend draft PR #3; actual deployment and Poco HTTPS reconnect/revocation checks remain open. Local HTTPS validation is separate evidence and does not mark the deployed-service acceptance check complete.
+
+## Deployed M2 backend — 21 October 2026
+
+The actual postmarketOS/OpenRC server was backed up and upgraded to M2. The additive migration completed at version 1, preserving both existing voice logs. An initial external-helper import-path failure occurred before migration; rollback restored the prior API, the helper was corrected, and activation then succeeded.
+
+Uvicorn now listens only on loopback port 8000, behind private Tailscale Serve HTTPS with normal certificate verification. The host's separate drop-policy nftables chain required an explicit TCP 443 allowance on tailscale0; the obsolete general TCP 8000 allowance was removed. Rules were backed up and persisted without flushing the full firewall or changing SSH/Tailscale-managed rules.
+
+Live isolated-owner checks passed authentication, owner isolation, idempotent create, revision conflicts/stale retries, permanent deletion, revoked reads/writes and same-device token rotation/pending delivery. Synthetic devices were revoked and test records retained as isolated terminal tombstones. A separate phone credential was enrolled and verified; credentials stay only in the restricted server enrollment file. See [server HTTPS evidence](evidence/m2-server-https-deployment.json), with the private hostname omitted.
+
+Actual Poco reconnect/retry/restart/edit/delete, revocation/rotation and real day-boundary gates remain open. The owner reporting “Sync configured” does not by itself prove delivery.
+
+## Saved synchronization token display — 21 October 2026
+
+The owner reported that the token field became blank after saving despite the configured status. Settings now restores the saved endpoint/token from the existing encrypted credential store, displays token characters as asterisks, and retains the masked token after saving. Disconnect clears the displayed token. Credential storage remains encrypted; the UI state is not saved into an Android instance-state bundle.
+
+Debug APK assembly, lint and existing unit tests passed with the cached Gradle dependencies (`:app:assembleDebug :app:lintDebug :app:testDebugUnitTest --offline`). No device is currently attached to ADB, so the updated APK has not been installed or visually checked on the Poco.
+
+## Assistant presentation and agent brief — 21 October 2026
+
+Replaced the plain assistant card with a shared bottom-sheet presentation for the in-app dialog and Android assistant session. It uses the established violet/mint theme, branded header, accessible close action, decorative waveform emblem, distinct ready/listening/processing/reply/error layouts, a reply card and a fixed hold-to-speak control. Content scrolls independently of the controls. System sessions reserve fingerprint-sensor space on tall screens. The UI labels voice as a preview and explicitly states that transcription uses demo text and replies are not saved; this does not complete M3. Unexpected send failures now return to a visible error state; existing recording and backend behavior otherwise remain in place.
+
+Updated `CHIPS_phase1_agent_brief.md` with draft PR #3, real M2 deployment/migration/firewall/HTTPS evidence, published-token CI success, remaining phone/day-boundary gates and the assistant source map. It no longer treats M2 as unpublished local work or asks a future agent to repeat an already completed deployment.
+
+Debug assembly, lint, all seven unit tests and all 13 API 37 emulator instrumentation tests passed. Two new tests verify compact-window recording/processing/close controls and independently scrollable long replies at 1.5× font size. Inspected the actual in-app ready screen on the emulator; captured preview retained locally. Automated tests were restricted to the emulator, not the owner's phone. Physical-device/system-invocation acceptance remains separate.
+
+The updated debug APK was subsequently installed in place on the connected Poco using `adb install -r`, without clearing application data. No automated instrumentation or input was run on the phone.

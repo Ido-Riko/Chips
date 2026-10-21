@@ -1,6 +1,6 @@
 # CHIPS — M1 (formerly Phase 1) Results and Android Agent Brief
 
-Updated 20 October 2026. **Phase 1 / milestone 1 is complete.** This document replaces the original mock-dashboard build instructions with the accepted implementation, its evidence, and the revised delivery order.
+Updated 21 October 2026. **M1 is complete. M2 is implemented and its server is deployed; physical-device synchronization and day-boundary acceptance remain open.** This document replaces the original mock-dashboard build instructions with the accepted implementation, current evidence, and delivery order.
 
 Use **M1–M5** in new chats, issues and implementation work. This historical filename is retained for continuity. The canonical numbering, status table and retired-phase mapping are in [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md#milestone-names-and-current-plan); do not maintain a parallel Phase 2–8 schedule.
 
@@ -8,8 +8,8 @@ Use **M1–M5** in new chats, issues and implementation work. This historical fi
 
 - Android is the current product focus. The first release is a personal app for the owner on a Poco X6 Pro.
 - The Android project is `chips-mobile/`, not `chips-android/`. Preserve the existing Kotlin/Compose implementation and the accepted visual design.
-- [PR #1](https://github.com/Ido-Riko/Chips/pull/1) is merged. At this audit, `master` is `fb7263dcf29098fbe1c19d337b08772158c5bd1b`; its tree contains the completed M1 foundation.
-- The shared local workspace now also contains later M2 implementation. Those changes are **not on master at this audit** and M2 acceptance is still open. Do not describe them as work completed in the Phase 1 chat, rebuild them from scratch, or overwrite them while obtaining a checkout.
+- PRs [#1](https://github.com/Ido-Riko/Chips/pull/1) and [#2](https://github.com/Ido-Riko/Chips/pull/2) are merged. M2 is in [draft PR #3](https://github.com/Ido-Riko/Chips/pull/3), targeting `master` at base `3cd553972c3701d59e812e8d07046b058123380a` in the last inspected snapshot. Do not infer the current master SHA from older audit notes.
+- The shared local workspace contains M2 and subsequent assistant UI work. M2 is **published as a draft, not merged or fully accepted**. Preserve local changes; do not rebuild logging from scratch or overwrite this workspace while obtaining a checkout.
 - [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md) defines milestones M1–M5. [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) records execution evidence in the workspace. Its later M1-closure/M2 entries extend the earlier history; earlier pending-status notes are historical.
 - The original Phase 2–8 labels are superseded by M2–M5 below. In particular, current **M2 means durable logging**, not the original brief's Beat Saber integration phase.
 
@@ -70,7 +70,7 @@ Pinned project configuration at this audit:
 | AndroidX JUnit / Espresso | 1.3.0 / 3.7.0 |
 | Local validated JDK / CI JDK | Android Studio bundled JBR 25 / JDK 17 |
 
-Use [chips-mobile/README.md](chips-mobile/README.md) for build commands, endpoint configuration and device checks. Keep local SDK paths, IDE configuration, tokens and provider keys out of Git. The old brief's live-host/database/Redis assertions were not revalidated; do not assume a server is running or migrate a real database based on that text.
+Use [chips-mobile/README.md](chips-mobile/README.md) for build commands, endpoint configuration and device checks. Keep local SDK paths, IDE configuration, tokens and provider keys out of Git. The server was inspected and deployed on 21 October; use the current server evidence below rather than the original brief's infrastructure assumptions. A migration has already been applied; do not repeat deployment setup without inspecting the current installation.
 
 The M1 source is organized as follows; the proposed separate `widgets/` files were not needed:
 
@@ -85,13 +85,14 @@ chips-mobile/app/src/main/java/com/chips/
 │   ├── ChipsApp.kt                    # Today / History / Settings and in-app voice entry
 │   ├── ChipsIcon.kt                   # Native line icons
 │   ├── AssistantOverlayContent.kt
+│   ├── AssistantPanel.kt              # Shared assistant presentation and state layouts
 │   └── theme/ChipsTheme.kt
 ├── assistant/                        # System assistant registration/session
 ├── audio/AudioRecorder.kt
 └── network/ApiClient.kt
 ```
 
-Later local M2 adds `data/`, `ActivityHistoryScreen.kt`, `SyncSettingsCard.kt` and backend activity/auth/migration code. Inspect those actual files before planning more logging work. Do not replace the M2 database with a new Room implementation merely because Room was suggested in the roadmap; native SQLite is the current implementation.
+M2 adds `data/`, `ActivityHistoryScreen.kt`, `SyncSettingsCard.kt` and backend activity/auth/migration code. Settings restores the saved service URL and shows the saved token as asterisks, including after reopening; Disconnect clears the token field. Inspect the actual files before planning more logging work. Do not replace the M2 database with a new Room implementation merely because Room was suggested in the roadmap; native SQLite is the current implementation.
 
 ## M1 acceptance and evidence
 
@@ -109,7 +110,7 @@ Later local M2 adds `data/`, `ActivityHistoryScreen.kt`, `SyncSettingsCard.kt` a
 
 The assistant-button code revision `ee4307c9924e428802c92432751d7f565521332f` passed both jobs in [CI run 39482910525](https://github.com/Ido-Riko/Chips/actions/runs/39482910525). The final PR head `7f1f34fb0dae85ae78d08bfd70517ad80852c635` also passed both jobs in [CI run 39483379703](https://github.com/Ido-Riko/Chips/actions/runs/39483379703). CI built/linted/tested the app and ran API 35 instrumentation. M1 has four unit tests and four instrumentation tests, including two basic template checks; this is limited foundation coverage, not proof of recording/network/lock-screen reliability.
 
-The owner accepted the revised visual direction as usable. Device acceptance covers the stated navigation/permission/setup scenarios; it is not a general no-crashes guarantee for every voice or background scenario. Merge status and CI were rechecked during this brief update. No new app test run was required for this documentation-only change.
+The owner accepted the revised visual direction as usable. Device acceptance covers the stated navigation/permission/setup scenarios; it is not a general no-crashes guarantee for every voice or background scenario. The CI results above describe M1 history, not validation of later source changes; use the progress ledger for current checks.
 
 ## Revisited plan: keep the product goal, change the delivery order
 
@@ -118,24 +119,40 @@ The old plan put multiple integrations ahead of durable logging and allowed the 
 | Milestone | Outcome | Current status and gate |
 | --- | --- | --- |
 | M1 — Useful Android home | Dashboard/navigation/theme, explicit preview, optional setup, tests/CI | Complete; owner device checks passed or were explicitly waived; PR #1 merged |
-| M2 — Trustworthy daily logging | Offline records, shared Today/Quick Log/History, undo/edit/delete, real streaks, authenticated sync | Implemented locally; still requires owner-device and deployed-service acceptance, then publication/review |
+| M2 — Trustworthy daily logging | Offline records, shared Today/Quick Log/History, undo/edit/delete, real streaks, authenticated sync | Draft PR #3; actual HTTPS backend deployed and operator sync checks passed; phone reconnect/revocation/rotation and real day-boundary checks remain open |
 | M3 — Real voice assistant | Actual transcription/answers, safe recording lifecycle, cancellation, structured errors and persisted conversations | Not complete; fixed STT test string remains a blocker |
 | M4 — Personal dashboard integrations | Real Japanese, drawing, Beat Saber, sleep and pantry/meal data, one source at a time | Not complete; choose/validate actual sources and demonstrate each integration |
 | M5 — Dependable personal beta | Upgrade/recovery/export/deletion, diagnostics, device coverage and a seven-day owner trial | Not complete; a signed/distributed release and trial are not implied by a debug build |
 
 ### Immediate next work: finish accepting M2, not another dashboard scaffold
 
-At this audit, local source contains SQLite activity storage, real History/edit/delete/undo, daily streak rules, WorkManager sync, Keystore-protected enrollment credentials, and owned backend activity routes/migration/enrollment tooling. Normal-mode activity actions now save locally in that workspace; preview remains isolated. The current activity sync contract uses stable UUIDs and `/api/v1/activities` operations, not the original brief's proposed `POST /api/v1/activity-log`.
+Current source contains SQLite activity storage, real History/edit/delete/undo, daily streak rules, WorkManager sync, Keystore-protected enrollment credentials, and owned backend activity routes/migration/enrollment tooling. Normal-mode activity actions save locally; preview remains isolated. The activity sync contract uses stable UUIDs and `/api/v1/activities` operations, not the original brief's proposed `POST /api/v1/activity-log`.
 
-Later local progress records seven unit tests, nine API 37 instrumentation tests, twelve backend tests with PostgreSQL coverage, and an offline force-stop/relaunch demonstration. The Android XML reports and saved evidence were inspected for this brief update; the backend count is the recorded M2 result, not a new backend test run by this chat. See the local `docs/ACTIVITY_SYNC.md`, `docs/evidence/m2-local-checks.json` and `docs/evidence/m2-offline-workout.json`. Those M2 artifacts/code are not yet on master at this audit, so their presence in the workspace must not be mistaken for a published/accepted deployment.
+Recorded M2 evidence includes seven unit tests, eleven API 37 instrumentation tests after the rhythm-toggle fixes, 21 backend/deployment tests with PostgreSQL coverage, and offline force-stop/relaunch persistence. Android and backend CI passed at PR head `06fb9f18259b4c083068b7650f90e9c8379a9f14`. The saved-token fix at `091e156111e251f03a6646c59a63bf04fd007774` also passed [Android CI](https://github.com/Ido-Riko/Chips/actions/runs/39627667148) and [backend CI](https://github.com/Ido-Riko/Chips/actions/runs/39627667118); both results were checked on 21 October. These results do not automatically validate subsequent assistant UI changes.
+
+### Actual server state verified on 21 October
+
+- The server runs postmarketOS/aarch64, Python 3.12, OpenRC, PostgreSQL and Redis. M2 is installed in a separate release directory; the previous application and restricted database/config backups were retained.
+- The additive migration completed at schema version 1 and preserved both existing voice logs. The first activation failed before migration due to a helper import path; this was fixed and the successful rerun independently verified.
+- Uvicorn listens only on loopback port 8000. Tailscale Serve provides private HTTPS with normal certificate verification; no public registration or public internet exposure was added.
+- The host firewall now allows TCP 443 through `tailscale0`; the obsolete general TCP 8000 allowance was removed and the change persisted. Do not reload the full nftables ruleset casually: its configuration flushes rules, including Tailscale-managed state.
+- Live isolated-owner HTTPS checks passed: device authentication, owner isolation, repeated create without duplicates, stale/equal-revision handling, terminal deletion, revoked reads/writes, and same-device token rotation/pending delivery. Test devices were revoked; test tombstones remain separate from the phone owner's records.
+- A separate phone device credential was enrolled and verified. Its token exists only in a restricted server-side enrollment file; never include it in this brief, Git, screenshots or chat. The owner reported “Sync configured” in the app, but that alone is not proof of activity delivery.
+
+See [server HTTPS evidence](docs/evidence/m2-server-https-deployment.json) and the dated entries in [the progress ledger](docs/ANDROID_PROGRESS.md). Server tests do not substitute for phone acceptance.
 
 Before closing M2:
 
-1. Inspect/preserve the local M2 changes and their latest progress notes; verify the actual worktree and remote state. Local Git still has no baseline commit at this audit. Do not reset or overwrite this workspace to match master.
-2. Run the M2 Poco acceptance steps from the local Android README: save offline, force-stop/relaunch, inspect the same saved record in Today/History, and verify undo/edit/delete and day boundaries.
-3. Validate a trusted HTTPS deployment with the required migration and revocable device enrollment. Follow the documented operator procedure; do not assume those deployment steps were performed by the local tests.
-4. Reconnect the actual device and verify exactly one server record after retries/restarts, correct edit/delete recovery, no resurrection after deletion, and revoked/unauthorized credential rejection.
-5. Publish/review the M2 change and run its Android/backend CI; record remaining limitations before marking M2 complete. Existing M1 CI does not validate unpublished M2 code.
+1. Preserve local changes and inspect draft PR #3 before publishing further work. Local Git still has no baseline commit; do not reset or overwrite this workspace to match master.
+2. Preserve the Poco offline checks already marked accepted in PR #3; inspect the latest evidence before repeating them. Install/check the latest UI build separately as needed.
+3. Connect the Poco to Tailscale and confirm its configured CHIPS service and enrolled device. Verify actual offline records reach the deployed server exactly once after retries/restarts, with correct edit/delete recovery and no restored deletions.
+4. Test revocation on the actual phone: remote requests fail while local logging works; rotate that same device identity and recover pending records. Do not replace the owner/device UUID or service URL casually; Android binds its activity database to them.
+5. Observe a real local midnight and confirm streak/date behavior and retained captured dates across timezone changes.
+6. Check CI for the latest published head, review and close remaining gates before merging M2. Passing M1 CI or operator-only server tests do not close the physical-device gates.
+
+### Assistant presentation update — 21 October
+
+The shared in-app/system assistant now has a dedicated bottom-sheet layout in the established CHIPS theme: branded header and close action, a decorative voice emblem, distinct ready/listening/processing/reply/error states, a readable reply card, and a fixed hold-to-speak control. Long content scrolls independently of the controls; system invocation retains fingerprint-sensor clearance on tall screens. Voice preview labeling explicitly says transcription uses demo text and replies are not saved. This visual work does not close M3 or prove lock-screen/recording reliability. Consult the progress ledger for build and emulator validation of the latest UI source.
 
 ### After M2
 
