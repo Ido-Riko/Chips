@@ -1,6 +1,6 @@
 # CHIPS — M1 (formerly Phase 1) Results and Android Agent Brief
 
-Updated 21 October 2026. **M1 is complete. M2 is implemented and its server is deployed; physical-device synchronization and day-boundary acceptance remain open.** This document replaces the original mock-dashboard build instructions with the accepted implementation, current evidence, and delivery order.
+Updated 21 October 2026. **M1 is complete. M2 is implemented, deployed and verified for phone synchronization/recovery; real-midnight and physical-device timezone acceptance remain open.** This document replaces the original mock-dashboard build instructions with the accepted implementation, current evidence, and delivery order.
 
 Use **M1–M5** in new chats, issues and implementation work. This historical filename is retained for continuity. The canonical numbering, status table and retired-phase mapping are in [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md#milestone-names-and-current-plan); do not maintain a parallel Phase 2–8 schedule.
 
@@ -9,7 +9,7 @@ Use **M1–M5** in new chats, issues and implementation work. This historical fi
 - Android is the current product focus. The first release is a personal app for the owner on a Poco X6 Pro.
 - The Android project is `chips-mobile/`, not `chips-android/`. Preserve the existing Kotlin/Compose implementation and the accepted visual design.
 - PRs [#1](https://github.com/Ido-Riko/Chips/pull/1) and [#2](https://github.com/Ido-Riko/Chips/pull/2) are merged. M2 is in [draft PR #3](https://github.com/Ido-Riko/Chips/pull/3), targeting `master` at base `3cd553972c3701d59e812e8d07046b058123380a` in the last inspected snapshot. Do not infer the current master SHA from older audit notes.
-- The shared local workspace contains M2 and subsequent assistant UI work. M2 is **published as a draft, not merged or fully accepted**. Preserve local changes; do not rebuild logging from scratch or overwrite this workspace while obtaining a checkout.
+- The shared local workspace contains M2 and subsequent assistant UI work. M2 is **published as a draft, with server and phone sync/recovery accepted; not yet merged or fully closed**. Preserve local changes; do not rebuild logging from scratch or overwrite this workspace while obtaining a checkout.
 - [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md) defines milestones M1–M5. [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) records execution evidence in the workspace. Its later M1-closure/M2 entries extend the earlier history; earlier pending-status notes are historical.
 - The original Phase 2–8 labels are superseded by M2–M5 below. In particular, current **M2 means durable logging**, not the original brief's Beat Saber integration phase.
 
@@ -119,7 +119,7 @@ The old plan put multiple integrations ahead of durable logging and allowed the 
 | Milestone | Outcome | Current status and gate |
 | --- | --- | --- |
 | M1 — Useful Android home | Dashboard/navigation/theme, explicit preview, optional setup, tests/CI | Complete; owner device checks passed or were explicitly waived; PR #1 merged |
-| M2 — Trustworthy daily logging | Offline records, shared Today/Quick Log/History, undo/edit/delete, real streaks, authenticated sync | Draft PR #3; actual HTTPS backend deployed and operator sync checks passed; phone reconnect/revocation/rotation and real day-boundary checks remain open |
+| M2 — Trustworthy daily logging | Offline records, shared Today/Quick Log/History, undo/edit/delete, real streaks, authenticated sync | Draft PR #3; deployed HTTPS and Poco reconnect/edit/delete/revocation/rotation checks passed; real-midnight/timezone acceptance remains open |
 | M3 — Real voice assistant | Actual transcription/answers, safe recording lifecycle, cancellation, structured errors and persisted conversations | Not complete; fixed STT test string remains a blocker |
 | M4 — Personal dashboard integrations | Real Japanese, drawing, Beat Saber, sleep and pantry/meal data, one source at a time | Not complete; choose/validate actual sources and demonstrate each integration |
 | M5 — Dependable personal beta | Upgrade/recovery/export/deletion, diagnostics, device coverage and a seven-day owner trial | Not complete; a signed/distributed release and trial are not implied by a debug build |
@@ -137,16 +137,16 @@ Recorded M2 evidence includes seven unit tests, eleven API 37 instrumentation te
 - Uvicorn listens only on loopback port 8000. Tailscale Serve provides private HTTPS with normal certificate verification; no public registration or public internet exposure was added.
 - The host firewall now allows TCP 443 through `tailscale0`; the obsolete general TCP 8000 allowance was removed and the change persisted. Do not reload the full nftables ruleset casually: its configuration flushes rules, including Tailscale-managed state.
 - Live isolated-owner HTTPS checks passed: device authentication, owner isolation, repeated create without duplicates, stale/equal-revision handling, terminal deletion, revoked reads/writes, and same-device token rotation/pending delivery. Test devices were revoked; test tombstones remain separate from the phone owner's records.
-- A separate phone device credential was enrolled and verified. Its token exists only in a restricted server-side enrollment file; never include it in this brief, Git, screenshots or chat. The owner reported “Sync configured” in the app, but that alone is not proof of activity delivery.
+- A separate phone device credential was enrolled and verified. Its token exists only in a restricted server-side enrollment file; never include it in this brief, Git, screenshots or chat. The Poco subsequently passed actual logging/reconnect/retry/edit/delete and revocation/rotation checks; final phone/server snapshots match on all 28 records with nothing pending.
 
-See [server HTTPS evidence](docs/evidence/m2-server-https-deployment.json) and the dated entries in [the progress ledger](docs/ANDROID_PROGRESS.md). Server tests do not substitute for phone acceptance.
+See [server HTTPS evidence](docs/evidence/m2-server-https-deployment.json) and the dated entries in [the progress ledger](docs/ANDROID_PROGRESS.md). Detailed [Poco acceptance evidence](docs/evidence/m2-poco-live-acceptance.json) records the separate physical-device checks. Server tests alone do not substitute for them.
 
 Before closing M2:
 
 1. Preserve local changes and inspect draft PR #3 before publishing further work. Local Git still has no baseline commit; do not reset or overwrite this workspace to match master.
 2. Preserve the Poco offline checks already marked accepted in PR #3; inspect the latest evidence before repeating them. Install/check the latest UI build separately as needed.
-3. Connect the Poco to Tailscale and confirm its configured CHIPS service and enrolled device. Verify actual offline records reach the deployed server exactly once after retries/restarts, with correct edit/delete recovery and no restored deletions.
-4. Test revocation on the actual phone: remote requests fail while local logging works; rotate that same device identity and recover pending records. Do not replace the owner/device UUID or service URL casually; Android binds its activity database to them.
+3. Preserve the completed Poco sync evidence: paused logging/reopen, reconnect/retries without duplicate IDs, edit/delete recovery and retained tombstones all passed. Do not repeat these as if they were untested.
+4. Preserve the completed phone revocation/rotation result: rejected access retained local logs, and rotating the same owner/device recovered both pending entries exactly once. Keep the replacement credential private and retain the existing identity/service binding.
 5. Observe a real local midnight and confirm streak/date behavior and retained captured dates across timezone changes.
 6. Check CI for the latest published head, review and close remaining gates before merging M2. Passing M1 CI or operator-only server tests do not close the physical-device gates.
 

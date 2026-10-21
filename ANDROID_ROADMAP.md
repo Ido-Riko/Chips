@@ -1,6 +1,6 @@
 # CHIPS Android: demo to daily-use app
 
-Prepared 19 October 2026. Status: M1 complete on 20 October 2026; M2 implementation and acceptance checks in progress.
+Prepared 19 October 2026. Status: M1 complete on 20 October 2026; M2 server and Poco sync/recovery accepted on 21 October; real-midnight/timezone acceptance remains open.
 
 ## Outcome and scope
 
@@ -14,10 +14,10 @@ Keep Kotlin, Jetpack Compose, and the existing Android assistant integration. Bu
 
 Use **M1–M5** as the only current delivery numbering. "Phase 1" is a historical alias for M1; the filename `CHIPS_phase1_agent_brief.md` is retained for continuity. The old Phases 2–8 are retired, not extra milestones to execute after M5. The product domains remain in scope; their delivery order and grouping changed.
 
-| Current milestone | Deliverable | Status on 20 October 2026 |
+| Current milestone | Deliverable | Status on 21 October 2026 |
 | --- | --- | --- |
 | M1 — Useful Android home | Dashboard, navigation, preview, optional assistant setup, build/tests/CI | Complete; PR #1 merged, Poco checks passed, Poco large-text test explicitly waived |
-| M2 — Trustworthy daily logging | Durable offline activity records, History, undo/edit/delete, real streaks and authenticated synchronization | Implemented in the local workspace; still needs Poco/deployed HTTPS acceptance, publication/review and M2 CI |
+| M2 — Trustworthy daily logging | Durable offline activity records, History, undo/edit/delete, real streaks and authenticated synchronization | Implemented in draft PR #3; deployed HTTPS and Poco sync/edit/delete/revocation/rotation passed, CI green for installed source; real-midnight/timezone acceptance and review remain |
 | M3 — Reliable real voice | Actual transcription and answers, safe recording/cancellation, recoverable errors and saved conversations | Not complete; transcription is still a fixed test string |
 | M4 — Real dashboard integrations | Japanese, drawing, Beat Saber, sleep and meals/pantry connected to actual personal data | Not complete; deliver and accept one integration at a time |
 | M5 — Dependable personal beta | Safe updates and recovery, export/deletion, diagnostics, device coverage and seven-day owner trial | Not complete |
@@ -34,7 +34,7 @@ Use **M1–M5** as the only current delivery numbering. "Phase 1" is a historica
 
 M3 makes the existing voice prototype reliable and real; M5 adds a release/acceptance gate. Neither is a renaming of an old individual integration phase. Immediate work is to accept and publish the existing M2 implementation, not restart it or begin the old "Phase 2" Beat Saber work.
 
-M1 is on `master`. M2 code and its later progress/evidence files are local and unpublished at this audit; their implementation/testing is not proof of deployed-service acceptance. Inspect the actual worktree and [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) before continuing.
+M1 is on `master`. M2 code is published in draft PR #3. Actual server and Poco synchronization/recovery evidence is recorded; remaining day-boundary/timezone gates still prevent M2 closure. Inspect the actual worktree and [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) before continuing.
 
 ## Initial baseline — historical, 19 October 2026
 
@@ -80,6 +80,8 @@ Acceptance update, 20 October 2026: the owner confirmed Dashboard/History/Settin
 ### M2 — Daily logging that can be trusted
 
 Implementation update, 20 October 2026: durable local logging, undo/edit/delete, real streaks, background sync, device enrollment and owned backend contract are implemented. Debug/release builds, seven unit tests, nine emulator tests, twelve backend tests (including PostgreSQL) and an offline force-stop/relaunch check passed locally. M2 remains open for Poco and deployed HTTPS reconnect/retry/revocation acceptance; see `docs/ANDROID_PROGRESS.md` and `docs/ACTIVITY_SYNC.md`.
+
+Acceptance update, 21 October 2026: the actual HTTPS backend and Poco passed paused logging/reopen, reconnect/retries without duplicates, edit/delete recovery, revoked access with local logging, and same-device token rotation/pending recovery. Phone/server snapshots match on 28 records with zero pending/failed records. Installed source `9f5ce142ffa0c0290d7e01fad584caf57a20d5b9` passed Android/backend CI. Only real local-midnight and physical-device timezone acceptance remain before review/closure; see [Poco evidence](docs/evidence/m2-poco-live-acceptance.json).
 
 **User result:** log Workout, Beat Saber, Drawing, or Japanese, see Today and streaks update, and retain those records after closing the app—even offline.
 
