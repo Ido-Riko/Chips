@@ -20,6 +20,7 @@ fun SyncSettingsCard() {
     val credentials = remember { SyncCredentials(context) }
     val savedConfig = remember { runCatching { credentials.read() }.getOrNull() }
     var configured by remember { mutableStateOf(credentials.configured()) }
+    var connected by remember { mutableStateOf(credentials.connected()) }
     var endpoint by remember { mutableStateOf(savedConfig?.endpoint.orEmpty()) }
     var token by remember { mutableStateOf(savedConfig?.token.orEmpty()) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -33,7 +34,11 @@ fun SyncSettingsCard() {
         onDispose { syncPrefs.unregisterOnSharedPreferenceChangeListener(listener) }
     }
     DashboardCard("Synchronization") {
-        Text(if (configured) "Sync configured" else "Local only · entries stay saved without enrollment")
+        Text(when {
+            connected -> "Sync configured"
+            configured -> "Sync disconnected · credentials saved"
+            else -> "Local only · entries stay saved without enrollment"
+        })
         Text("Enter the HTTPS address ending in /api/v1 and your revocable device token. This installation keeps the same owner and device identity.")
         syncError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         OutlinedTextField(value = endpoint, onValueChange = { endpoint = it }, label = { Text("HTTPS service URL") }, singleLine = true)
@@ -44,7 +49,7 @@ fun SyncSettingsCard() {
             scope.launch {
                 try {
                     withContext(Dispatchers.IO) { credentials.save(endpoint, token) }
-                    token = token.trim(); configured = true; error = null
+                    token = token.trim(); configured = true; connected = true; error = null
                     ActivitySyncWorker.schedule(context)
                 } catch (e: CancellationException) { throw e }
                 catch (_: Exception) { error = "Could not save. Check the HTTPS address and enrolled device token." }
@@ -52,8 +57,17 @@ fun SyncSettingsCard() {
             }
         }) { Text(if (busy) "Saving…" else "Save sync settings") }
         if (configured) Row {
-            TextButton(onClick = { ActivitySyncWorker.schedule(context, retryNow = true) }) { Text("Retry sync") }
-            TextButton(onClick = { ActivitySyncWorker.disconnect(context); configured = false; token = "" }) { Text("Disconnect") }
+            if (connected) {
+                TextButton(enabled = !busy, onClick = { ActivitySyncWorker.schedule(context, retryNow = true) }) { Text("Retry sync") }
+                TextButton(enabled = !busy, onClick = { ActivitySyncWorker.disconnect(context); connected = false }) { Text("Disconnect") }
+            } else {
+                TextButton(enabled = !busy, onClick = {
+                    credentials.reconnect()
+                    connected = true
+                    ActivitySyncWorker.schedule(context, retryNow = true)
+                }) { Text("Reconnect") }
+            }
         }
+        if (configured) Text("Disconnect pauses sync and keeps your saved URL and token.", style = MaterialTheme.typography.bodyMedium)
     }
 }

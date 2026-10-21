@@ -92,7 +92,7 @@ chips-mobile/app/src/main/java/com/chips/
 └── network/ApiClient.kt
 ```
 
-M2 adds `data/`, `ActivityHistoryScreen.kt`, `SyncSettingsCard.kt` and backend activity/auth/migration code. Settings restores the saved service URL and shows the saved token as asterisks, including after reopening; Disconnect clears the token field. Inspect the actual files before planning more logging work. Do not replace the M2 database with a new Room implementation merely because Room was suggested in the roadmap; native SQLite is the current implementation.
+M2 adds `data/`, `ActivityHistoryScreen.kt`, `SyncSettingsCard.kt` and backend activity/auth/migration code. Settings restores the saved service URL and shows the saved token as asterisks, including after reopening; Disconnect pauses synchronization while retaining the encrypted URL/token and masked field; Reconnect resumes with the saved enrollment. Inspect the actual files before planning more logging work. Do not replace the M2 database with a new Room implementation merely because Room was suggested in the roadmap; native SQLite is the current implementation.
 
 ## M1 acceptance and evidence
 

@@ -23,7 +23,7 @@ Today and Quick Log save Workout, Beat Saber, Drawing and Japanese to SQLite bef
 
 The calendar date and IANA timezone are captured with each session. Travel does not reassign old sessions to another date. Today follows the phone’s current local date and updates while the app stays open. A streak counts consecutive completed dates ending today, or yesterday if today is incomplete. An explicit date correction in History changes completion/streak attribution without changing the original capture timestamp.
 
-Local logging needs no network or enrollment. Sync requires an operator-enrolled device token and an HTTPS endpoint ending in `/api/v1`. Enter both in Settings → Synchronization. See [service setup and contract](../docs/ACTIVITY_SYNC.md). Pending/synced/failed states appear in History; retries run through persistent WorkManager jobs, with a manual Retry sync action. A force-stopped app resumes its work after it is opened again. Disconnect removes the credential and cancels background sync while retaining activities.
+Local logging needs no network or enrollment. Sync requires an operator-enrolled device token and an HTTPS endpoint ending in `/api/v1`. Enter both in Settings → Synchronization. See [service setup and contract](../docs/ACTIVITY_SYNC.md). Pending/synced/failed states appear in History; retries run through persistent WorkManager jobs, with a manual Retry sync action. A force-stopped app resumes its work after it is opened again. Disconnect pauses synchronization and cancels background jobs while keeping the encrypted URL/token and all activities. The paused state survives app restarts; Reconnect resumes with the saved enrollment. Saving sync settings also reconnects.
 
 ## Voice service
 

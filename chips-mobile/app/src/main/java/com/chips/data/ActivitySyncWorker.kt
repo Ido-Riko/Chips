@@ -22,7 +22,9 @@ class ActivitySyncWorker(context: Context, params: WorkerParameters) : Coroutine
             val store = ActivityStore.get(applicationContext)
             val status = applicationContext.getSharedPreferences("sync_state", Context.MODE_PRIVATE)
             try {
-                val config = SyncCredentials(applicationContext).read() ?: return@withLock Result.success()
+                val credentials = SyncCredentials(applicationContext)
+                if (!credentials.connected()) return@withLock Result.success()
+                val config = credentials.read() ?: return@withLock Result.success()
                 ActivitySynchronizer(store, HttpActivityRemote(config)).sync()
                 status.edit().remove("error").apply()
                 Result.success()
@@ -40,7 +42,7 @@ class ActivitySyncWorker(context: Context, params: WorkerParameters) : Coroutine
         private val syncMutex = Mutex()
         private val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         fun schedule(context: Context, retryNow: Boolean = false) {
-            if (!SyncCredentials(context).configured()) return
+            if (!SyncCredentials(context).connected()) return
             val manager = WorkManager.getInstance(context)
             manager.enqueueUniqueWork("activity-sync", if (retryNow) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.APPEND_OR_REPLACE,
                 OneTimeWorkRequestBuilder<ActivitySyncWorker>().setConstraints(constraints)
@@ -49,7 +51,7 @@ class ActivitySyncWorker(context: Context, params: WorkerParameters) : Coroutine
                 PeriodicWorkRequestBuilder<ActivitySyncWorker>(15, TimeUnit.MINUTES).setConstraints(constraints).build())
         }
         fun disconnect(context: Context) {
-            SyncCredentials(context).clear()
+            SyncCredentials(context).disconnect()
             WorkManager.getInstance(context).cancelUniqueWork("activity-sync")
             WorkManager.getInstance(context).cancelUniqueWork("activity-sync-periodic")
             context.getSharedPreferences("sync_state", Context.MODE_PRIVATE).edit().remove("error").apply()

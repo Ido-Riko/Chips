@@ -30,7 +30,7 @@ class SyncCredentials(context: Context, preferencesName: String = "sync_credenti
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key()) }
         val body = JSONObject().put("endpoint", url.toString().trimEnd('/')).put("token", token.trim()).toString()
         val encoded = Base64.encodeToString(cipher.iv + cipher.doFinal(body.toByteArray()), Base64.NO_WRAP)
-        check(prefs.edit().putString("config", encoded).commit()) { "Could not save sync settings" }
+        check(prefs.edit().putString("config", encoded).putBoolean("enabled", true).commit()) { "Could not save sync settings" }
     }
     fun read(): Config? {
         val encoded = prefs.getString("config", null) ?: return null
@@ -41,4 +41,11 @@ class SyncCredentials(context: Context, preferencesName: String = "sync_credenti
     }
     fun clear() { check(prefs.edit().clear().commit()) }
     fun configured() = prefs.contains("config")
+    // Existing enrollments have no enabled flag and continue syncing after an app update.
+    fun connected() = configured() && prefs.getBoolean("enabled", true)
+    fun disconnect() { check(prefs.edit().putBoolean("enabled", false).commit()) { "Could not disconnect sync" } }
+    fun reconnect() {
+        check(configured()) { "Save device enrollment first" }
+        check(prefs.edit().putBoolean("enabled", true).commit()) { "Could not reconnect sync" }
+    }
 }
