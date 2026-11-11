@@ -31,7 +31,8 @@ class VoiceContractTest {
         val invalid = listOf("plain old answer", "{}", json(id).put("is_demo", true).toString(),
             json("another-request").toString(), json(id).put("transcript", JSONObject.NULL).toString(),
             json(id).put("answer", "").toString(), json(id).put("transcript", "x".repeat(10_001)).toString(),
-            json(id).put("protocol_version", 2).toString())
+            json(id).put("protocol_version", 2).toString(), json(id).put("is_demo", "false").toString(),
+            json(id).put("protocol_version", "1").toString())
         invalid.forEach { body ->
             val failure = runCatching { VoiceReplyProtocol.decode(body, id) }.exceptionOrNull()
             assertTrue(failure is VoiceFailure)
@@ -128,5 +129,40 @@ class VoiceContractTest {
                 assertEquals(ActivityType.WORKOUT, db.load().single().type)
             }
         } finally { context.deleteDatabase(name) }
+    }
+
+    @Test fun incompatibleCapabilitiesNeverReceiveAudio() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val file = File.createTempFile("capability-test", ".m4a", context.cacheDir)
+        var posts = 0
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            val request = chain.request()
+            if (request.method == "POST") posts++
+            Response.Builder().request(request).protocol(Protocol.HTTP_1_1).code(200).message("fixture")
+                .body("{\"protocol_version\":1,\"idempotency\":false}".toResponseBody()).build()
+        }.build()
+        try {
+            val failure = runCatching {
+                HttpVoiceService("https://fixture.invalid/api/v1", "fixture-token", client)
+                    .send(VoiceRequest(UUID.randomUUID().toString(), file, 1234)) {}
+            }.exceptionOrNull()
+            assertTrue(failure is VoiceFailure)
+            assertFalse((failure as VoiceFailure).retryable)
+            assertEquals(0, posts)
+        } finally {
+            file.delete(); client.dispatcher.executorService.shutdown(); client.connectionPool.evictAll()
+        }
+    }
+
+    /** Isolated fixture intentionally retained for the external force-stop/relaunch acceptance check. */
+    @Test fun completedConversationFixtureForProcessRestart(): Unit = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        ActivityStore(context, "m3-process-acceptance.db").use { db ->
+            val history = VoiceHistoryStore(db)
+            val record = VoiceConversation("11111111-1111-4111-8111-111111111111", 1234,
+                "Synthetic M3 process-restart fixture", "Synthetic saved reply")
+            history.save(record)
+            assertEquals(record, history.records.value.single())
+        }
     }
 }

@@ -81,7 +81,7 @@ class AssistantPanelTest {
         compose.onNodeWithText("Retry request").assertIsDisplayed().performClick()
         compose.onNodeWithText("Discard").assertIsDisplayed().performClick()
         compose.runOnIdle { assertTrue(retries == 1 && discarded == 1); phase.value = AssistantPhase.SAVING }
-        compose.onNodeWithText("Cancel request").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Dismiss").assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription("Close assistant").assertIsDisplayed()
     }
 }

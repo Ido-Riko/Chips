@@ -9,7 +9,7 @@ Use **M1–M5** in new chats, issues and implementation work. This historical fi
 - Android is the current product focus. The first release is a personal app for the owner on a Poco X6 Pro.
 - The Android project is `chips-mobile/`, not `chips-android/`. Preserve the existing Kotlin/Compose implementation and the accepted visual design.
 - PRs #1, #2 and [#3](https://github.com/Ido-Riko/Chips/pull/3) are merged. Local and GitHub master were verified at `e3d4eea07708e20f138387b78dde4107546bee10` on 12 November. M2 still needs real-midnight/timezone acceptance.
-- Preserve the existing local roadmap/inference requirements and IDE settings. Current work is Android-only M3 recording/request reliability; the owner explicitly deferred server work. Older draft-PR/local-Git notes below are historical; use the dated progress ledger for current validation.
+- Preserve the existing local roadmap/inference requirements and IDE settings. The Android M3 client is implemented and locally accepted; see the newest progress entry and `docs/VOICE_CONTRACT.md`. The owner explicitly deferred server work. Publish work checkpoints to draft PR #4; suppress interactive Git credential dialogs and prefer existing GitHub Desktop HTTPS credentials when available. Older draft-PR/local-Git notes below are historical; use the dated progress ledger for current validation.
 - [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md) defines milestones M1–M5. [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) records execution evidence in the workspace. Its later M1-closure/M2 entries extend the earlier history; earlier pending-status notes are historical.
 - The original Phase 2–8 labels are superseded by M2–M5 below. In particular, current **M2 means durable logging**, not the original brief's Beat Saber integration phase.
 
@@ -120,7 +120,7 @@ The old plan put multiple integrations ahead of durable logging and allowed the 
 | --- | --- | --- |
 | M1 — Useful Android home | Dashboard/navigation/theme, explicit preview, optional setup, tests/CI | Complete; owner device checks passed or were explicitly waived; PR #1 merged |
 | M2 — Trustworthy daily logging | Offline records, shared Today/Quick Log/History, undo/edit/delete, real streaks, authenticated sync | PR #3 merged; deployed HTTPS and Poco reconnect/edit/delete/revocation/rotation checks passed; real-midnight/timezone acceptance remains open |
-| M3 — Real voice assistant | Actual transcription/answers, safe recording lifecycle, cancellation, structured errors and persisted conversations | Not complete; fixed STT test string remains a blocker |
+| M3 — Real voice assistant | Actual transcription/answers, safe recording lifecycle, cancellation, structured errors and persisted conversations | Android client implemented/locally accepted; compatible server, real inference and physical Poco acceptance remain |
 | M4 — Personal dashboard integrations | Real Japanese, drawing, Beat Saber, sleep and pantry/meal data, one source at a time | Not complete; choose/validate actual sources and demonstrate each integration |
 | M5 — Dependable personal beta | Upgrade/recovery/export/deletion, diagnostics, device coverage and a seven-day owner trial | Not complete; a signed/distributed release and trial are not implied by a debug build |
 

@@ -80,7 +80,8 @@ class AudioRecorder(private val context: Context) : VoiceRecorder {
     }
 
     private fun releaseRecorder() {
-        try { recorder?.release() } catch (_: Exception) { /* Cleanup remains best effort. */ }
+        val previous = recorder
         recorder = null
+        try { previous?.release() } catch (_: Exception) { /* Cleanup remains best effort. */ }
     }
 }

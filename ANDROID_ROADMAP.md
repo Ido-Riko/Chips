@@ -1,6 +1,6 @@
 # CHIPS Android: demo to daily-use app
 
-Prepared 19 October 2026. Updated 12 November 2026. M1 is complete. M2 was merged on 21 October; server/Poco sync and recovery are accepted, with real-midnight/timezone acceptance still open. Android M3 recording/request reliability is in progress; server inference work is deferred by the owner.
+Prepared 19 October 2026. Updated 12 November 2026. M1 is complete. M2 was merged on 21 October; server/Poco sync and recovery are accepted, with real-midnight/timezone acceptance still open. M3 Android client implementation and local acceptance are complete against the version-1 service contract; server inference and physical-phone acceptance remain deferred/open.
 
 ## Outcome and scope
 
@@ -18,7 +18,7 @@ Use **M1–M5** as the only current delivery numbering. "Phase 1" is a historica
 | --- | --- | --- |
 | M1 — Useful Android home | Dashboard, navigation, preview, optional assistant setup, build/tests/CI | Complete; PR #1 merged, Poco checks passed, Poco large-text test explicitly waived |
 | M2 — Trustworthy daily logging | Durable offline activity records, History, undo/edit/delete, real streaks and authenticated synchronization | Merged in PR #3; deployed HTTPS and Poco sync/edit/delete/revocation/rotation passed; real-midnight/timezone acceptance remains |
-| M3 — Reliable real voice | Actual transcription and answers, safe recording/cancellation, recoverable errors and saved conversations | Android recording/request reliability underway; real transcription and saved conversations remain; server work deferred |
+| M3 — Reliable real voice | Actual transcription and answers, safe recording/cancellation, recoverable errors and saved conversations | Android client implemented and locally verified: structured transcript/reply, saved conversations, retry, cancellation and lock gating; server inference and physical-phone acceptance remain |
 | M4 — Real dashboard integrations | Japanese, drawing, Beat Saber, sleep and meals/pantry connected to actual personal data | Not complete; deliver and accept one integration at a time |
 | M5 — Dependable personal beta | Safe updates and recovery, export/deletion, diagnostics, device coverage and seven-day owner trial | Not complete |
 
@@ -95,6 +95,8 @@ Acceptance update, 21 October 2026: the actual HTTPS backend and Poco passed pau
 **Done when:** an offline log survives force-stop/relaunch, appears exactly once after reconnecting and repeated retries, and can be edited/deleted without reappearing. Today, history and streaks agree across the day boundary. An unauthorized request cannot read or alter records.
 
 ### M3 — A real, reliable voice assistant
+
+Android client update, 12 November 2026: recording/controller/transport recovery, versioned service-capability and response validation, same-ID retries, local transcript/answer persistence and History deletion, storage-only retry, abandoned-audio cleanup and unlock-only assistant behavior are implemented. Debug and unsigned release builds, lint, 24 JVM tests and 29 API 37 emulator tests pass. Actual emulator system invocation/secure-lock policy and a force-stop/relaunch persistence/cleanup check passed. See [Android acceptance evidence](docs/evidence/m3-android-client-acceptance.json) and the [service contract](docs/VOICE_CONTRACT.md). This completes the Android client implementation/local checks; it does not close full M3. The current server is incompatible, and real inference/provider/server-deduplication and physical Poco acceptance remain open.
 
 **User result:** hold to speak, receive an answer based on what was actually said, and find the transcript and answer in history.
 

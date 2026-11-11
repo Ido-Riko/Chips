@@ -124,7 +124,8 @@ internal fun AssistantPanel(
                             AssistantPhase.SAVING -> "Saving on this phone…"
                             else -> "One moment…"
                         }, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
-                        Text("You can cancel or close this window at any time.", style = MaterialTheme.typography.bodyLarge,
+                        Text(if (phase == AssistantPhase.SAVING) "You can close this window. The completed reply will stay in History."
+                            else "You can cancel or close this window at any time.", style = MaterialTheme.typography.bodyLarge,
                             color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
                     } else {
                         if (phase == AssistantPhase.REPLY && transcript != null) {
@@ -188,7 +189,9 @@ internal fun AssistantPanel(
                             TextButton(onClick = onDiscard) { Text("Discard") }
                         }
                     }
-                    if (busy) TextButton(onClick = onDiscard) { Text("Cancel request") }
+                    if (busy) TextButton(onClick = onDiscard) {
+                        Text(if (phase == AssistantPhase.SAVING) "Dismiss" else "Cancel request")
+                    }
                     if (!busy && phase != AssistantPhase.ERROR) Text("Conversations are saved on this phone.",
                         style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
                         textAlign = TextAlign.Center)

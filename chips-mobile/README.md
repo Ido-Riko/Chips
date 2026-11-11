@@ -50,7 +50,7 @@ Successful real transcripts/replies are saved to SQLite before success is shown 
 
 Source restored from GitHub commit `46f0c8510f0bdf2d1c55a779b23a62bb9cd9d857` on 19 October 2026. After Android Studio installation, the local debug build, lint and all four unit tests passed on 20 October with Gradle 9.6.0, AGP 9.4.1 and bundled JBR 25. Lint reported zero errors and 29 warnings; those warnings remain follow-up work.
 
-All three instrumentation tests also passed locally on the Android 17 / API 37 emulator using the standard `connectedDebugAndroidTest` task. Espresso was updated to 3.7.0 and AndroidX JUnit to 1.3.0 after the old Espresso version failed on a removed platform method. PR #1’s latest head passed build and API 35 UI jobs in CI run 39483379703. The owner confirmed the M1 Poco checks and waived large-text testing; M1 is closed. Lock-screen invocation remains M3 work. Current M2 validation is recorded in `docs/ANDROID_PROGRESS.md`.
+All three instrumentation tests also passed locally on the Android 17 / API 37 emulator using the standard `connectedDebugAndroidTest` task. Espresso was updated to 3.7.0 and AndroidX JUnit to 1.3.0 after the old Espresso version failed on a removed platform method. PR #1’s latest head passed build and API 35 UI jobs in CI run 39483379703. The owner confirmed the M1 Poco checks and waived large-text testing; M1 is closed. Physical-phone lock-screen invocation remains M3 acceptance work. The completed Android client implementation and actual emulator system/lock checks are recorded in `docs/ANDROID_PROGRESS.md`.
 
 ## M2 device acceptance
 
@@ -62,3 +62,9 @@ All three instrumentation tests also passed locally on the Android 17 / API 37 e
 6. Revoke the device token on the server. Read/write requests must fail; local logging remains usable. Rotate the token for the same device UUID and retry pending changes.
 
 These are M2 acceptance checks, separate from the completed M1 Poco checks. See the progress ledger for executed evidence.
+
+## M3 Android acceptance
+
+The client implementation passes debug/release assembly, lint, 24 JVM tests and 29 API 37 instrumentation tests. A normal emulator installation passed actual system invocation and secure-lock privacy checks. A real force-stop/relaunch retained an isolated synthetic saved conversation and removed abandoned audio. See [final evidence](../docs/evidence/m3-android-client-acceptance.json).
+
+Full M3 still requires the deferred compatible service and Poco acceptance. Once the service is ready, verify ten representative spoken utterances, real transcripts/answers retained after restart, independent PC/API STT and LLM configuration, unavailable-PC recovery, permission denial/revocation/contention, interrupted uploads/processing, rapid invocation, same-ID retries and unlocked/locked system invocation. Server deduplication/cancellation cannot be certified by client tests alone.
