@@ -27,9 +27,13 @@ Local logging needs no network or enrollment. Sync requires an operator-enrolled
 
 ## Voice service
 
-Transcription remains a stub; saved transcripts and full voice reliability are M3 work. The existing voice path now uses the same enrolled HTTPS service and bearer token. Set up Synchronization before trying it. Provider keys remain on the backend. Release builds disable cleartext traffic. Debug builds retain `BASE_URL` in `local.properties` for local development, but the backend requires device authentication even in local HTTP mode.
+Android now requires the [version-1 voice service contract](../docs/VOICE_CONTRACT.md). The existing demo/plain-text server needs an update; server work is deferred. Android checks authenticated `/voice-capabilities` before sending audio, and requires real structured transcript/answer responses and advertised request idempotency. Settings → Synchronization supplies the HTTPS endpoint/device token. STT and LLM model/provider selection is independently configured on the service; PC and explicitly selected API providers are supported by the contract. Provider keys stay on the service.
 
-To use the overlay, select CHIPS as the device assistant from Settings. To try voice without changing the device assistant, grant microphone access and tap Ask CHIPS on Today. Results remain visible until dismissed; they are not saved yet. Recording is limited to 60 seconds, and clips shorter than 400 ms or failed/empty captures are rejected. A cancelled hold gesture discards audio. Closing/backgrounding the assistant releases the microphone and cancels the HTTP request. Temporary clips are deleted after completion, failure or cancellation. Transport failures are shown as errors; hold to record again. Voice POSTs are not automatically retried because server request deduplication is not implemented. Audio uses an MPEG-4 container with AAC encoding (`.m4a`, `audio/mp4`).
+To use the overlay, select CHIPS as the device assistant from Settings. To use voice without changing that selection, grant microphone access and tap Ask CHIPS on Today. Voice and private replies require an unlocked phone. System invocation on a locked phone reveals only unlock guidance.
+
+Captures use MPEG-4/AAC (`.m4a`, `audio/mp4`), reject clips shorter than 400 ms, and stop/discard at 60 seconds. Cancelled hold gestures discard audio. Closing/backgrounding cancels recording/network work. Uploading, processing and saving have separate visible states. Retry request reuses the recording and request UUID; Retry saving only repeats local storage. Discard/close removes retry audio. A cold app start clears clips abandoned by process death.
+
+Successful real transcripts/replies are saved to SQLite before success is shown and appear in History → Conversations. Read conversation expands both texts; deletion removes the local copy after confirmation. Server copies have separate retention/deletion. Malformed, mismatched, demo and legacy responses are never saved as personal conversations. Activity history and synchronization are unaffected.
 
 ## Manual acceptance checks
 

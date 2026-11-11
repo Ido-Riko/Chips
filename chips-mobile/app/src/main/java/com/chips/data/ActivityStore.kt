@@ -24,7 +24,7 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
             sync_status TEXT NOT NULL, error TEXT NOT NULL)""")
         db.execSQL("CREATE INDEX activity_day ON activities(local_day, deleted)")
         db.execSQL("CREATE TABLE sync_identity (slot INTEGER PRIMARY KEY CHECK(slot=1), identity TEXT NOT NULL)")
-        // M3 will populate this; transient recordings are never stored here.
+        // Successful M3 conversations only; transient audio is never stored here.
         db.execSQL("""CREATE TABLE voice_history (id TEXT PRIMARY KEY, occurred_at INTEGER NOT NULL,
             transcript TEXT NOT NULL, answer TEXT NOT NULL, sync_status TEXT NOT NULL)""")
     }
@@ -43,6 +43,32 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
         }
         mutableRecords.value = rows
         return rows
+    }
+    @Synchronized fun loadVoiceHistory(): List<com.chips.voice.VoiceConversation> {
+        val rows = mutableListOf<com.chips.voice.VoiceConversation>()
+        readableDatabase.query("voice_history", null, null, null, null, null, "occurred_at DESC, id").use { c ->
+            while (c.moveToNext()) rows += com.chips.voice.VoiceConversation(
+                c.getString(c.getColumnIndexOrThrow("id")), c.getLong(c.getColumnIndexOrThrow("occurred_at")),
+                c.getString(c.getColumnIndexOrThrow("transcript")), c.getString(c.getColumnIndexOrThrow("answer")))
+        }
+        return rows
+    }
+    @Synchronized fun saveVoiceConversation(record: com.chips.voice.VoiceConversation) {
+        require(record.id.isNotBlank() && record.transcript.isNotBlank() && record.answer.isNotBlank())
+        val values = ContentValues().apply {
+            put("id", record.id); put("occurred_at", record.occurredAt)
+            put("transcript", record.transcript); put("answer", record.answer); put("sync_status", "LOCAL")
+        }
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            val previous = db.rawQuery("SELECT occurred_at, transcript, answer FROM voice_history WHERE id=?", arrayOf(record.id)).use { c ->
+                if (c.moveToFirst()) com.chips.voice.VoiceConversation(record.id, c.getLong(0), c.getString(1), c.getString(2)) else null
+            }
+            check(previous == null || previous == record) { "Conflicting reply for a saved request" }
+            if (previous == null) check(db.insertOrThrow("voice_history", null, values) != -1L) { "Could not save conversation" }
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
     }
     @Synchronized fun bind(identity: String) {
         val current = readableDatabase.rawQuery("SELECT identity FROM sync_identity WHERE slot=1", null).use {

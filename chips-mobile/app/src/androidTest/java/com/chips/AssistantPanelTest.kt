@@ -34,7 +34,7 @@ class AssistantPanelTest {
             }
         }
         compose.onNodeWithText("Hold to speak").assertIsDisplayed().assertIsEnabled()
-        compose.onNodeWithText("Transcription uses demo text. Replies aren’t saved.").assertIsDisplayed()
+        compose.onNodeWithText("Conversations are saved on this phone.").assertIsDisplayed()
         compose.runOnIdle { phase.value = AssistantPhase.LISTENING }
         compose.onNodeWithText("Release to send").assertIsDisplayed().assertIsEnabled()
         compose.runOnIdle { phase.value = AssistantPhase.PROCESSING }
@@ -59,6 +59,29 @@ class AssistantPanelTest {
         compose.onNodeWithText("REPLY").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(reply).assertExists()
         compose.onNodeWithText("Hold to speak").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithContentDescription("Close assistant").assertIsDisplayed()
+    }
+
+    @Test fun retryAndCancelRemainReachableAtLargeTextInCompactWindow() {
+        val phase = mutableStateOf(AssistantPhase.ERROR)
+        var retries = 0
+        var discarded = 0
+        compose.setContent {
+            ChipsTheme {
+                val density = LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.5f)) {
+                    Box(Modifier.requiredSize(320.dp, 480.dp)) {
+                        AssistantPanel(phase.value, "Service unavailable. Retry when your PC is ready.",
+                            remember { MutableInteractionSource() }, {}, canRetry = true,
+                            onRetry = { retries++ }, onDiscard = { discarded++ })
+                    }
+                }
+            }
+        }
+        compose.onNodeWithText("Retry request").assertIsDisplayed().performClick()
+        compose.onNodeWithText("Discard").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertTrue(retries == 1 && discarded == 1); phase.value = AssistantPhase.SAVING }
+        compose.onNodeWithText("Cancel request").assertIsDisplayed().performClick()
         compose.onNodeWithContentDescription("Close assistant").assertIsDisplayed()
     }
 }

@@ -12,6 +12,9 @@ class AudioRecorder(private val context: Context) : VoiceRecorder {
     private var recorder: MediaRecorder? = null
     private var currentFile: File? = null
     private var startedAt = 0L
+    private var failureListener: (String) -> Unit = {}
+
+    override fun onFailure(listener: (String) -> Unit) { failureListener = listener }
 
     override fun start(): Result<Unit> {
         cancel()
@@ -27,6 +30,19 @@ class AudioRecorder(private val context: Context) : VoiceRecorder {
             recording.setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
             recording.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             recording.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            recording.setMaxDuration(60_000)
+            recording.setOnErrorListener { _, _, _ ->
+                if (recorder === recording) {
+                    cancel()
+                    failureListener("The microphone stopped unexpectedly. Check microphone access and record again.")
+                }
+            }
+            recording.setOnInfoListener { _, what, _ ->
+                if (recorder === recording && what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    cancel()
+                    failureListener("Recording reached the 60-second limit. Record a shorter message.")
+                }
+            }
             recording.setOutputFile(file.absolutePath)
             recording.prepare()
             recording.start()

@@ -110,7 +110,18 @@ fun ChipsApp(
                 Destination.DASHBOARD -> DashboardScreen(state, { onActivity(it, true) }) {
                     if (micPermissionGranted) showVoice = true else destination = Destination.SETTINGS
                 }
-                Destination.HISTORY -> ActivityHistoryScreen(state, dashboard)
+                Destination.HISTORY -> {
+                    var conversations by rememberSaveable { mutableStateOf(false) }
+                    Column {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            FilterChip(selected = !conversations, onClick = { conversations = false }, label = { Text("Activities") })
+                            FilterChip(selected = conversations, onClick = { conversations = true }, label = { Text("Conversations") })
+                        }
+                        Box(Modifier.weight(1f)) {
+                            if (conversations) VoiceHistoryScreen() else ActivityHistoryScreen(state, dashboard)
+                        }
+                    }
+                }
                 Destination.SETTINGS -> SettingsScreen(
                     micPermissionGranted, isAssistant, settingsError, state.demoMode,
                     onRequestMicrophone, onAssistantSettings, onAppSettings, dashboard::setDemoMode
@@ -171,8 +182,10 @@ private fun SettingsScreen(
             OutlinedButton(onClick = onAssistantSettings) { Text("Choose device assistant") }
             if (error != null) Text(error, color = MaterialTheme.colorScheme.error)
         }
-        DashboardCard("Development build") {
-            Text("Voice currently uses the existing demo service. Real transcription and saved history are not connected yet.")
+        DashboardCard("Voice service") {
+            Text("Voice uses your saved service enrollment. The service selects speech recognition and the answer model independently; either may run on your PC or use an explicitly configured API.")
+            Text("A compatible service must return a real transcript and reply. Successful conversations are saved on this phone. The earlier demo service needs an update before it can be used.")
+            Text("Voice is available only while the phone is unlocked. Closing the assistant discards any recording waiting for retry.")
         }
     }
 }

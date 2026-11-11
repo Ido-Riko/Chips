@@ -1,5 +1,13 @@
 # Android implementation progress
 
+## M3 Android completion checkpoint — 12 November 2026
+
+Implemented the remaining Android client: structured/versioned voice responses, authenticated capability negotiation before audio upload, stable request IDs for explicit retry, separate uploading/processing/saving states, transcript display, durable local conversations, History → Conversations with confirmed local deletion, storage-only retry, process-start abandoned-audio cleanup, and unlock-only voice/privacy gating. The existing reserved voice_history table is populated without a destructive migration. System recognition callbacks now fail explicitly instead of hanging and are protected by the recognition binding permission.
+
+The latest completed validation run passed debug build, lint, 24 JVM tests and 27 API 37 emulator tests. The unsigned release variant also built before the final strict JSON-type refinement; final verification is in progress. Real system assistant selection/invocation was inspected on the emulator. With a temporary secure test lock, the actual invoked surface showed only “Unlock to use CHIPS”, without microphone/private content; the test PIN was removed. Physical Poco acceptance remains separate.
+
+The service handoff is defined in [VOICE_CONTRACT.md](VOICE_CONTRACT.md). The current stub server is intentionally incompatible and receives no audio without a successful idempotency capability check. Server implementation, real utterance/provider acceptance and physical-device acceptance remain open. Draft PR #4 receives checkpoints; this entry does not mark the full M3 milestone complete.
+
 ## Android M3 recording and request reliability — 12 November 2026
 
 The owner authorized Android work and deferred all server work. Verified local and GitHub master at `e3d4eea07708e20f138387b78dde4107546bee10`; PR #3 merged on 21 October. M2 still needs actual midnight/timezone acceptance. Updated current roadmap/brief summaries while preserving the pre-existing PC/API inference requirements and IDE changes.

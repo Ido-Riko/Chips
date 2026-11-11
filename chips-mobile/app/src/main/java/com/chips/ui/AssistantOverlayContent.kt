@@ -10,6 +10,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chips.audio.AudioRecorder
 import com.chips.network.ApiClient
+import com.chips.data.VoiceHistoryStore
+import android.app.KeyguardManager
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.delay
 import com.chips.voice.VoiceController
 import com.chips.voice.VoicePhase
 
@@ -19,16 +28,31 @@ fun AssistantOverlayContent(onDismiss: () -> Unit, reserveFingerprintSpace: Bool
     val scope = rememberCoroutineScope()
     val controller = remember(context, scope) {
         val api = ApiClient(context)
-        VoiceController(AudioRecorder(context), scope, api::sendAudio)
+        VoiceController(AudioRecorder(context), scope, api, VoiceHistoryStore.get(context)::save)
     }
-    AssistantVoiceContent(controller, onDismiss, reserveFingerprintSpace)
+    val keyguard = remember(context) { context.getSystemService(KeyguardManager::class.java) }
+    var unlocked by remember { mutableStateOf(!keyguard.isDeviceLocked) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle, controller) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            while (true) {
+                unlocked = !keyguard.isDeviceLocked
+                if (!unlocked) controller.cancel()
+                delay(250)
+            }
+        }
+    }
+    AssistantVoiceContent(controller, onDismiss, reserveFingerprintSpace, unlocked,
+        canUseVoice = { !keyguard.isDeviceLocked })
 }
 
 @Composable
 internal fun AssistantVoiceContent(
     controller: VoiceController,
     onDismiss: () -> Unit,
-    reserveFingerprintSpace: Boolean = false
+    reserveFingerprintSpace: Boolean = false,
+    unlocked: Boolean = true,
+    canUseVoice: () -> Boolean = { true }
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -42,12 +66,17 @@ internal fun AssistantVoiceContent(
             controller.cancel()
         }
     }
+    LaunchedEffect(unlocked) { if (!unlocked) controller.cancel() }
+    if (!unlocked) {
+        LockedVoicePanel(onDismiss)
+        return
+    }
     val interactionSource = remember { MutableInteractionSource() }
     LaunchedEffect(controller, interactionSource, lifecycleOwner) {
         interactionSource.interactions.collect { interaction ->
             when (interaction) {
-                is PressInteraction.Press -> if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) controller.press()
-                is PressInteraction.Release -> controller.release()
+                is PressInteraction.Press -> if (canUseVoice() && lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) controller.press()
+                is PressInteraction.Release -> if (canUseVoice()) controller.release() else controller.cancel()
                 is PressInteraction.Cancel -> controller.cancelGesture()
             }
         }
@@ -55,12 +84,29 @@ internal fun AssistantVoiceContent(
     val phase = when (state.phase) {
         VoicePhase.READY -> AssistantPhase.READY
         VoicePhase.RECORDING -> AssistantPhase.LISTENING
+        VoicePhase.UPLOADING -> AssistantPhase.UPLOADING
         VoicePhase.PROCESSING -> AssistantPhase.PROCESSING
+        VoicePhase.SAVING -> AssistantPhase.SAVING
         VoicePhase.REPLY -> AssistantPhase.REPLY
         VoicePhase.ERROR -> AssistantPhase.ERROR
     }
     AssistantPanel(phase, state.text, interactionSource, {
         controller.cancel()
         onDismiss()
-    }, reserveFingerprintSpace)
+    }, reserveFingerprintSpace, state.transcript, state.canRetry, state.retrySaving,
+        onRetry = { if (canUseVoice()) controller.retry() else controller.cancel() },
+        onDiscard = controller::cancel)
+}
+
+@Composable
+internal fun LockedVoicePanel(onDismiss: () -> Unit) {
+    Surface(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().padding(32.dp), verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Unlock to use CHIPS", style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(16.dp))
+            Text("Voice and saved conversations are available after you unlock your phone.")
+            TextButton(onClick = onDismiss) { Text("Close assistant") }
+        }
+    }
 }

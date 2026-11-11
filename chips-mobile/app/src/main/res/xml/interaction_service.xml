@@ -3,4 +3,5 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:sessionService="com.chips.assistant.ChipsVoiceInteractionSessionService"
     android:recognitionService="com.chips.assistant.ChipsRecognitionService"
-    android:supportsAssist="true" />
+    android:supportsAssist="true"
+    android:supportsLaunchVoiceAssistFromKeyguard="false" />
