@@ -1,6 +1,6 @@
 # CHIPS Android: demo to daily-use app
 
-Prepared 19 October 2026. Status: M1 complete on 20 October 2026; M2 server and Poco sync/recovery accepted on 21 October; real-midnight/timezone acceptance remains open.
+Prepared 19 October 2026. Updated 12 November 2026. M1 is complete. M2 was merged on 21 October; server/Poco sync and recovery are accepted, with real-midnight/timezone acceptance still open. Android M3 recording/request reliability is in progress; server inference work is deferred by the owner.
 
 ## Outcome and scope
 
@@ -14,11 +14,11 @@ Keep Kotlin, Jetpack Compose, and the existing Android assistant integration. Bu
 
 Use **M1–M5** as the only current delivery numbering. "Phase 1" is a historical alias for M1; the filename `CHIPS_phase1_agent_brief.md` is retained for continuity. The old Phases 2–8 are retired, not extra milestones to execute after M5. The product domains remain in scope; their delivery order and grouping changed.
 
-| Current milestone | Deliverable | Status on 21 October 2026 |
+| Current milestone | Deliverable | Status on 12 November 2026 |
 | --- | --- | --- |
 | M1 — Useful Android home | Dashboard, navigation, preview, optional assistant setup, build/tests/CI | Complete; PR #1 merged, Poco checks passed, Poco large-text test explicitly waived |
-| M2 — Trustworthy daily logging | Durable offline activity records, History, undo/edit/delete, real streaks and authenticated synchronization | Implemented in draft PR #3; deployed HTTPS and Poco sync/edit/delete/revocation/rotation passed, CI green for installed source; real-midnight/timezone acceptance and review remain |
-| M3 — Reliable real voice | Actual transcription and answers, safe recording/cancellation, recoverable errors and saved conversations | Not complete; transcription is still a fixed test string |
+| M2 — Trustworthy daily logging | Durable offline activity records, History, undo/edit/delete, real streaks and authenticated synchronization | Merged in PR #3; deployed HTTPS and Poco sync/edit/delete/revocation/rotation passed; real-midnight/timezone acceptance remains |
+| M3 — Reliable real voice | Actual transcription and answers, safe recording/cancellation, recoverable errors and saved conversations | Android recording/request reliability underway; real transcription and saved conversations remain; server work deferred |
 | M4 — Real dashboard integrations | Japanese, drawing, Beat Saber, sleep and meals/pantry connected to actual personal data | Not complete; deliver and accept one integration at a time |
 | M5 — Dependable personal beta | Safe updates and recovery, export/deletion, diagnostics, device coverage and seven-day owner trial | Not complete |
 
@@ -32,9 +32,9 @@ Use **M1–M5** as the only current delivery numbering. "Phase 1" is a historica
 | Phase 6: drawing analysis/uploads | M4 — drawing integration |
 | Phases 7/8: kanji reviews/SRS | M4 — Japanese integration |
 
-M3 makes the existing voice prototype reliable and real; M5 adds a release/acceptance gate. Neither is a renaming of an old individual integration phase. Immediate work is to accept and publish the existing M2 implementation, not restart it or begin the old "Phase 2" Beat Saber work.
+M3 makes the existing voice prototype reliable and real; M5 adds a release/acceptance gate. Neither is a renaming of an old individual integration phase. The remaining M2 gate is physical midnight/timezone acceptance. Android-only M3 reliability work can proceed while the owner defers server work; M2 is not yet closed.
 
-M1 is on `master`. M2 code is published in draft PR #3. Actual server and Poco synchronization/recovery evidence is recorded; remaining day-boundary/timezone gates still prevent M2 closure. Inspect the actual worktree and [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) before continuing.
+M1 and M2 code are on `master`; PR #3 merged on 21 October at `e3d4eea07708e20f138387b78dde4107546bee10`. Actual server and Poco synchronization/recovery evidence is recorded; remaining day-boundary/timezone gates still prevent M2 closure. Inspect the actual worktree and [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) before continuing.
 
 ## Initial baseline — historical, 19 October 2026
 
@@ -101,14 +101,15 @@ Acceptance update, 21 October 2026: the actual HTTPS backend and Poco passed pau
 - Share one voice controller between the in-app surface and system assistant overlay. Model idle, recording, uploading, processing, success, error and cancellation explicitly; prevent overlapping submissions.
 - Make recorder start/stop report valid outcomes. Bound recording duration; reject empty/too-short recordings; handle microphone contention, revocation and rapid presses.
 - Explicitly stop/release recording on session hide and destruction, cancel in-flight work, and prevent late responses from updating a later session. Clean temporary audio after success, cancellation or terminal failure.
-- Align the audio format with the backend; replace stub transcription with a real STT implementation. Choose provider/language support using representative owner recordings before implementation; verify current provider documentation at that time.
+- Align the audio format with the backend; replace stub transcription with real STT. Support speech recognition running on the owner's PC and an optional hosted API provider. Choose the local model/runtime and language support using representative owner recordings; verify current provider documentation during implementation.
+- Support LLM inference running on the owner's PC, with optional hosted APIs for closed-source models. Configure STT and LLM providers independently so local and API inference can be combined. Keep endpoint/model selection explicit and API credentials on the backend. An unavailable PC service must produce a recoverable error; switching to an external API requires an explicitly configured choice.
 - Return a structured voice response containing request ID, actual transcript and answer, plus structured errors. Propagate cancellation to the HTTP call and use bounded timeouts. Make processing retries safe against duplicate history or provider work.
 - Persist transcript and answer. Keep results visible until dismissed or deliberately configured otherwise; expose retry/discard on failure instead of treating an error string as an answer.
 - Verify default-assistant enrollment and invocation on the actual device. Treat locked-device support as a separate capability to prove; protect private history behind unlock and define what an overlay may reveal while locked.
 
-**Backend dependency:** real STT, authenticated voice route, response schema, bounded uploads, request deduplication and retention/deletion behavior. Do not add broader assistant tools yet.
+**Backend dependency:** independently configurable PC-hosted/API STT and LLM adapters, authenticated voice route, response schema, bounded uploads, request deduplication and retention/deletion behavior. The backend routes requests to the selected inference services; PC hosting is a required supported path for both STT and the LLM. Do not add broader assistant tools yet.
 
-**Done when:** ten representative utterances produce transcripts matching the spoken intent and corresponding answers, with results retained after restart. Dismiss while recording/processing, deny/revoke permission, send near-empty audio, disconnect the network, time out the server, and invoke repeatedly: each must leave the microphone released, no duplicate request/history, and an understandable recoverable state. Record unlocked and locked invocation results separately.
+**Done when:** ten representative utterances produce transcripts matching the spoken intent and corresponding answers, with results retained after restart. Demonstrate the full flow with both STT and LLM running on the owner's PC, verify the optional API adapters and independent provider selection, and verify recovery when a PC service is unavailable. Dismiss while recording/processing, deny/revoke permission, send near-empty audio, disconnect the network, time out the server, and invoke repeatedly: each must leave the microphone released, no duplicate request/history, and an understandable recoverable state. Record unlocked and locked invocation results separately.
 
 ### M4 — Dashboard cards backed by personal data
 
@@ -150,7 +151,7 @@ Android boundaries: Compose screens → ViewModels/controllers → storage/repos
 
 Dependency order: M1 → M2 → M3 → M4 → M5. CI, authentication, error handling, privacy and device checks enter with their associated features; M5 is the final release gate, not the first time those concerns are addressed.
 
-Product choices to settle during the relevant milestone, without blocking M1: spoken languages; preferred STT/answer provider; actual sleep hardware and Beat Saber account/source; whether spoken replies are desired; whether this stays personal or eventually supports other users. This plan assumes text replies for the first release, matching the existing app.
+Product choices to settle during the relevant milestone, without blocking M1: spoken languages; PC-hosted STT/LLM models and runtimes and optional API providers (PC hosting and API alternatives for both are required); actual sleep hardware and Beat Saber account/source; whether spoken replies are desired; whether this stays personal or eventually supports other users. This plan assumes text replies for the first release, matching the existing app.
 
 ## Completed first batch — M1 history
 

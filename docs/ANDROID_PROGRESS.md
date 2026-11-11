@@ -1,5 +1,29 @@
 # Android implementation progress
 
+## Android M3 recording and request reliability — 12 November 2026
+
+The owner authorized Android work and deferred all server work. Verified local and GitHub master at `e3d4eea07708e20f138387b78dde4107546bee10`; PR #3 merged on 21 October. M2 still needs actual midnight/timezone acceptance. Updated current roadmap/brief summaries while preserving the pre-existing PC/API inference requirements and IDE changes.
+
+Implemented one `VoiceController` for in-app and system-overlay presentation with explicit ready/recording/processing/reply/error states. Repeated presses/releases cannot overlap requests. Cancelled hold gestures discard the recording; release submits only a valid capture. Dismissal, lifecycle stop and composition disposal cancel work and release recording. A session generation prevents late replies/errors from changing a later session. Temporary files are deleted on completion, failure and cancellation.
+
+`AudioRecorder` reports start/finish failures instead of returning a failed capture. It releases partially initialized resources, rejects clips shorter than 400 ms and empty/failed recordings, and uses MPEG-4/AAC with `.m4a` / `audio/mp4`. The controller discards recording at 60 seconds and displays an actionable error. The shared panel explains the limit and retains honest preview/unsaved-reply labeling.
+
+Voice transport uses asynchronous OkHttp callbacks and coroutine cancellation cancels the real HTTP call, including response-body reads. Added a 45-second total call timeout, bounded connection/read waits, actionable authentication/service/empty-response errors and disabled automatic POST retries until server deduplication exists. Successful replies are no longer classified as errors by a text prefix. The existing plain-text route remains compatible; no server code, deployment or credentials were changed or used.
+
+Validation on the local working tree:
+
+- Debug APK assembly and lint passed: zero errors, 29 warnings.
+- All 17 JVM unit tests passed (10 new voice/controller/transport tests); zero failures/errors/skips. Includes duplicate input prevention, failed/short capture, cancellation, stale-response isolation, recording limit, recoverable failure, HTTP status/empty response handling and cancellation of a real loopback HTTP request during body transfer.
+- All 20 API 37 emulator instrumentation tests passed (six new tests); zero failures/errors/skips. New coverage verifies cancelled holds, close while holding, recoverable microphone failure and actual MediaRecorder MPEG-4 capture/restart/short-clip/cancellation cleanup. Existing dashboard, activity persistence/sync and assistant layout tests also passed.
+- Command: `ANDROID_SERIAL=emulator-5554 JAVA_HOME=<Android Studio bundled JBR> bash ./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest :app:connectedDebugAndroidTest --offline`.
+- No Poco installation, physical-device acceptance, external voice request or new CI result is claimed. Tests used the existing local emulator and an isolated loopback HTTP server. See [structured evidence](evidence/m3-android-voice-reliability.json).
+
+M3 remains open for actual transcription, independently configured PC/API inference, structured transcript/answer responses, retained conversations and physical-device/system/lock-screen/failure acceptance. Cancelling the client HTTP call does not prove server inference cancellation or server-side deduplication. Server integration is explicitly deferred. This entry records local validation; publication and subsequent CI are tracked by the M3 draft PR.
+
+## M3 inference requirements clarified — 21 October 2026
+
+The owner requires both speech recognition and LLM inference to support running on their PC, with optional API providers for each, including closed-source LLM APIs. STT and LLM provider selection must be independent. Updated the roadmap and agent brief, including acceptance of the PC-hosted flow, API alternatives and PC-service unavailability. This records required scope, not implemented functionality: STT remains a stub and the current LLM service only selects hosted APIs by available keys.
+
 ## First batch — 19 October 2026
 
 Implemented the M1 app shell: dark theme, Today/History/Settings navigation, seven dashboard cards plus pinned Quick Log, explicit fictional preview mode, shared preview-completion actions, and an in-app voice entry point. Assistant setup no longer blocks the dashboard. Preview state is temporary and never submitted or presented as saved data.

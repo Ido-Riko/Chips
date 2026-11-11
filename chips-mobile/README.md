@@ -29,7 +29,7 @@ Local logging needs no network or enrollment. Sync requires an operator-enrolled
 
 Transcription remains a stub; saved transcripts and full voice reliability are M3 work. The existing voice path now uses the same enrolled HTTPS service and bearer token. Set up Synchronization before trying it. Provider keys remain on the backend. Release builds disable cleartext traffic. Debug builds retain `BASE_URL` in `local.properties` for local development, but the backend requires device authentication even in local HTTP mode.
 
-To use the overlay, select CHIPS as the device assistant from Settings. To try voice without changing the device assistant, grant microphone access and tap Ask CHIPS on Today. Results remain visible until dismissed; they are not saved yet.
+To use the overlay, select CHIPS as the device assistant from Settings. To try voice without changing the device assistant, grant microphone access and tap Ask CHIPS on Today. Results remain visible until dismissed; they are not saved yet. Recording is limited to 60 seconds, and clips shorter than 400 ms or failed/empty captures are rejected. A cancelled hold gesture discards audio. Closing/backgrounding the assistant releases the microphone and cancels the HTTP request. Temporary clips are deleted after completion, failure or cancellation. Transport failures are shown as errors; hold to record again. Voice POSTs are not automatically retried because server request deduplication is not implemented. Audio uses an MPEG-4 container with AAC encoding (`.m4a`, `audio/mp4`).
 
 ## Manual acceptance checks
 
@@ -40,7 +40,7 @@ To use the overlay, select CHIPS as the device assistant from Settings. To try v
 - Ask CHIPS without microphone permission opens Settings. Denial leaves normal navigation usable; permanent denial has an App settings route.
 - Returning from Android settings refreshes permission/assistant status. Check in-app and system-overlay recording separately.
 - Choose device assistant opens the system assistant-settings screen, with a Default apps fallback if the manufacturer omits that screen. The assistant-button regression test intercepts the outgoing intent and never changes the selected assistant.
-- Background/dismiss during recording releases the microphone. Real transcription, transport cancellation and recorder-failure coverage are tracked under M3.
+- Background/dismiss during recording releases the microphone and discards the clip; dismissal during a request cancels the HTTP call. Cancel a hold gesture and verify nothing is submitted. Try a very short hold, microphone refusal, unavailable service and repeated presses; each should allow a new recording. Emulator regression coverage exists for recorder cleanup, gesture cancellation and transport cancellation. Real transcription, physical-device microphone contention/revocation and system/lock-screen acceptance remain M3 work.
 
 ## Validation status
 

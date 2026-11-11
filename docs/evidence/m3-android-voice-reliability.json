@@ -1,0 +1,63 @@
+{
+  "date": "2026-11-12",
+  "scope": "Android M3 recording and request reliability; server work deferred",
+  "source": {
+    "base_commit": "e3d4eea07708e20f138387b78dde4107546bee10",
+    "changes": "uncommitted local working tree"
+  },
+  "build": "passed",
+  "lint": {
+    "errors": 0,
+    "warnings": 29
+  },
+  "unit_tests": {
+    "tests": 17,
+    "new_voice_tests": 10,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "instrumentation": {
+    "device": "Medium_Phone_API_37.0 emulator",
+    "api": 37,
+    "tests": 20,
+    "new_voice_tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "recording": {
+    "format": "MPEG-4/AAC",
+    "extension": ".m4a",
+    "mime": "audio/mp4",
+    "minimum_ms": 400,
+    "maximum_ms": 60000
+  },
+  "transport": {
+    "call_timeout_seconds": 45,
+    "automatic_connection_retry": false,
+    "cancellation_closes_http_call": true,
+    "test_endpoint": "isolated local loopback server only"
+  },
+  "checks": [
+    "actual MediaRecorder capture produces MPEG-4 header",
+    "cancelled/short/restarted capture cleanup",
+    "cancelled UI hold never submits",
+    "close during hold releases recorder",
+    "microphone start failure remains recoverable",
+    "repeated input never overlaps submissions",
+    "late response cannot overwrite newer session",
+    "request cancellation deletes temporary clip",
+    "recording limit discards clip",
+    "HTTP authentication/service/empty reply handling",
+    "real HTTP cancellation while receiving body"
+  ],
+  "limitations": [
+    "M2 physical midnight/timezone acceptance remains open",
+    "No physical-phone, system-invocation or lock-screen acceptance",
+    "No server changes or external voice calls",
+    "Real transcription and conversation persistence remain unimplemented",
+    "Client cancellation does not establish server inference cancellation",
+    "No CI result at the time of local validation"
+  ]
+}

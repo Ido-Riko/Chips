@@ -1,92 +1,66 @@
 package com.chips.ui
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
-import com.chips.audio.AudioRecorder
-import com.chips.network.ApiClient
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.chips.audio.AudioRecorder
+import com.chips.network.ApiClient
+import com.chips.voice.VoiceController
+import com.chips.voice.VoicePhase
 
 @Composable
 fun AssistantOverlayContent(onDismiss: () -> Unit, reserveFingerprintSpace: Boolean = false) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    
-    val audioRecorder = remember { AudioRecorder(context) }
-    val apiClient = remember { ApiClient(context.applicationContext) }
-    
-    var responseText by remember { mutableStateOf<String?>(null) }
-    var isRecording by remember { mutableStateOf(false) }
-    var isProcessing by remember { mutableStateOf(false) }
-    var requestJob by remember { mutableStateOf<Job?>(null) }
-    val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current.applicationContext
+    val scope = rememberCoroutineScope()
+    val controller = remember(context, scope) {
+        val api = ApiClient(context)
+        VoiceController(AudioRecorder(context), scope, api::sendAudio)
+    }
+    AssistantVoiceContent(controller, onDismiss, reserveFingerprintSpace)
+}
 
-    // Crucial: Clean up the recorder if the Android system suddenly hides our session window
-    // while the person is still holding the button!
-    DisposableEffect(lifecycleOwner) {
-        val stop = {
-            requestJob?.cancel()
-            if (isRecording) audioRecorder.stopRecording()?.delete()
-            isRecording = false
-            isProcessing = false
-            responseText = null
-        }
+@Composable
+internal fun AssistantVoiceContent(
+    controller: VoiceController,
+    onDismiss: () -> Unit,
+    reserveFingerprintSpace: Boolean = false
+) {
+    val state by controller.state.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, controller) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) stop()
+            if (event == Lifecycle.Event.ON_STOP) controller.cancel()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            stop()
+            controller.cancel()
         }
     }
-
     val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-
-    LaunchedEffect(isPressed) {
-        if (isPressed && !isProcessing) {
-            isRecording = true
-            responseText = null
-            audioRecorder.startRecording()
-        } else {
-            if (isRecording) { // Means it was just released
-                isRecording = false
-                val audioFile = audioRecorder.stopRecording()
-                
-                if (audioFile != null) {
-                    isProcessing = true
-                    requestJob = coroutineScope.launch {
-                        try {
-                            responseText = apiClient.sendAudio(audioFile)
-                        } catch (e: CancellationException) {
-                            throw e
-                        } catch (_: Exception) {
-                            responseText = "Error: Could not send the recording. Check your connection and try again."
-                        } finally {
-                            audioFile.delete()
-                            isProcessing = false
-                        }
-                    }
-                } else {
-                    responseText = "Error: Could not record audio. Try holding the button a little longer."
-                }
+    LaunchedEffect(controller, interactionSource, lifecycleOwner) {
+        interactionSource.interactions.collect { interaction ->
+            when (interaction) {
+                is PressInteraction.Press -> if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) controller.press()
+                is PressInteraction.Release -> controller.release()
+                is PressInteraction.Cancel -> controller.cancelGesture()
             }
         }
     }
-
-    val phase = when {
-        isRecording -> AssistantPhase.LISTENING
-        isProcessing -> AssistantPhase.PROCESSING
-        responseText?.startsWith("Error:") == true -> AssistantPhase.ERROR
-        responseText != null -> AssistantPhase.REPLY
-        else -> AssistantPhase.READY
+    val phase = when (state.phase) {
+        VoicePhase.READY -> AssistantPhase.READY
+        VoicePhase.RECORDING -> AssistantPhase.LISTENING
+        VoicePhase.PROCESSING -> AssistantPhase.PROCESSING
+        VoicePhase.REPLY -> AssistantPhase.REPLY
+        VoicePhase.ERROR -> AssistantPhase.ERROR
     }
-    AssistantPanel(phase, responseText, interactionSource, onDismiss, reserveFingerprintSpace)
+    AssistantPanel(phase, state.text, interactionSource, {
+        controller.cancel()
+        onDismiss()
+    }, reserveFingerprintSpace)
 }

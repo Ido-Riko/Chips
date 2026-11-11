@@ -104,10 +104,10 @@ internal fun AssistantPanel(
                     if (phase == AssistantPhase.READY) {
                         Text("What’s on your mind?", style = MaterialTheme.typography.headlineMedium,
                             textAlign = TextAlign.Center)
-                        Text("Hold the button, speak, then release to send.", style = MaterialTheme.typography.bodyLarge,
+                        Text("Hold the button, speak, then release to send. Up to 60 seconds.", style = MaterialTheme.typography.bodyLarge,
                             color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
                     } else if (phase == AssistantPhase.LISTENING) {
-                        Text("Take your time.", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+                        Text("I’m listening.", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
                         Text("Release the button when you’re finished.", style = MaterialTheme.typography.bodyLarge,
                             color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
                     } else if (phase == AssistantPhase.PROCESSING) {
@@ -122,7 +122,7 @@ internal fun AssistantPanel(
                             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(if (phase == AssistantPhase.ERROR) "COULDN’T COMPLETE REQUEST" else "REPLY",
                                     style = MaterialTheme.typography.labelMedium, color = accent, letterSpacing = 1.sp)
-                                Text(reply.orEmpty().removePrefix("Error: "), style = MaterialTheme.typography.bodyLarge,
+                                Text(reply.orEmpty(), style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                             }
                         }
