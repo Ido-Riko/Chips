@@ -1,5 +1,10 @@
 # Android implementation progress
 
+## Beat Saber navigation and chart readability — 13 November 2026
+
+Tapping Today now closes the Beat Saber explorer, including when Today is already selected and when returning from another tab. Imported scores remain saved. The scatter plot now draws numbered ticks against both grid axes, with metric names beside the plot, readable date ticks and a padded scale for single-value data. Point selection uses the same plot margins as the grid and labels. Regression coverage checks the Today reset, displayed metric names, tick values and selection at the chart edge. Debug/unsigned-release builds, lint, all 26 JVM tests and all 38 emulator tests passed; the navigation/chart test classes also passed a focused rerun. Installed the updated debug APK in place on the Poco without clearing app data.
+
+
 ## M4 local-first correction — 13 November 2026
 
 After the phone could not reach the private CHIPS endpoint, read-only diagnosis found no active phone VPN, both phone/server offline in Tailscale and timed-out backend health. The owner explicitly declined requiring that server and confirmed **local-first across M4**, with optional server/PC use for sync or processing that actually needs it. This supersedes the backend-first Android dependency described in the earlier entry below.

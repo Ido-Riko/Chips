@@ -9,6 +9,21 @@ class AppNavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
+    fun todayTabClosesScoreExplorerEvenWhenAlreadySelected() {
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-beat-saber"))
+        compose.onNodeWithTag("open-beat-saber").performClick()
+        compose.onNodeWithTag("beat-saber-screen").assertIsDisplayed()
+        compose.onNodeWithTag("nav-DASHBOARD").performClick()
+        compose.onNodeWithTag("beat-saber-screen").assertDoesNotExist()
+        compose.onNodeWithText("Your day, at a glance").assertIsDisplayed()
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-beat-saber"))
+        compose.onNodeWithTag("open-beat-saber").performClick()
+        compose.onNodeWithTag("nav-HISTORY").performClick()
+        compose.onNodeWithTag("nav-DASHBOARD").performClick()
+        compose.onNodeWithTag("beat-saber-screen").assertDoesNotExist()
+    }
+
+    @Test
     fun dashboardIsUsableWithoutAssistantSetup() {
         compose.onNodeWithText("Your day, at a glance").assertIsDisplayed()
         compose.onNodeWithText("Quick log").assertIsDisplayed()

@@ -95,7 +95,10 @@ fun ChipsApp(
                                 Column(
                                     Modifier.weight(1f).testTag("nav-${target.name}")
                                         .clip(RoundedCornerShape(14.dp))
-                                        .selectable(selected = selected, role = Role.Tab, onClick = { destination = target })
+                                        .selectable(selected = selected, role = Role.Tab, onClick = {
+                                            if (target == Destination.DASHBOARD) showBeatSaber = false
+                                            destination = target
+                                        })
                                         .padding(vertical = 8.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(4.dp)

@@ -1,7 +1,9 @@
 package com.chips.beatsaber
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import com.chips.data.SyncCredentials
@@ -30,6 +32,22 @@ class BeatSaberTest {
         .put("fetched_at", 1794500100L).put("profile", JSONObject().put("name", "Test player").put("pp", 1000))
         .put("graph", JSONArray().put(point())).put("scores", JSONArray().put(point()))
         .put("history", JSONArray()).put("total_scores", 1).put("coverage", "Retained scores, not every attempt.")
+
+    @Test fun chartShowsNamedNumberedAxesAndKeepsPointsSelectable() {
+        val scores = listOf(point(), point().put("key", "middle").put("stars", 10).put("accuracy", 94),
+            point().put("key", "end").put("stars", 12).put("accuracy", 95))
+        val data = BeatSnapshot.decode(snapshot().put("graph", JSONArray(scores))).graph
+        var selected: String? = null
+        compose.setContent { ChipsTheme { Column { ScoreScatter(data, "stars", "accuracy", null) { selected = it.key } } } }
+        compose.onNodeWithText("X · Stars").assertIsDisplayed()
+        compose.onNodeWithText("Y · Accuracy %").assertIsDisplayed()
+        compose.onNodeWithTag("beat-scatter").assertContentDescriptionEquals(
+            "3 scores. X axis: Stars. Ticks: ${fmt(8.0, 1)}, ${fmt(10.0, 1)}, ${fmt(12.0, 1)}. " +
+                "Y axis: Accuracy %. Ticks: ${listOf(93.0, 93.5, 94.0, 94.5, 95.0).joinToString { fmt(it, 2) }}. Score details are also available in the list.")
+        // The top/right endpoint is inset by half its measured tick label, within the hit radius.
+        compose.onNodeWithTag("beat-scatter").performTouchInput { click(androidx.compose.ui.geometry.Offset(width - 16.dp.toPx(), 12.dp.toPx())) }
+        compose.runOnIdle { assertEquals("end", selected) }
+    }
 
     @Test fun cacheSurvivesReopenIsolatesEnrollmentAndDeletesImportsOnly() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext

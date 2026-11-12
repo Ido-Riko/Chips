@@ -19,7 +19,10 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.chips.dashboard.DashboardCard
 import com.chips.ui.theme.ChipsAccent
 import com.chips.ui.theme.ChipsMint
@@ -157,19 +160,48 @@ private fun AxisPicker(label: String, selected: String, onSelect: (String) -> Un
 private fun BeatScore.axis(key: String): Double? = if (key == "timestamp") timestamp.toDouble() else metric(key)
 
 @Composable
-private fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selected: String?, onSelect: (BeatScore) -> Unit) {
+internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selected: String?, onSelect: (BeatScore) -> Unit) {
     val plotted = remember(points, x, y) { points.mapNotNull { p -> p.axis(x)?.let { a -> p.axis(y)?.let { b -> Triple(p, a, b) } } } }
     if (plotted.isEmpty()) { Text("No ${metrics[x]} / ${metrics[y]} measurements in this view."); return }
-    val minX = plotted.minOf { it.second }; val maxX = plotted.maxOf { it.second }
-    val minY = plotted.minOf { it.third }; val maxY = plotted.maxOf { it.third }
-    fun position(a: Double, b: Double, width: Float, height: Float): Offset {
-        fun scale(v: Double, low: Double, high: Double) = if (high == low) 0.5f else ((v - low) / (high - low)).toFloat()
-        return Offset(16 + scale(a, minX, maxX) * (width - 32), height - 16 - scale(b, minY, maxY) * (height - 32))
+    // Give a single value a real scale, with the point in the middle of the axis.
+    fun bounds(values: List<Double>, key: String): Pair<Double, Double> {
+        val low = values.min(); val high = values.max()
+        val padding = if (key == "timestamp") 3600.0 else maxOf(kotlin.math.abs(low) * 0.05, 0.5)
+        return if (low == high) low - padding to high + padding else low to high
     }
-    val grid = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
-    Canvas(Modifier.fillMaxWidth().height(230.dp).testTag("beat-scatter")
-        .semantics { contentDescription = "${plotted.size} scores. ${metrics[x]} versus ${metrics[y]}. Score details are also available in the list." }
-        .pointerInput(plotted, x, y) {
+    val (minX, maxX) = bounds(plotted.map { it.second }, x)
+    val (minY, maxY) = bounds(plotted.map { it.third }, y)
+    fun tick(value: Double, key: String, span: Double): String {
+        if (key == "timestamp") return Instant.ofEpochSecond(value.toLong()).atZone(ZoneId.systemDefault())
+            .format(DateTimeFormatter.ofPattern(if (span < 86400) "d MMM\nHH:mm" else "d MMM\nyyyy"))
+        val step = span / 4
+        val digits = if (step >= 1) 1 else (1 - kotlin.math.floor(kotlin.math.log10(step)).toInt()).coerceIn(1, 8)
+        return fmt(value, digits)
+    }
+    val xTicks = (0..2).map { minX + it * (maxX - minX) / 2 }
+    val yTicks = (0..4).map { minY + it * (maxY - minY) / 4 }
+    val measurer = rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface)
+    val xLabels = xTicks.map { measurer.measure(tick(it, x, maxX - minX), labelStyle) }
+    val yLabels = yTicks.map { measurer.measure(tick(it, y, maxY - minY), labelStyle) }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val gap = with(density) { 8.dp.toPx() }
+    val left = maxOf(yLabels.maxOf { it.size.width }.toFloat() + gap, xLabels.first().size.width / 2f)
+    val right = maxOf(gap, xLabels.last().size.width / 2f)
+    val top = maxOf(gap, yLabels.maxOf { it.size.height } / 2f)
+    val bottom = gap + xLabels.maxOf { it.size.height }
+    fun position(a: Double, b: Double, width: Float, height: Float) = Offset(
+        left + ((a - minX) / (maxX - minX)).toFloat() * (width - left - right),
+        height - bottom - ((b - minY) / (maxY - minY)).toFloat() * (height - top - bottom))
+    val grid = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
+    val axis = MaterialTheme.colorScheme.onSurfaceVariant
+    Text("Y · ${metrics[y]}", style = MaterialTheme.typography.labelLarge)
+    Canvas(Modifier.fillMaxWidth().height(260.dp).testTag("beat-scatter")
+        .semantics {
+            contentDescription = "${plotted.size} scores. X axis: ${metrics[x]}. Ticks: ${xTicks.joinToString { tick(it, x, maxX - minX) }}. " +
+                "Y axis: ${metrics[y]}. Ticks: ${yTicks.joinToString { tick(it, y, maxY - minY) }}. Score details are also available in the list."
+        }
+        .pointerInput(plotted, x, y, left, right, top, bottom, onSelect) {
             detectTapGestures { tap ->
                 val nearest = plotted.minByOrNull { (_, a, b) -> val p = position(a, b, size.width.toFloat(), size.height.toFloat()); hypot(p.x - tap.x, p.y - tap.y) }
                 nearest?.let { (score, a, b) ->
@@ -178,15 +210,22 @@ private fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selected
                 }
             }
         }) {
-        for (i in 0..4) {
-            val line = 16 + i * (size.height - 32) / 4
-            drawLine(grid, Offset(16f, line), Offset(size.width - 16, line))
+        yTicks.forEachIndexed { i, value ->
+            val p = position(minX, value, size.width, size.height)
+            drawLine(grid, p, Offset(size.width - right, p.y))
+            val label = yLabels[i]
+            drawText(label, topLeft = Offset(left - gap - label.size.width, p.y - label.size.height / 2f))
         }
-        plotted.forEach { (score, a, b) -> drawCircle(if (score.key == selected) ChipsMint else ChipsAccent.copy(alpha = 0.65f), if (score.key == selected) 7.dp.toPx() else 3.dp.toPx(), position(a, b, size.width, size.height)) }
+        xTicks.forEachIndexed { i, value ->
+            val p = position(value, minY, size.width, size.height)
+            drawLine(grid, Offset(p.x, top), p)
+            drawText(xLabels[i], topLeft = Offset(p.x - xLabels[i].size.width / 2f, p.y + gap))
+        }
+        drawLine(axis, Offset(left, top), Offset(left, size.height - bottom))
+        drawLine(axis, Offset(left, size.height - bottom), Offset(size.width - right, size.height - bottom))
+        plotted.forEach { (score, a, b) -> drawCircle(if (score.key == selected) ChipsMint else ChipsAccent.copy(alpha = 0.75f), if (score.key == selected) 7.dp.toPx() else 3.dp.toPx(), position(a, b, size.width, size.height)) }
     }
-    fun axisLabel(v: Double, key: String) = if (key == "timestamp") date(v.toLong()) else fmt(v)
-    Text("${metrics[x]}: ${axisLabel(minX, x)} – ${axisLabel(maxX, x)}", style = MaterialTheme.typography.labelMedium)
-    Text("${metrics[y]}: ${axisLabel(minY, y)} – ${axisLabel(maxY, y)}", style = MaterialTheme.typography.labelMedium)
+    Text("X · ${metrics[x]}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
 }
 
 @Composable
