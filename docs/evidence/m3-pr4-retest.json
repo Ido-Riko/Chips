@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-12",
+  "timezone": "Asia/Jerusalem",
+  "pull_request": 4,
+  "tested_head": "b4804b391cf291bfecf6bc0475b253df85d716c4",
+  "exact_source_match": {
+    "files_verified": 79,
+    "differences": 0
+  },
+  "build": {
+    "debug": "passed",
+    "release_unsigned": "passed",
+    "cached_tasks_disabled": true,
+    "executed_tasks": 133
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 29
+  },
+  "unit_tests": {
+    "tests": 24,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "emulator_api": 37,
+  "normal_screen": {
+    "pixels": "1080x2400",
+    "density_dpi": 420,
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "compact_screen": {
+    "pixels": "320x640",
+    "density_dpi": 160,
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "new_failures_found": 0,
+  "code_changes_required": false,
+  "github_ci": {
+    "run_id": 43114913852,
+    "status_at_last_check": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/Ido-Riko/Chips/actions/runs/43114913852"
+  },
+  "limits": [
+    "No live server/provider or physical Poco acceptance was performed",
+    "The emulator suite includes focused 1.5x-font layout checks, not complete application accessibility certification"
+  ]
+}

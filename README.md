@@ -1,8 +1,8 @@
 # CHIPS (Conversational Humanlike Intelligence for Programming Simplification)
 
-**CHIPS** is a personal Android dashboard and Digital Assistant in development. The app opens to Today, with History and Settings navigation. Assistant enrollment is optional for browsing; voice can also be opened in the app. Lock-screen behavior still needs device verification.
+**CHIPS** is a personal Android dashboard and Digital Assistant in development. The app opens to Today, with History and Settings navigation. Assistant enrollment is optional for browsing; voice can also be opened in the app. Voice and private replies require an unlocked device; emulator system/secure-lock checks passed, while physical Poco acceptance remains open.
 
-Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity logging, History and streaks now use local SQLite, with an authenticated background sync path. Real transcription and other live dashboard integrations remain planned work.
+Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity logging, History and streaks now use local SQLite, with an authenticated background sync path. The M3 Android voice client is implemented and locally verified, including saved conversations. Full M3 remains open for a compatible service, real inference and physical Poco acceptance; other live dashboard integrations remain planned work.
 
 ## Repository Structure
 
@@ -20,10 +20,11 @@ This is a mono-repo containing both the mobile client and the Python backend ser
 - **Target SDK**: API 36
 - **Key Features**: 
   - Overlays a recording button via `VoiceInteractionSession`. 
-  - Captures `AAC` audio using the device microphone.
-  - Sends multipart POST to the backend and renders the returned response asynchronously.
+  - Captures bounded MPEG-4/AAC (`.m4a`, `audio/mp4`) recordings with cancellation and recoverable errors.
+  - Checks authenticated version-1 service capabilities before uploading audio, then validates structured transcript/answer responses.
+  - Saves successful conversations locally before confirming success; History supports reading and deleting the local copy.
 
-### Backend Sever (`chips-backend`)
+### Backend Server (`chips-backend`)
 - **Language**: Python 3.12 (validated)
 - **Framework**: FastAPI (Served via Uvicorn)
 - **Database**: PostgreSQL via SQLAlchemy
@@ -33,8 +34,10 @@ This is a mono-repo containing both the mobile client and the Python backend ser
 ## Getting Started
 
 1. **Mobile App**: Follow [chips-mobile/README.md](chips-mobile/README.md). The dashboard works without a backend or device-assistant enrollment.
-2. **Voice demo backend**: Install `chips-backend/requirements.txt` in a virtual environment, follow [deployment preparation](chips-backend/DEPLOYMENT.md) and [service setup](docs/ACTIVITY_SYNC.md) to apply the additive migration, enroll a revocable device, and run the service behind HTTPS.
+2. **Existing backend**: Install `chips-backend/requirements.txt` in a virtual environment, follow [deployment preparation](chips-backend/DEPLOYMENT.md) and [service setup](docs/ACTIVITY_SYNC.md) to apply the additive migration, enroll a revocable device, and run the service behind HTTPS. Activity synchronization is supported. Its current demo/plain-text voice implementation is incompatible with the M3 Android client; the deferred service update must implement the [voice contract](docs/VOICE_CONTRACT.md).
 
 ---
 
-Real STT and saved voice history remain M3 work. Wake-word detection remains outside the first release. Backend personal-data routes require an enrolled device credential.
+M1 is complete. M2 code is merged; real-midnight/timezone acceptance remains open. M3 Android implementation and local acceptance are complete; the compatible server, real STT/LLM quality and physical Poco acceptance remain open. The M3 plan requires independently configurable PC-hosted STT and LLM inference with explicitly selected API alternatives; those service adapters are deferred, not implemented by the client. See the [canonical milestone plan](ANDROID_ROADMAP.md) and [Android acceptance evidence](docs/evidence/m3-android-client-acceptance.json).
+
+Wake-word detection remains outside the first release. Backend personal-data routes require an enrolled device credential.

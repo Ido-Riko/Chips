@@ -1,5 +1,51 @@
 # Android implementation progress
 
+## M3 Android client implemented and locally accepted — 12 November 2026
+
+Completed the Android client work and final local acceptance against the version-1 service contract. Debug and unsigned release APKs built; lint reports zero errors and 29 warnings. All 24 JVM tests and 29 API 37 emulator instrumentation tests passed with zero failures/errors/skips. The final command included `assembleDebug assembleRelease testDebugUnitTest lintDebug connectedDebugAndroidTest --offline`. No server implementation, deployment or provider request was performed.
+
+Conversation results are validated, saved before success and available in History → Conversations with full transcript/answer reading and confirmed local deletion. A reserved version-1 SQLite table avoids a destructive migration. Saves are idempotent by request ID; conflicting content is rejected. Retry request reuses the ID/audio, while Retry saving never contacts inference again. An authenticated capabilities check prevents audio submission to a service without protocol/idempotency support. Processing, saving, retry/discard and cancellation actions remain reachable on compact screens at 1.5× text. Dismissing during an already-completed reply's save clearly explains that it will remain in History.
+
+Actual system invocation was verified on the emulator after a normal APK installation and assistant-role selection. The test runner removes its temporary installation, so earlier invocation attempts before reinstalling had no active app and are not acceptance evidence. The installed app opened the shared assistant surface from KEYCODE_ASSIST. After applying a temporary secure lock, actual invocation displayed only “Unlock to use CHIPS”, with no microphone/private content. The test PIN was removed. Screenshots: [unlocked system assistant](evidence/m3-system-assistant-ready.png), [locked guidance](evidence/m3-locked-assistant.png). This is emulator evidence, not a Poco result.
+
+A separate direct instrumentation run seeded an explicitly synthetic conversation in isolated `m3-process-acceptance.db` using the production store. An actual `am force-stop` and cold launcher start retained the one saved row with all fields identical. A synthetic abandoned `chips_voice_*` cache clip was removed by cold-start cleanup. This supplements database-close/reopen checks; it does not claim actual speech inference.
+
+Detailed final evidence, test totals and source hashes: [m3-android-client-acceptance.json](evidence/m3-android-client-acceptance.json). Server handoff and limits: [VOICE_CONTRACT.md](VOICE_CONTRACT.md). The existing demo/plain-text server is intentionally incompatible. Remaining full-M3 acceptance is compatible server implementation, ten real utterances, independent PC/API STT/LLM behavior, unavailable-PC recovery, server request deduplication/cancellation and physical Poco checks. Android implementation/local acceptance is complete; full M3 stays open for those dependencies.
+
+Work is published in checkpoints to draft PR #4. A GitHub username popup was traced to a background Git process launched by the desktop app. Repository-local `core.askPass=/usr/bin/false` now suppresses interactive credential dialogs without changing saved credentials. This setting is local only and not part of the PR.
+
+## M3 Android completion checkpoint — 12 November 2026
+
+Implemented the remaining Android client: structured/versioned voice responses, authenticated capability negotiation before audio upload, stable request IDs for explicit retry, separate uploading/processing/saving states, transcript display, durable local conversations, History → Conversations with confirmed local deletion, storage-only retry, process-start abandoned-audio cleanup, and unlock-only voice/privacy gating. The existing reserved voice_history table is populated without a destructive migration. System recognition callbacks now fail explicitly instead of hanging and are protected by the recognition binding permission.
+
+The latest completed validation run passed debug build, lint, 24 JVM tests and 27 API 37 emulator tests. The unsigned release variant also built before the final strict JSON-type refinement; final verification is in progress. Real system assistant selection/invocation was inspected on the emulator. With a temporary secure test lock, the actual invoked surface showed only “Unlock to use CHIPS”, without microphone/private content; the test PIN was removed. Physical Poco acceptance remains separate.
+
+The service handoff is defined in [VOICE_CONTRACT.md](VOICE_CONTRACT.md). The current stub server is intentionally incompatible and receives no audio without a successful idempotency capability check. Server implementation, real utterance/provider acceptance and physical-device acceptance remain open. Draft PR #4 receives checkpoints; this entry does not mark the full M3 milestone complete.
+
+## Android M3 recording and request reliability — 12 November 2026
+
+The owner authorized Android work and deferred all server work. Verified local and GitHub master at `e3d4eea07708e20f138387b78dde4107546bee10`; PR #3 merged on 21 October. M2 still needs actual midnight/timezone acceptance. Updated current roadmap/brief summaries while preserving the pre-existing PC/API inference requirements and IDE changes.
+
+Implemented one `VoiceController` for in-app and system-overlay presentation with explicit ready/recording/processing/reply/error states. Repeated presses/releases cannot overlap requests. Cancelled hold gestures discard the recording; release submits only a valid capture. Dismissal, lifecycle stop and composition disposal cancel work and release recording. A session generation prevents late replies/errors from changing a later session. Temporary files are deleted on completion, failure and cancellation.
+
+`AudioRecorder` reports start/finish failures instead of returning a failed capture. It releases partially initialized resources, rejects clips shorter than 400 ms and empty/failed recordings, and uses MPEG-4/AAC with `.m4a` / `audio/mp4`. The controller discards recording at 60 seconds and displays an actionable error. The shared panel explains the limit and retains honest preview/unsaved-reply labeling.
+
+Voice transport uses asynchronous OkHttp callbacks and coroutine cancellation cancels the real HTTP call, including response-body reads. Added a 45-second total call timeout, bounded connection/read waits, actionable authentication/service/empty-response errors and disabled automatic POST retries until server deduplication exists. Successful replies are no longer classified as errors by a text prefix. The existing plain-text route remains compatible; no server code, deployment or credentials were changed or used.
+
+Validation on the local working tree:
+
+- Debug APK assembly and lint passed: zero errors, 29 warnings.
+- All 17 JVM unit tests passed (10 new voice/controller/transport tests); zero failures/errors/skips. Includes duplicate input prevention, failed/short capture, cancellation, stale-response isolation, recording limit, recoverable failure, HTTP status/empty response handling and cancellation of a real loopback HTTP request during body transfer.
+- All 20 API 37 emulator instrumentation tests passed (six new tests); zero failures/errors/skips. New coverage verifies cancelled holds, close while holding, recoverable microphone failure and actual MediaRecorder MPEG-4 capture/restart/short-clip/cancellation cleanup. Existing dashboard, activity persistence/sync and assistant layout tests also passed.
+- Command: `ANDROID_SERIAL=emulator-5554 JAVA_HOME=<Android Studio bundled JBR> bash ./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest :app:connectedDebugAndroidTest --offline`.
+- No Poco installation, physical-device acceptance, external voice request or new CI result is claimed. Tests used the existing local emulator and an isolated loopback HTTP server. See [structured evidence](evidence/m3-android-voice-reliability.json).
+
+M3 remains open for actual transcription, independently configured PC/API inference, structured transcript/answer responses, retained conversations and physical-device/system/lock-screen/failure acceptance. Cancelling the client HTTP call does not prove server inference cancellation or server-side deduplication. Server integration is explicitly deferred. This entry records local validation; publication and subsequent CI are tracked by the M3 draft PR.
+
+## M3 inference requirements clarified — 21 October 2026
+
+The owner requires both speech recognition and LLM inference to support running on their PC, with optional API providers for each, including closed-source LLM APIs. STT and LLM provider selection must be independent. Updated the roadmap and agent brief, including acceptance of the PC-hosted flow, API alternatives and PC-service unavailability. This records required scope, not implemented functionality: STT remains a stub and the current LLM service only selects hosted APIs by available keys.
+
 ## First batch — 19 October 2026
 
 Implemented the M1 app shell: dark theme, Today/History/Settings navigation, seven dashboard cards plus pinned Quick Log, explicit fictional preview mode, shared preview-completion actions, and an in-app voice entry point. Assistant setup no longer blocks the dashboard. Preview state is temporary and never submitted or presented as saved data.

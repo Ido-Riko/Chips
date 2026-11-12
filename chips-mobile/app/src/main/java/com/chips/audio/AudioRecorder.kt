@@ -2,51 +2,86 @@ package com.chips.audio
 
 import android.content.Context
 import android.media.MediaRecorder
+import android.os.Build
+import android.os.SystemClock
+import com.chips.voice.VoiceRecorder
 import java.io.File
+import java.io.IOException
 
-class AudioRecorder(private val context: Context) {
+class AudioRecorder(private val context: Context) : VoiceRecorder {
     private var recorder: MediaRecorder? = null
     private var currentFile: File? = null
+    private var startedAt = 0L
+    private var failureListener: (String) -> Unit = {}
 
-    fun startRecording() {
-        val file = File(context.cacheDir, "chips_voice_log_${System.currentTimeMillis()}.aac")
-        currentFile = file
+    override fun onFailure(listener: (String) -> Unit) { failureListener = listener }
 
-        recorder = (if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            MediaRecorder(context)
-        } else {
-            @Suppress("DEPRECATION")
-            MediaRecorder()
-        }).apply {
-            setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
-            setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
-            setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
-            setOutputFile(file.absolutePath)
-            
-            try {
-                prepare()
-                start()
-            } catch (e: Exception) {
-                e.printStackTrace()
+    override fun start(): Result<Unit> {
+        cancel()
+        return try {
+            // MPEG-4 container with AAC audio: extension and upload type match the container.
+            val file = File.createTempFile("chips_voice_", ".m4a", context.cacheDir)
+            currentFile = file
+            val recording = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) MediaRecorder(context) else {
+                @Suppress("DEPRECATION")
+                MediaRecorder()
             }
+            recorder = recording
+            recording.setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
+            recording.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
+            recording.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+            recording.setMaxDuration(60_000)
+            recording.setOnErrorListener { _, _, _ ->
+                if (recorder === recording) {
+                    cancel()
+                    failureListener("The microphone stopped unexpectedly. Check microphone access and record again.")
+                }
+            }
+            recording.setOnInfoListener { _, what, _ ->
+                if (recorder === recording && what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+                    cancel()
+                    failureListener("Recording reached the 60-second limit. Record a shorter message.")
+                }
+            }
+            recording.setOutputFile(file.absolutePath)
+            recording.prepare()
+            recording.start()
+            startedAt = SystemClock.elapsedRealtime()
+            Result.success(Unit)
+        } catch (_: Exception) {
+            cancel()
+            Result.failure(IOException("Could not start the microphone. Check microphone permission and whether another app is using it."))
         }
     }
 
-    fun stopRecording(): File? {
-        recorder?.apply {
-            try {
-                stop()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            } finally {
-                try {
-                    release()
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
+    override fun finish(): Result<File> {
+        val recording = recorder ?: return Result.failure(IOException("No recording is available. Hold to speak again."))
+        val file = currentFile
+        val duration = SystemClock.elapsedRealtime() - startedAt
+        return try {
+            recording.stop()
+            if (duration < 400 || file == null || file.length() == 0L) {
+                file?.delete()
+                Result.failure(IOException("Recording was too short. Hold the button a little longer and try again."))
+            } else Result.success(file)
+        } catch (_: Exception) {
+            file?.delete()
+            Result.failure(IOException("Could not finish the recording. Hold to speak again."))
+        } finally {
+            releaseRecorder()
+            currentFile = null
         }
+    }
+
+    override fun cancel() {
+        releaseRecorder()
+        currentFile?.delete()
+        currentFile = null
+    }
+
+    private fun releaseRecorder() {
+        val previous = recorder
         recorder = null
-        return currentFile
+        try { previous?.release() } catch (_: Exception) { /* Cleanup remains best effort. */ }
     }
 }

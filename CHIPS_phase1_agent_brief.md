@@ -1,6 +1,6 @@
 # CHIPS — M1 (formerly Phase 1) Results and Android Agent Brief
 
-Updated 21 October 2026. **M1 is complete. M2 is implemented, deployed and verified for phone synchronization/recovery; real-midnight and physical-device timezone acceptance remain open.** This document replaces the original mock-dashboard build instructions with the accepted implementation, current evidence, and delivery order.
+Updated 12 November 2026. **M1 is complete. M2 is implemented, deployed and verified for phone synchronization/recovery; real-midnight and physical-device timezone acceptance remain open.** This document replaces the original mock-dashboard build instructions with the accepted implementation, current evidence, and delivery order.
 
 Use **M1–M5** in new chats, issues and implementation work. This historical filename is retained for continuity. The canonical numbering, status table and retired-phase mapping are in [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md#milestone-names-and-current-plan); do not maintain a parallel Phase 2–8 schedule.
 
@@ -8,8 +8,8 @@ Use **M1–M5** in new chats, issues and implementation work. This historical fi
 
 - Android is the current product focus. The first release is a personal app for the owner on a Poco X6 Pro.
 - The Android project is `chips-mobile/`, not `chips-android/`. Preserve the existing Kotlin/Compose implementation and the accepted visual design.
-- PRs [#1](https://github.com/Ido-Riko/Chips/pull/1) and [#2](https://github.com/Ido-Riko/Chips/pull/2) are merged. M2 is in [draft PR #3](https://github.com/Ido-Riko/Chips/pull/3), targeting `master` at base `3cd553972c3701d59e812e8d07046b058123380a` in the last inspected snapshot. Do not infer the current master SHA from older audit notes.
-- The shared local workspace contains M2 and subsequent assistant UI work. M2 is **published as a draft, with server and phone sync/recovery accepted; not yet merged or fully closed**. Preserve local changes; do not rebuild logging from scratch or overwrite this workspace while obtaining a checkout.
+- PRs #1, #2 and [#3](https://github.com/Ido-Riko/Chips/pull/3) are merged. Local and GitHub master were verified at `e3d4eea07708e20f138387b78dde4107546bee10` on 12 November. M2 still needs real-midnight/timezone acceptance.
+- Preserve the existing local roadmap/inference requirements and IDE settings. The Android M3 client is implemented and locally accepted; see the newest progress entry and `docs/VOICE_CONTRACT.md`. The owner explicitly deferred server work. Publish work checkpoints to draft PR #4; suppress interactive Git credential dialogs and prefer existing GitHub Desktop HTTPS credentials when available. Older draft-PR/local-Git notes below are historical; use the dated progress ledger for current validation.
 - [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md) defines milestones M1–M5. [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) records execution evidence in the workspace. Its later M1-closure/M2 entries extend the earlier history; earlier pending-status notes are historical.
 - The original Phase 2–8 labels are superseded by M2–M5 below. In particular, current **M2 means durable logging**, not the original brief's Beat Saber integration phase.
 
@@ -119,8 +119,8 @@ The old plan put multiple integrations ahead of durable logging and allowed the 
 | Milestone | Outcome | Current status and gate |
 | --- | --- | --- |
 | M1 — Useful Android home | Dashboard/navigation/theme, explicit preview, optional setup, tests/CI | Complete; owner device checks passed or were explicitly waived; PR #1 merged |
-| M2 — Trustworthy daily logging | Offline records, shared Today/Quick Log/History, undo/edit/delete, real streaks, authenticated sync | Draft PR #3; deployed HTTPS and Poco reconnect/edit/delete/revocation/rotation checks passed; real-midnight/timezone acceptance remains open |
-| M3 — Real voice assistant | Actual transcription/answers, safe recording lifecycle, cancellation, structured errors and persisted conversations | Not complete; fixed STT test string remains a blocker |
+| M2 — Trustworthy daily logging | Offline records, shared Today/Quick Log/History, undo/edit/delete, real streaks, authenticated sync | PR #3 merged; deployed HTTPS and Poco reconnect/edit/delete/revocation/rotation checks passed; real-midnight/timezone acceptance remains open |
+| M3 — Real voice assistant | Actual transcription/answers, safe recording lifecycle, cancellation, structured errors and persisted conversations | Android client implemented/locally accepted; compatible server, real inference and physical Poco acceptance remain |
 | M4 — Personal dashboard integrations | Real Japanese, drawing, Beat Saber, sleep and pantry/meal data, one source at a time | Not complete; choose/validate actual sources and demonstrate each integration |
 | M5 — Dependable personal beta | Upgrade/recovery/export/deletion, diagnostics, device coverage and a seven-day owner trial | Not complete; a signed/distributed release and trial are not implied by a debug build |
 
@@ -143,12 +143,12 @@ See [server HTTPS evidence](docs/evidence/m2-server-https-deployment.json) and t
 
 Before closing M2:
 
-1. Preserve local changes and inspect draft PR #3 before publishing further work. Local Git still has no baseline commit; do not reset or overwrite this workspace to match master.
+1. Preserve local changes. PR #3 is merged and the local checkout has a baseline commit; older no-baseline notes are historical.
 2. Preserve the Poco offline checks already marked accepted in PR #3; inspect the latest evidence before repeating them. Install/check the latest UI build separately as needed.
 3. Preserve the completed Poco sync evidence: paused logging/reopen, reconnect/retries without duplicate IDs, edit/delete recovery and retained tombstones all passed. Do not repeat these as if they were untested.
 4. Preserve the completed phone revocation/rotation result: rejected access retained local logs, and rotating the same owner/device recovered both pending entries exactly once. Keep the replacement credential private and retain the existing identity/service binding.
 5. Observe a real local midnight and confirm streak/date behavior and retained captured dates across timezone changes.
-6. Check CI for the latest published head, review and close remaining gates before merging M2. Passing M1 CI or operator-only server tests do not close the physical-device gates.
+6. M2 is merged; close only the remaining midnight/timezone gate after recording actual acceptance. Passing CI or operator-only tests does not replace physical-device evidence.
 
 ### Assistant presentation update — 21 October
 
@@ -156,7 +156,7 @@ The shared in-app/system assistant now has a dedicated bottom-sheet layout in th
 
 ### After M2
 
-Complete M3 before treating voice as a working personal assistant. Choose the owner's spoken languages and transcription/answer provider using representative recordings. Keep provider keys on the backend. Prove the full speak → actual transcript → answer → retained history flow and its failure/cancellation cases. Verify system invocation and locked-device behavior separately on the Poco.
+Complete M3 before treating voice as a working personal assistant. Both speech recognition and LLM inference must support running on the owner's PC, with optional API providers, including closed-source LLMs. Configure STT and LLM independently; keep endpoint/model selection explicit and provider keys on the backend. Select local models/runtimes and spoken languages using representative recordings. Prove the full speak → actual transcript → answer → retained history flow with PC-hosted inference, verify API alternatives and recovery when the PC is unavailable, and cover failure/cancellation cases. Verify system invocation and locked-device behavior separately on the Poco. See the canonical M3 scope in `ANDROID_ROADMAP.md`.
 
 For M4, reuse M2's saved activities for Today, Quick Log and streaks. The roadmap's proposed next integration order is Japanese → drawing → Beat Saber → sleep → meals/pantry; confirm source availability and owner priorities as each is started. Retain the original domain ambitions, including drawing uploads/feedback and kanji reviews. Every enabled card needs an actual source, cache/freshness indication, useful actions, deletion behavior and visible recovery. No source means an honest unavailable/manual-input state, not invented scores.
 

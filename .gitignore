@@ -1,6 +1,7 @@
 # Android / Gradle
 *.iml
 .gradle
+.kotlin/
 local.properties
 .idea/
 .DS_Store
@@ -22,3 +23,6 @@ chips-backend/.env
 # Local test reports/caches
 .pytest_cache/
 chips-backend/dist/
+
+# Local credentials and private notes
+/secret.md

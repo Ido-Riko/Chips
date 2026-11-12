@@ -27,9 +27,13 @@ Local logging needs no network or enrollment. Sync requires an operator-enrolled
 
 ## Voice service
 
-Transcription remains a stub; saved transcripts and full voice reliability are M3 work. The existing voice path now uses the same enrolled HTTPS service and bearer token. Set up Synchronization before trying it. Provider keys remain on the backend. Release builds disable cleartext traffic. Debug builds retain `BASE_URL` in `local.properties` for local development, but the backend requires device authentication even in local HTTP mode.
+Android now requires the [version-1 voice service contract](../docs/VOICE_CONTRACT.md). The existing demo/plain-text server needs an update; server work is deferred. Android checks authenticated `/voice-capabilities` before sending audio, and requires real structured transcript/answer responses and advertised request idempotency. Settings → Synchronization supplies the HTTPS endpoint/device token. STT and LLM model/provider selection is independently configured on the service; PC and explicitly selected API providers are supported by the contract. Provider keys stay on the service.
 
-To use the overlay, select CHIPS as the device assistant from Settings. To try voice without changing the device assistant, grant microphone access and tap Ask CHIPS on Today. Results remain visible until dismissed; they are not saved yet.
+To use the overlay, select CHIPS as the device assistant from Settings. To use voice without changing that selection, grant microphone access and tap Ask CHIPS on Today. Voice and private replies require an unlocked phone. System invocation on a locked phone reveals only unlock guidance.
+
+Captures use MPEG-4/AAC (`.m4a`, `audio/mp4`), reject clips shorter than 400 ms, and stop/discard at 60 seconds. Cancelled hold gestures discard audio. Closing/backgrounding cancels recording/network work. Uploading, processing and saving have separate visible states. Retry request reuses the recording and request UUID; Retry saving only repeats local storage. Discard/close removes retry audio. A cold app start clears clips abandoned by process death.
+
+Successful real transcripts/replies are saved to SQLite before success is shown and appear in History → Conversations. Read conversation expands both texts; deletion removes the local copy after confirmation. Server copies have separate retention/deletion. Malformed, mismatched, demo and legacy responses are never saved as personal conversations. Activity history and synchronization are unaffected.
 
 ## Manual acceptance checks
 
@@ -40,13 +44,13 @@ To use the overlay, select CHIPS as the device assistant from Settings. To try v
 - Ask CHIPS without microphone permission opens Settings. Denial leaves normal navigation usable; permanent denial has an App settings route.
 - Returning from Android settings refreshes permission/assistant status. Check in-app and system-overlay recording separately.
 - Choose device assistant opens the system assistant-settings screen, with a Default apps fallback if the manufacturer omits that screen. The assistant-button regression test intercepts the outgoing intent and never changes the selected assistant.
-- Background/dismiss during recording releases the microphone. Real transcription, transport cancellation and recorder-failure coverage are tracked under M3.
+- Background/dismiss during recording releases the microphone and discards the clip; dismissal during a request cancels the HTTP call. Cancel a hold gesture and verify nothing is submitted. Try a very short hold, microphone refusal, unavailable service and repeated presses; each should allow a new recording. Emulator regression coverage exists for recorder cleanup, gesture cancellation and transport cancellation. Actual emulator system invocation and secure-lock privacy checks passed. Real transcription and physical-device microphone contention/revocation and system/lock-screen acceptance remain M3 gates.
 
 ## Validation status
 
 Source restored from GitHub commit `46f0c8510f0bdf2d1c55a779b23a62bb9cd9d857` on 19 October 2026. After Android Studio installation, the local debug build, lint and all four unit tests passed on 20 October with Gradle 9.6.0, AGP 9.4.1 and bundled JBR 25. Lint reported zero errors and 29 warnings; those warnings remain follow-up work.
 
-All three instrumentation tests also passed locally on the Android 17 / API 37 emulator using the standard `connectedDebugAndroidTest` task. Espresso was updated to 3.7.0 and AndroidX JUnit to 1.3.0 after the old Espresso version failed on a removed platform method. PR #1’s latest head passed build and API 35 UI jobs in CI run 39483379703. The owner confirmed the M1 Poco checks and waived large-text testing; M1 is closed. Lock-screen invocation remains M3 work. Current M2 validation is recorded in `docs/ANDROID_PROGRESS.md`.
+All three instrumentation tests also passed locally on the Android 17 / API 37 emulator using the standard `connectedDebugAndroidTest` task. Espresso was updated to 3.7.0 and AndroidX JUnit to 1.3.0 after the old Espresso version failed on a removed platform method. PR #1’s latest head passed build and API 35 UI jobs in CI run 39483379703. The owner confirmed the M1 Poco checks and waived large-text testing; M1 is closed. Physical-phone lock-screen invocation remains M3 acceptance work. The completed Android client implementation and actual emulator system/lock checks are recorded in `docs/ANDROID_PROGRESS.md`.
 
 ## M2 device acceptance
 
@@ -58,3 +62,9 @@ All three instrumentation tests also passed locally on the Android 17 / API 37 e
 6. Revoke the device token on the server. Read/write requests must fail; local logging remains usable. Rotate the token for the same device UUID and retry pending changes.
 
 These are M2 acceptance checks, separate from the completed M1 Poco checks. See the progress ledger for executed evidence.
+
+## M3 Android acceptance
+
+The client implementation passes debug/release assembly, lint, 24 JVM tests and 29 API 37 instrumentation tests. A normal emulator installation passed actual system invocation and secure-lock privacy checks. A real force-stop/relaunch retained an isolated synthetic saved conversation and removed abandoned audio. See [final evidence](../docs/evidence/m3-android-client-acceptance.json) and the [repeat test report](../docs/evidence/m3-pr4-retest.json). GitHub CI for tested implementation head `b4804b3` also [passed](https://github.com/Ido-Riko/Chips/actions/runs/43114913852).
+
+Full M3 still requires the deferred compatible service and Poco acceptance. Once the service is ready, verify ten representative spoken utterances, real transcripts/answers retained after restart, independent PC/API STT and LLM configuration, unavailable-PC recovery, permission denial/revocation/contention, interrupted uploads/processing, rapid invocation, same-ID retries and unlocked/locked system invocation. Server deduplication/cancellation cannot be certified by client tests alone.

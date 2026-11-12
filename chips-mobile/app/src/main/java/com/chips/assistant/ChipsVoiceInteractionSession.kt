@@ -38,6 +38,12 @@ class ChipsVoiceInteractionSession(context: Context) : VoiceInteractionSession(c
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
     }
 
+    override fun onLockscreenShown() {
+        super.onLockscreenShown()
+        // Never leave private replies or an active microphone above the lockscreen.
+        hide()
+    }
+
     override fun onHide() {
         super.onHide()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)

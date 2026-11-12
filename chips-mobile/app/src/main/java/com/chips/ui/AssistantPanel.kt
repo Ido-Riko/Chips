@@ -33,7 +33,7 @@ import com.chips.ui.theme.ChipsAccent
 import com.chips.ui.theme.ChipsMint
 import com.chips.ui.theme.ChipsWarning
 
-internal enum class AssistantPhase { READY, LISTENING, PROCESSING, REPLY, ERROR }
+internal enum class AssistantPhase { READY, LISTENING, UPLOADING, PROCESSING, SAVING, REPLY, ERROR }
 
 /** Shared presentation for in-app voice and Android's assistant session. */
 @Composable
@@ -42,8 +42,14 @@ internal fun AssistantPanel(
     reply: String?,
     interactionSource: MutableInteractionSource,
     onDismiss: () -> Unit,
-    reserveFingerprintSpace: Boolean = false
+    reserveFingerprintSpace: Boolean = false,
+    transcript: String? = null,
+    canRetry: Boolean = false,
+    retrySaving: Boolean = false,
+    onRetry: () -> Unit = {},
+    onDiscard: () -> Unit = {}
 ) {
+    val busy = phase in setOf(AssistantPhase.UPLOADING, AssistantPhase.PROCESSING, AssistantPhase.SAVING)
     val colors = MaterialTheme.colorScheme
     val accent by animateColorAsState(
         when (phase) {
@@ -55,7 +61,9 @@ internal fun AssistantPanel(
     val status = when (phase) {
         AssistantPhase.READY -> "Ready when you are"
         AssistantPhase.LISTENING -> "Listening"
+        AssistantPhase.UPLOADING -> "Sending your recording"
         AssistantPhase.PROCESSING -> "Working on your reply"
+        AssistantPhase.SAVING -> "Saving your conversation"
         AssistantPhase.REPLY -> "CHIPS replied"
         AssistantPhase.ERROR -> "Let’s try that again"
     }
@@ -95,7 +103,7 @@ internal fun AssistantPanel(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Surface(shape = CircleShape, color = ChipsWarning.copy(alpha = 0.10f)) {
-                        Text("Voice preview", Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                        Text("Voice", Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                             color = ChipsWarning, style = MaterialTheme.typography.labelMedium)
                     }
                     VoiceEmblem(accent, phase == AssistantPhase.LISTENING)
@@ -104,17 +112,30 @@ internal fun AssistantPanel(
                     if (phase == AssistantPhase.READY) {
                         Text("What’s on your mind?", style = MaterialTheme.typography.headlineMedium,
                             textAlign = TextAlign.Center)
-                        Text("Hold the button, speak, then release to send.", style = MaterialTheme.typography.bodyLarge,
+                        Text("Hold the button, speak, then release to send. Up to 60 seconds.", style = MaterialTheme.typography.bodyLarge,
                             color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
                     } else if (phase == AssistantPhase.LISTENING) {
-                        Text("Take your time.", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+                        Text("I’m listening.", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
                         Text("Release the button when you’re finished.", style = MaterialTheme.typography.bodyLarge,
                             color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
-                    } else if (phase == AssistantPhase.PROCESSING) {
-                        Text("One moment…", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
-                        Text("You can close this window at any time.", style = MaterialTheme.typography.bodyLarge,
+                    } else if (busy) {
+                        Text(when (phase) {
+                            AssistantPhase.UPLOADING -> "Sending…"
+                            AssistantPhase.SAVING -> "Saving on this phone…"
+                            else -> "One moment…"
+                        }, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
+                        Text(if (phase == AssistantPhase.SAVING) "You can close this window. The completed reply will stay in History."
+                            else "You can cancel or close this window at any time.", style = MaterialTheme.typography.bodyLarge,
                             color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
                     } else {
+                        if (phase == AssistantPhase.REPLY && transcript != null) {
+                            Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = colors.surfaceVariant) {
+                                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("YOU SAID", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                                    Text(transcript, style = MaterialTheme.typography.bodyLarge)
+                                }
+                            }
+                        }
                         Surface(
                             Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
                             color = if (phase == AssistantPhase.ERROR) colors.error.copy(alpha = 0.07f) else colors.surfaceVariant
@@ -122,9 +143,14 @@ internal fun AssistantPanel(
                             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Text(if (phase == AssistantPhase.ERROR) "COULDN’T COMPLETE REQUEST" else "REPLY",
                                     style = MaterialTheme.typography.labelMedium, color = accent, letterSpacing = 1.sp)
-                                Text(reply.orEmpty().removePrefix("Error: "), style = MaterialTheme.typography.bodyLarge,
+                                Text(reply.orEmpty(), style = MaterialTheme.typography.bodyLarge,
                                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                             }
+                        }
+                        if (phase == AssistantPhase.ERROR && canRetry && !retrySaving) {
+                            Text("Retry uses this recording. Closing discards it.",
+                                style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
+                                textAlign = TextAlign.Center)
                         }
                     }
                 }
@@ -135,13 +161,13 @@ internal fun AssistantPanel(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
-                        onClick = {}, enabled = phase != AssistantPhase.PROCESSING,
+                        onClick = {}, enabled = !busy,
                         interactionSource = interactionSource,
                         colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = colors.onPrimary),
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)
                     ) {
-                        if (phase == AssistantPhase.PROCESSING) {
+                        if (busy) {
                             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                         } else {
                             ChipsIcon(ChipsSymbol.VOICE, colors.onPrimary)
@@ -149,11 +175,24 @@ internal fun AssistantPanel(
                         Spacer(Modifier.width(12.dp))
                         Text(when (phase) {
                             AssistantPhase.LISTENING -> "Release to send"
+                            AssistantPhase.UPLOADING -> "Sending recording…"
                             AssistantPhase.PROCESSING -> "Getting your reply…"
+                            AssistantPhase.SAVING -> "Saving conversation…"
                             else -> "Hold to speak"
                         }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
-                    Text("Transcription uses demo text. Replies aren’t saved.",
+                    if (phase == AssistantPhase.ERROR) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            if (canRetry) OutlinedButton(onClick = onRetry) {
+                                Text(if (retrySaving) "Retry saving" else "Retry request")
+                            }
+                            TextButton(onClick = onDiscard) { Text("Discard") }
+                        }
+                    }
+                    if (busy) TextButton(onClick = onDiscard) {
+                        Text(if (phase == AssistantPhase.SAVING) "Dismiss" else "Cancel request")
+                    }
+                    if (!busy && phase != AssistantPhase.ERROR) Text("Conversations are saved on this phone.",
                         style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
                         textAlign = TextAlign.Center)
                 }

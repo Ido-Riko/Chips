@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
+        android:name=".ChipsApplication"
         android:usesCleartextTraffic="${allowCleartext}"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -44,6 +45,7 @@
 
         <service
             android:name=".assistant.ChipsRecognitionService"
+            android:permission="android.permission.BIND_SPEECH_RECOGNITION_SERVICE"
             android:label="CHIPS Recognition"
             android:exported="true">
             <intent-filter>
