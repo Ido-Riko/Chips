@@ -117,16 +117,18 @@ Android client update, 12 November 2026: recording/controller/transport recovery
 
 **User result:** every enabled card has a real source, useful actions and visible freshness; unsupported sources show an honest unavailable state.
 
+The updated [M4 integration plan](docs/M4_PLAN.md), saved 13 November 2026, records owner-confirmed sources, code-reuse permission and acceptance details. Japanese design is delegated to the coding agent. Contributing live-HR code upstream to Gadgetbridge is optional later work, not an M4 dependency.
+
 Implement and validate one integration at a time, in the proposed order below. Each needs a source contract, persistence/cache, refresh behavior, error state and an on-device demonstration before moving on.
 
 | Order | Widget/domain | Real behavior and evidence |
 | --- | --- | --- |
 | 1 | Today, streaks, Quick Log | Reuse M2 records; restart/offline/day-boundary checks remain green |
-| 2 | Japanese | Persist daily kanji and review progress; define a licensed source and a small review schedule; completion logs Japanese activity |
+| 2 | Japanese | Agent chooses a licensed content source and small persistent review system; daily kanji/review progress and completion linked to Japanese activity |
 | 3 | Drawing | Pick an image, show pending/upload/error, retain thumbnail and feedback; use actual analysis output or explicitly label manual feedback; deletion removes owned media |
-| 4 | Beat Saber | Select the owner's actual score source; import session identity, accuracy and timestamps, deduplicate, and derive trends from history; label manually entered focus versus generated advice |
-| 5 | Sleep | Select and validate the owner's device/data source and permissions; display measured duration/HR when present; introduce a sleep score only with a defined calculation or attributed provider score |
-| 6 | Meals and pantry | Persist pantry edits and meal preferences; base suggestions on that data; low-stock notes derive from actual thresholds |
+| 4 | Beat Saber | BeatLeader + BeatSaver using the owner's `beat_leader_maps` reference; verify play-history coverage, import/deduplicate scores and map details, and provide charts |
+| 5 | Sleep and live HR | Xiaomi Smart Band 10 + Gadgetbridge/Health Connect for sleep/history; adapt the owner's MiBand-Converter for live HR and optional BLE/OSC outputs; combine HR with daily Beat Saber scores; validate device behavior and any sleep-score source |
+| 6 | Meals and pantry | Product barcode scanning and receipt OCR with editable review add to durable pantry inventory; meal suggestions use actual stock/preferences and low-stock thresholds |
 
 Use manual entry/import where a source integration is unavailable, clearly marked as such. Display last updated time and missing/partial data. Do not turn missing data into zero scores or broken streaks. Offer a way to disable cards the owner does not use.
 

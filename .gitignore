@@ -16,8 +16,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# AI Agents
-.agent/
+# Backend local configuration
 chips-backend/.env
 
 # Local test reports/caches

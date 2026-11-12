@@ -6,6 +6,8 @@ Use **M1–M5** in new chats, issues and implementation work. This historical fi
 
 ## Read this before continuing
 
+- The owner-confirmed [M4 integration plan](docs/M4_PLAN.md) records data sources, code-reuse authorization, barcode/receipt pantry input and delegated Japanese implementation. Keep plans, agent notes and READMEs tracked in Git. Gadgetbridge upstream contributions are optional later work.
+
 - Android is the current product focus. The first release is a personal app for the owner on a Poco X6 Pro.
 - The Android project is `chips-mobile/`, not `chips-android/`. Preserve the existing Kotlin/Compose implementation and the accepted visual design.
 - PRs #1, #2 and [#3](https://github.com/Ido-Riko/Chips/pull/3) are merged. Local and GitHub master were verified at `e3d4eea07708e20f138387b78dde4107546bee10` on 12 November. M2 still needs real-midnight/timezone acceptance.
