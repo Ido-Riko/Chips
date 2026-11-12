@@ -32,7 +32,7 @@ Use **M1–M5** as the only current delivery numbering. "Phase 1" is a historica
 | Phase 6: drawing analysis/uploads | M4 — drawing integration |
 | Phases 7/8: kanji reviews/SRS | M4 — Japanese integration |
 
-M3 makes the existing voice prototype reliable and real; M5 adds a release/acceptance gate. Neither is a renaming of an old individual integration phase. The remaining M2 gate is physical midnight/timezone acceptance. Android-only M3 reliability work can proceed while the owner defers server work; M2 is not yet closed.
+M3 makes the existing voice prototype reliable and real; M5 adds a release/acceptance gate. Neither is a renaming of an old individual integration phase. The remaining M2 gate is physical midnight/timezone acceptance. Android-only M3 implementation and local acceptance are complete while the owner defers server work. Next M3 gates are the compatible service, real inference and physical Poco acceptance; M2 is not yet closed.
 
 M1 and M2 code are on `master`; PR #3 merged on 21 October at `e3d4eea07708e20f138387b78dde4107546bee10`. Actual server and Poco synchronization/recovery evidence is recorded; remaining day-boundary/timezone gates still prevent M2 closure. Inspect the actual worktree and [docs/ANDROID_PROGRESS.md](docs/ANDROID_PROGRESS.md) before continuing.
 

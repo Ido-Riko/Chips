@@ -44,7 +44,7 @@ Successful real transcripts/replies are saved to SQLite before success is shown 
 - Ask CHIPS without microphone permission opens Settings. Denial leaves normal navigation usable; permanent denial has an App settings route.
 - Returning from Android settings refreshes permission/assistant status. Check in-app and system-overlay recording separately.
 - Choose device assistant opens the system assistant-settings screen, with a Default apps fallback if the manufacturer omits that screen. The assistant-button regression test intercepts the outgoing intent and never changes the selected assistant.
-- Background/dismiss during recording releases the microphone and discards the clip; dismissal during a request cancels the HTTP call. Cancel a hold gesture and verify nothing is submitted. Try a very short hold, microphone refusal, unavailable service and repeated presses; each should allow a new recording. Emulator regression coverage exists for recorder cleanup, gesture cancellation and transport cancellation. Real transcription, physical-device microphone contention/revocation and system/lock-screen acceptance remain M3 work.
+- Background/dismiss during recording releases the microphone and discards the clip; dismissal during a request cancels the HTTP call. Cancel a hold gesture and verify nothing is submitted. Try a very short hold, microphone refusal, unavailable service and repeated presses; each should allow a new recording. Emulator regression coverage exists for recorder cleanup, gesture cancellation and transport cancellation. Actual emulator system invocation and secure-lock privacy checks passed. Real transcription and physical-device microphone contention/revocation and system/lock-screen acceptance remain M3 gates.
 
 ## Validation status
 
@@ -65,6 +65,6 @@ These are M2 acceptance checks, separate from the completed M1 Poco checks. See 
 
 ## M3 Android acceptance
 
-The client implementation passes debug/release assembly, lint, 24 JVM tests and 29 API 37 instrumentation tests. A normal emulator installation passed actual system invocation and secure-lock privacy checks. A real force-stop/relaunch retained an isolated synthetic saved conversation and removed abandoned audio. See [final evidence](../docs/evidence/m3-android-client-acceptance.json).
+The client implementation passes debug/release assembly, lint, 24 JVM tests and 29 API 37 instrumentation tests. A normal emulator installation passed actual system invocation and secure-lock privacy checks. A real force-stop/relaunch retained an isolated synthetic saved conversation and removed abandoned audio. See [final evidence](../docs/evidence/m3-android-client-acceptance.json) and the [repeat test report](../docs/evidence/m3-pr4-retest.json). GitHub CI for tested implementation head `b4804b3` also [passed](https://github.com/Ido-Riko/Chips/actions/runs/43114913852).
 
 Full M3 still requires the deferred compatible service and Poco acceptance. Once the service is ready, verify ten representative spoken utterances, real transcripts/answers retained after restart, independent PC/API STT and LLM configuration, unavailable-PC recovery, permission denial/revocation/contention, interrupted uploads/processing, rapid invocation, same-ID retries and unlocked/locked system invocation. Server deduplication/cancellation cannot be certified by client tests alone.
