@@ -13,7 +13,7 @@ Updated 13 November 2026. This is the saved M4 integration plan: owner-confirmed
 | Japanese | Owner delegates design/implementation choices to the coding agent; daily kanji and a small persistent review system |
 | Drawing | Image upload, retained thumbnail and feedback, next drill/focus and drawing history |
 
-Retain the roadmap's proposed delivery order: existing activity records → Japanese → drawing → Beat Saber → sleep/HR and the combined report → meals/pantry. Prove external data paths early so unavailable APIs or hardware behavior are discovered before UI completion. Each integration needs local persistence/cache, visible freshness and recovery, deletion behavior and actual on-device acceptance. Link domain completions to M2 activity records without duplicating imported and manually logged sessions.
+The owner selected **Beat Saber first** on 13 November, overriding the earlier proposed Japanese → drawing → Beat Saber order. The first import/explorer implementation and online API review are recorded in [BEAT_SABER.md](BEAT_SABER.md); deployment/Poco acceptance remains. Other integrations retain their scope; subsequent order follows owner priorities. Each integration needs local persistence/cache, visible freshness and recovery, deletion behavior and on-device acceptance. Link domain completions to M2 records without duplicating imported/manual sessions.
 
 ## Beat Saber — owner-provided reference
 

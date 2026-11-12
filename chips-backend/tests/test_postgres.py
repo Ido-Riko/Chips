@@ -24,7 +24,8 @@ def test_migration_and_concurrent_sync():
     engine = create_async_engine(url, connect_args={"server_settings": {"search_path": schema}}, poolclass=NullPool)
     sessions = async_sessionmaker(engine, expire_on_commit=False)
     owner, device_id, record_id = str(uuid4()), str(uuid4()), str(uuid4())
-    migration = (Path(__file__).resolve().parents[1] / "migrations/001_activity_sync.sql").read_text()
+    migration = "\n".join(path.read_text() for path in sorted(
+        (Path(__file__).resolve().parents[1] / "migrations").glob("[0-9][0-9][0-9]_*.sql")))
     async def setup():
         async with admin.begin() as conn:
             await conn.execute(text(f'CREATE SCHEMA "{schema}"'))

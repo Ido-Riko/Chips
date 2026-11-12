@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.chips.data.*
+import com.chips.beatsaber.*
 import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -52,6 +53,10 @@ fun ChipsApp(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val beatSaber: BeatSaberViewModel = viewModel(factory = viewModelFactory { initializer { BeatSaberViewModel(context.applicationContext as android.app.Application) } })
+    val beatState by beatSaber.state.collectAsStateWithLifecycle()
+    var showBeatSaber by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(destination) { if (destination == Destination.DASHBOARD) beatSaber.load() }
     LaunchedEffect(Unit) { ActivitySyncWorker.schedule(context) }
     val onActivity: (ActivityType, Boolean) -> Unit = { type, toggle ->
         if (state.demoMode) {
@@ -107,7 +112,12 @@ fun ChipsApp(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                Destination.DASHBOARD -> DashboardScreen(state, { onActivity(it, true) }) {
+                Destination.DASHBOARD -> if (showBeatSaber) BeatSaberScreen(beatState,
+                    onBack = { showBeatSaber = false }, onConnect = beatSaber::connect,
+                    onRefresh = beatSaber::refresh, onReload = beatSaber::load,
+                    onRemove = beatSaber::remove, onMap = beatSaber::map
+                ) else DashboardScreen(state, { onActivity(it, true) }, beatState,
+                    onBeatSaber = { showBeatSaber = true; beatSaber.load() }) {
                     if (micPermissionGranted) showVoice = true else destination = Destination.SETTINGS
                 }
                 Destination.HISTORY -> {

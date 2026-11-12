@@ -25,6 +25,10 @@ The calendar date and IANA timezone are captured with each session. Travel does 
 
 Local logging needs no network or enrollment. Sync requires an operator-enrolled device token and an HTTPS endpoint ending in `/api/v1`. Enter both in Settings → Synchronization. See [service setup and contract](../docs/ACTIVITY_SYNC.md). Pending/synced/failed states appear in History; retries run through persistent WorkManager jobs, with a manual Retry sync action. A force-stopped app resumes its work after it is opened again. Disconnect pauses synchronization and cancels background jobs while keeping the encrypted URL/token and all activities. The paused state survives app restarts; Reconnect resumes with the saved enrollment. Saving sync settings also reconnects.
 
+## Beat Saber
+
+Normal-mode Today → Beat Saber → Explore scores opens the real-data explorer. Save a BeatLeader player ID using the enrolled CHIPS service, compare chart metrics and open exact-version BeatSaver details. Imports are cached separately for offline browsing. See [the API/storage contract](../docs/BEAT_SABER.md). The backend requires the additive Beat Saber update/migration; deployment/Poco acceptance remains open.
+
 ## Voice service
 
 Android now requires the [version-1 voice service contract](../docs/VOICE_CONTRACT.md). The existing demo/plain-text server needs an update; server work is deferred. Android checks authenticated `/voice-capabilities` before sending audio, and requires real structured transcript/answer responses and advertised request idempotency. Settings → Synchronization supplies the HTTPS endpoint/device token. STT and LLM model/provider selection is independently configured on the service; PC and explicitly selected API providers are supported by the contract. Provider keys stay on the service.

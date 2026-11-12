@@ -28,6 +28,7 @@ def test_release_contains_migration_and_service_without_secrets_or_caches(source
     with tarfile.open(archive) as bundle:
         names = bundle.getnames()
         assert "migrations/001_activity_sync.sql" in names
+        assert "migrations/002_beat_saber.sql" in names
         assert "app/scripts/migrate.py" in names
         assert "app/scripts/devices.py" in names
         assert "chips-api.openrc" in names and "deploy/Caddyfile.example" in names
@@ -87,6 +88,8 @@ start_pre
     migration = install / "migrations/001_activity_sync.sql"
     migration.parent.mkdir()
     migration.touch()
+    assert start().returncode != 0
+    (migration.parent / "002_beat_saber.sql").touch()
     assert start().returncode == 0
 
 

@@ -1,0 +1,57 @@
+{
+  "date": "2026-11-13",
+  "scope": "M4 Beat Saber local implementation and validation",
+  "android": {
+    "debug_build": "passed",
+    "unsigned_release_build": "passed",
+    "lint_errors": 0,
+    "lint_warnings": 29,
+    "unit": {
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "instrumentation": {
+      "tests": 33,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "device": "API 37 emulator; physical Poco untouched"
+  },
+  "backend": {
+    "python": "3.12",
+    "passed": 25,
+    "skipped": 4,
+    "skip_reason": "PowerShell unavailable in temporary container",
+    "postgres": "16 disposable instance; both migrations applied twice over existing voice data",
+    "release_packaging": "passed"
+  },
+  "live_api": {
+    "ranked_graph_points": 337,
+    "recent_scores": 300,
+    "total_retained_scores": 529,
+    "daily_history_entries": 30,
+    "exact_version_beatsaver": "passed",
+    "score_statistics": "read-only inspection; not implemented in UI"
+  },
+  "limitations": [
+    "No actual backend deployment",
+    "No physical Poco acceptance",
+    "Retained scores are not all play attempts",
+    "No automatic activity logging",
+    "No live HR report in this increment",
+    "M3 voice service remains deferred"
+  ],
+  "source_sha256": {
+    "chips-backend/app/models/beat_saber.py": "89dddcdaded2389442f85a63f4739cdba6d231bb3133afbaa68f0739ce94c936",
+    "chips-backend/app/routers/beat_saber.py": "251db034d9aa1795b5a09d3952152751d5f608f3189c7f00b37e6988a9ee1986",
+    "chips-backend/app/services/beat_saber.py": "596729b6bca91207d2416312f29895841f667b45e0068dce167ea0d0fdb46d08",
+    "chips-backend/migrations/002_beat_saber.sql": "27d992b111f63961aac938f1d514c762de4db761b2ed596e63a4c10481ab4eb9",
+    "chips-backend/tests/test_beat_saber.py": "b83c6b0def545ca5ecb6d2080605ccead84b00d1720a0ed9ab140b8e51982d97",
+    "chips-mobile/app/src/androidTest/java/com/chips/beatsaber/BeatSaberTest.kt": "4d0b3f9c6484075deb4205abc8295473d9b1866bce012c2e1861ebd51ccd7c66",
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/BeatSaberData.kt": "88e02b93ce65660fc23e7d505a15ed330457f1f514b4cec386dece7376b1cedf",
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/BeatSaberScreen.kt": "15bf678bec8b94ca5904b4efdc274f70a285e7eae769f4ecc452295ec045d845"
+  }
+}

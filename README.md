@@ -8,6 +8,8 @@ Start with the [Android build and test guide](chips-mobile/README.md), [implemen
 
 The [M4 integration plan](docs/M4_PLAN.md) records the agreed Beat Saber, Smart Band sleep/live-HR, barcode/receipt pantry, Japanese and drawing integrations, including references to reusable projects. Keep project plans, agent notes and READMEs version-controlled; credentials and generated caches remain local.
 
+The first [Beat Saber integration](docs/BEAT_SABER.md) adds authenticated BeatLeader imports, score exploration, exact-version BeatSaver enrichment and Android offline caching. It has local validation; backend deployment and Poco acceptance remain open.
+
 This is a mono-repo containing both the mobile client and the Python backend services.
 
 - **`chips-mobile/`**: The Android project built with Kotlin and Jetpack Compose. Contains the `VoiceInteractionService` to register as the default device assistant.

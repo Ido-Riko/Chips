@@ -1,5 +1,15 @@
 # Android implementation progress
 
+## M4 Beat Saber import/explorer — 13 November 2026
+
+The owner selected Beat Saber as the first M4 integration and requested checking online APIs beyond the prototype. Implemented authenticated owner-scoped BeatLeader selection/import/removal, atomic persisted snapshots, ranked accuracy portfolio, up to 300 recent retained scores, 30-day profile history and exact-version BeatSaver enrichment. Android adds a searchable explorer, selectable chart axes, source links, mistake/combo/hand-cut/improvement details and a separate enrollment-isolated SQLite cache. M2 activity and M3 conversation schemas remain unchanged; no automatic activity logging or full-attempt coverage is claimed.
+
+Reviewed official live schemas and server source, and exercised the implemented adapter against the prototype player's real data: 337 graph points, 300 recent scores of 529 retained, 30 history entries. Real BeatSaver map enrichment passed. Also inspected the replay-statistics endpoint for later hand-level coaching; it is documented, not consumed by the current UI. See [contract/API findings](BEAT_SABER.md) and [local evidence](evidence/m4-beat-saber-local.json).
+
+Final local Android validation passed debug and unsigned release assembly, all 24 JVM tests, all 33 API 37 emulator tests and lint (zero errors, existing 29 warnings). Four new instrumentation tests cover cache reopen/namespace/removal, malformed snapshots/missing metrics, selection during map-enrichment failure and loopback HTTP framing. Emulator used host graphics after software-rendering launches crashed. All installs/tests targeted the emulator; the attached Poco was left untouched.
+
+Backend Python 3.12 validation: 25 tests passed; four PowerShell-dependent tests skipped because PowerShell was unavailable in that temporary environment. Includes eight new Beat Saber tests, existing activity/voice routes, additive/repeatable PostgreSQL migrations preserving existing voice data and synchronization concurrency, and deployment packaging/startup guards. Built an isolated release archive successfully. No actual server deployment, M3 service update or physical-phone acceptance was performed. M4 remains open.
+
 ## M3 Android client implemented and locally accepted — 12 November 2026
 
 Completed the Android client work and final local acceptance against the version-1 service contract. Debug and unsigned release APKs built; lint reports zero errors and 29 warnings. All 24 JVM tests and 29 API 37 emulator instrumentation tests passed with zero failures/errors/skips. The final command included `assembleDebug assembleRelease testDebugUnitTest lintDebug connectedDebugAndroidTest --offline`. No server implementation, deployment or provider request was performed.

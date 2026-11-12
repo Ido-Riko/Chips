@@ -6,6 +6,8 @@ Use **M1–M5** in new chats, issues and implementation work. This historical fi
 
 ## Read this before continuing
 
+- On 13 November the owner chose Beat Saber first for M4. Its [import/explorer contract](docs/BEAT_SABER.md) and latest progress entry describe implemented local work, online API findings and remaining deployment/Poco acceptance. The earlier proposed Japanese-first ordering is superseded for this integration. M3 server work remains separate.
+
 - The owner-confirmed [M4 integration plan](docs/M4_PLAN.md) records data sources, code-reuse authorization, barcode/receipt pantry input and delegated Japanese implementation. Keep plans, agent notes and READMEs tracked in Git. Gadgetbridge upstream contributions are optional later work.
 
 - Android is the current product focus. The first release is a personal app for the owner on a Poco X6 Pro.

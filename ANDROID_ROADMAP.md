@@ -119,6 +119,8 @@ Android client update, 12 November 2026: recording/controller/transport recovery
 
 The updated [M4 integration plan](docs/M4_PLAN.md), saved 13 November 2026, records owner-confirmed sources, code-reuse permission and acceptance details. Japanese design is delegated to the coding agent. Contributing live-HR code upstream to Gadgetbridge is optional later work, not an M4 dependency.
 
+Execution update, 13 November: the owner selected Beat Saber first. The [initial import/explorer](docs/BEAT_SABER.md) implements BeatLeader profile/ranked/recent data, exact-version BeatSaver enrichment and offline Android caching. Deployment and physical Poco acceptance remain; M4 is not closed. The ordering below is the earlier proposal, superseded by that owner choice for the first integration.
+
 Implement and validate one integration at a time, in the proposed order below. Each needs a source contract, persistence/cache, refresh behavior, error state and an on-device demonstration before moving on.
 
 | Order | Widget/domain | Real behavior and evidence |
