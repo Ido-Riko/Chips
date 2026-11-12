@@ -1,0 +1,55 @@
+{
+  "date": "2026-11-13",
+  "decision": "Local-first across M4; CHIPS server optional for sync/backup or processing that actually needs it",
+  "runtime": "Android reads public BeatLeader and BeatSaver APIs directly; no enrollment or Tailscale required",
+  "builds": {
+    "debug": "passed",
+    "unsigned_release": "passed",
+    "lint_errors": 0,
+    "lint_warnings": 29
+  },
+  "unit": {
+    "tests": 26,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "emulator_suite": {
+    "tests": 36,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "api": 37
+  },
+  "one_off_live_public_api_smoke": {
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "checks": [
+      "nonempty real profile graph and scores",
+      "exact-version map lookup",
+      "actual chart displayed"
+    ],
+    "no_chips_server": true,
+    "committed_ci_suite": "offline fixtures only"
+  },
+  "physical_phone": {
+    "in_place_install": "passed; app data retained",
+    "interactive_acceptance": "pending; phone showed system/always-on-display UI"
+  },
+  "limitations": [
+    "New imports and uncached map details require internet",
+    "No automatic score sync to optional backend",
+    "Complete play-attempt coverage and HR report remain separate"
+  ],
+  "source_sha256": {
+    "chips-mobile/app/src/androidTest/java/com/chips/beatsaber/BeatSaberLocalTest.kt": "f5ca3f4c39aa6673194d0ed695e3d94336dbec116c240bda772c205a4e037927",
+    "chips-mobile/app/src/androidTest/java/com/chips/beatsaber/BeatSaberTest.kt": "84af240cfaf83c6bb4216f732535fd7f5adf79317bff147a56c95275ac1db1e8",
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/BeatLeaderApi.kt": "467dcd0815639b1c87a175aed017c95f252eeb9333c0e5c3f9f9c7f6d508f85e",
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/BeatSaberData.kt": "062c3be8d6299bdcf49ec319b374e110954b8fdd04b7ffbd25533978d4226891",
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/BeatSaberErrors.kt": "67ddc94961e1d268af8f2f3fd18096c8290c24ca3bfb2c829bd6eedb4deb7252",
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/BeatSaberScreen.kt": "4e4bfa7c77ba716c0a61868c4dba145780822ee6a1a933a19b6b6afdcf521e67",
+    "chips-mobile/app/src/test/java/com/chips/beatsaber/BeatSaberErrorsTest.kt": "03d1576cee98a3c3f91c985b992f5d6b6073a87714da8ae2f347cbaefcc58caf"
+  }
+}

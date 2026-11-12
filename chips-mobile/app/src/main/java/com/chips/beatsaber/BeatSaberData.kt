@@ -11,14 +11,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import okhttp3.*
-import okhttp3.HttpUrl.Companion.toHttpUrl
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.io.IOException
 import java.security.MessageDigest
-import java.util.concurrent.TimeUnit
 
 internal fun JSONObject.number(key: String): Double? =
     if (isNull(key)) null else (opt(key) as? Number)?.toDouble()?.takeIf { it.isFinite() }
@@ -59,7 +53,7 @@ data class BeatSnapshot(val data: JSONObject, val graph: List<BeatScore>, val sc
     }
 }
 
-/** Independent cache leaves activity/conversation schemas untouched. Namespaces isolate enrollments. */
+/** Independent local cache; legacy enrollment namespaces remain available for one-time migration. */
 class BeatSaberCache(context: Context, name: String = "beat_saber.db") : SQLiteOpenHelper(context, name, null, 1) {
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("CREATE TABLE cache (namespace TEXT NOT NULL, entry TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(namespace, entry))")
@@ -85,120 +79,85 @@ data class BeatSaberState(
 internal fun enrollmentKey(config: SyncCredentials.Config): String = MessageDigest.getInstance("SHA-256")
     .digest((config.endpoint + "\n" + config.token).toByteArray()).joinToString("") { "%02x".format(it) }
 
-internal class BeatSaberHttp(private val config: SyncCredentials.Config) {
-    private val client = OkHttpClient.Builder().followRedirects(false).followSslRedirects(false)
-        .connectTimeout(15, TimeUnit.SECONDS).readTimeout(100, TimeUnit.SECONDS).callTimeout(115, TimeUnit.SECONDS).build()
-    suspend fun request(method: String, path: String = "", body: JSONObject? = null, query: Map<String, String> = emptyMap()): JSONObject {
-        val url = (config.endpoint + "/beat-saber" + path).toHttpUrl().newBuilder().apply {
-            query.forEach { (key, value) -> addQueryParameter(key, value) }
-        }.build()
-        val bytes = (body?.toString() ?: "").toRequestBody("application/json".toMediaType())
-        val request = Request.Builder().url(url).header("Authorization", "Bearer ${config.token}")
-            .header("Accept", "application/json").method(method, if (method in listOf("GET", "DELETE")) null else bytes).build()
-        return suspendCancellableCoroutine { continuation ->
-            val call = client.newCall(request)
-            continuation.invokeOnCancellation { call.cancel() }
-            call.enqueue(object : Callback {
-                override fun onFailure(call: Call, e: IOException) {
-                    if (continuation.isActive) continuation.resumeWith(Result.failure(IOException("Could not reach the score service. Your saved data is still available.")))
-                }
-                override fun onResponse(call: Call, response: Response) {
-                    val result = runCatching {
-                        response.use {
-                            val source = it.body?.source() ?: error("Empty score response")
-                            source.request(12 * 1024 * 1024L + 1)
-                            require(source.buffer.size <= 12 * 1024 * 1024L) { "Score response is too large." }
-                            val text = source.readUtf8()
-                            if (!it.isSuccessful) {
-                                val message = when (it.code) {
-                                    401, 403 -> "Device access was rejected. Check enrollment in Settings."
-                                    404 -> "Score service or player not found. The backend may need its Beat Saber update."
-                                    else -> runCatching { JSONObject(text).optString("detail").take(250) }.getOrNull()
-                                        ?.takeIf { m -> m.isNotBlank() } ?: "Score request failed. Retry later."
-                                }
-                                throw IOException(message)
-                            }
-                            JSONObject(text)
-                        }
-                    }
-                    if (continuation.isActive) continuation.resumeWith(result)
-                }
-            })
-        }
-    }
-}
+internal const val LOCAL_BEAT_CACHE = "local-beat-saber-v1"
 
-class BeatSaberViewModel(application: android.app.Application) : ViewModel() {
+class BeatSaberViewModel(
+    application: android.app.Application,
+    private val source: BeatSaberSource = BeatLeaderApi(),
+    private val cache: BeatSaberCache = BeatSaberCache(application)
+) : ViewModel() {
     private val context = application
-    private val cache = BeatSaberCache(context.applicationContext)
     private val mutableState = MutableStateFlow(BeatSaberState())
     val state = mutableState.asStateFlow()
     private var task: Job? = null
     private var mapTask: Job? = null
 
-    private fun config(): SyncCredentials.Config = requireNotNull(SyncCredentials(context).read()) {
-        "Set up device enrollment in Settings to connect BeatLeader."
-    }
-    private suspend fun applyState(body: JSONObject, key: String, busy: Boolean = false) {
+    private suspend fun applyState(body: JSONObject, busy: Boolean = false) {
         val snapshot = body.optJSONObject("snapshot")?.let { BeatSnapshot.decode(it) }
-        withContext(Dispatchers.IO) { cache.write(key, body) }
+        withContext(Dispatchers.IO) { cache.write(LOCAL_BEAT_CACHE, body) }
         mutableState.value = BeatSaberState(body.optString("player_id").takeUnless { it == "null" } ?: "", snapshot, busy)
     }
-    private fun runAction(action: suspend (SyncCredentials.Config, String) -> Unit) {
+    private fun runAction(action: suspend () -> Unit) {
         if (task?.isActive == true) return
         mapTask?.cancel()
         mutableState.update { it.copy(busy = true, error = null, mapBusy = false) }
         task = viewModelScope.launch {
-            try {
-                val saved = withContext(Dispatchers.IO) { config() }
-                check(SyncCredentials(context).connected()) { "Reconnect synchronization in Settings first." }
-                action(saved, enrollmentKey(saved))
-            } catch (e: CancellationException) { throw e }
+            try { action() }
+            catch (e: TimeoutCancellationException) { mutableState.update { it.copy(error = "BeatLeader took too long. Check your internet connection and retry.") } }
+            catch (e: CancellationException) { throw e }
             catch (e: Exception) { mutableState.update { it.copy(error = e.message ?: "Could not read saved scores.") } }
             finally { if (currentCoroutineContext().isActive) mutableState.update { it.copy(busy = false) } }
         }
     }
+    /** Opening the app or explorer only reads local storage; no service is needed. */
     fun load() {
-        task?.cancel(); mapTask?.cancel()
+        if (task?.isActive == true) return
         mutableState.value = BeatSaberState(busy = true)
         task = viewModelScope.launch {
             try {
-                val saved = withContext(Dispatchers.IO) { config() }
-                val key = enrollmentKey(saved)
-                withContext(Dispatchers.IO) { cache.read(key) }?.let { applyState(it, key, busy = true) }
-                if (SyncCredentials(context).connected()) {
-                    val body = BeatSaberHttp(saved).request("GET")
-                    check(config() == saved) { "Enrollment changed. Reopen Beat Saber." }
-                    applyState(body, key)
+                val saved = withContext(Dispatchers.IO) {
+                    cache.read(LOCAL_BEAT_CACHE) ?: run {
+                        // One-time migration only; enrollment never gates normal operation.
+                        val legacy = runCatching { SyncCredentials(context).read() }.getOrNull()
+                            ?.let { cache.read(enrollmentKey(it)) }
+                        legacy ?: JSONObject().put("player_id", JSONObject.NULL).put("snapshot", JSONObject.NULL)
+                    }
                 }
+                applyState(saved)
             } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { mutableState.update { it.copy(error = e.message ?: "Could not load scores.") } }
+            catch (e: Exception) { mutableState.update { it.copy(error = "Could not read the local score cache. Import your profile again to retry.") } }
             finally { if (currentCoroutineContext().isActive) mutableState.update { it.copy(busy = false) } }
         }
     }
     fun connect(playerId: String) {
-        if (!Regex("[A-Za-z0-9_-]{1,25}").matches(playerId.trim())) {
+        val id = playerId.trim()
+        if (!Regex("[A-Za-z0-9_-]{1,25}").matches(id)) {
             mutableState.update { it.copy(error = "Enter your BeatLeader player ID, rather than a profile URL.") }; return
         }
-        runAction { saved, key ->
-            val http = BeatSaberHttp(saved)
-            val connected = http.request("PUT", "/connection", JSONObject().put("player_id", playerId.trim()))
-            check(config() == saved) { "Enrollment changed. Reopen Beat Saber." }
-            withContext(Dispatchers.IO) { cache.clear(key) }; applyState(connected, key, busy = true)
-            val body = http.request("POST", "/refresh")
-            check(config() == saved) { "Enrollment changed. Reopen Beat Saber." }
-            applyState(body, key)
+        runAction {
+            if (id != mutableState.value.playerId) {
+                withContext(Dispatchers.IO) { cache.clear(LOCAL_BEAT_CACHE) }
+                applyState(JSONObject().put("player_id", id).put("snapshot", JSONObject.NULL), busy = true)
+            }
+            importProfile(id)
         }
     }
-    fun refresh() = runAction { saved, key ->
-        val body = BeatSaberHttp(saved).request("POST", "/refresh")
-        check(config() == saved) { "Enrollment changed. Reopen Beat Saber." }
-        applyState(body, key)
+    private suspend fun importProfile(id: String) {
+        val previous = mutableState.value.snapshot
+        if (previous != null && System.currentTimeMillis() / 1000 - previous.fetchedAt in 0..59) return
+        val snapshot = source.snapshot(id)
+        BeatSnapshot.decode(snapshot)
+        applyState(JSONObject().put("player_id", id).put("snapshot", snapshot))
     }
-    fun remove() = runAction { saved, key ->
-        val body = BeatSaberHttp(saved).request("DELETE")
-        check(config() == saved) { "Enrollment changed. Reopen Beat Saber." }
-        withContext(Dispatchers.IO) { cache.clear(key) }; applyState(body, key)
+    fun refresh() = runAction {
+        val id = mutableState.value.playerId
+        check(id.isNotEmpty()) { "Save your BeatLeader player ID first." }
+        importProfile(id)
+    }
+    fun remove() = runAction {
+        withContext(Dispatchers.IO) { cache.clear(LOCAL_BEAT_CACHE) }
+        // An empty marker prevents the legacy enrollment cache from reappearing.
+        applyState(JSONObject().put("player_id", JSONObject.NULL).put("snapshot", JSONObject.NULL))
     }
     fun map(score: BeatScore) {
         mapTask?.cancel()
@@ -206,15 +165,11 @@ class BeatSaberViewModel(application: android.app.Application) : ViewModel() {
         mapTask = viewModelScope.launch {
             try {
                 require(Regex("[a-fA-F0-9]{40}").matches(score.hash)) { "This score has no BeatSaver map hash." }
-                val saved = withContext(Dispatchers.IO) { config() }
-                val key = enrollmentKey(saved)
                 val entry = "${score.hash}/${score.mode}/${score.difficulty}"
-                val old = withContext(Dispatchers.IO) { cache.read(key, entry) }
+                val old = withContext(Dispatchers.IO) { cache.read(LOCAL_BEAT_CACHE, entry) }
                 if (old != null) { mutableState.update { it.copy(map = old) }; return@launch }
-                check(SyncCredentials(context).connected()) { "Map details are unavailable offline until first opened." }
-                val body = BeatSaberHttp(saved).request("GET", "/maps/${score.hash}", query = mapOf("mode" to score.mode, "difficulty" to score.difficulty))
-                check(config() == saved) { "Enrollment changed. Reopen Beat Saber." }
-                withContext(Dispatchers.IO) { cache.write(key, body, entry) }
+                val body = source.map(score.hash, score.mode, score.difficulty)
+                withContext(Dispatchers.IO) { cache.write(LOCAL_BEAT_CACHE, body, entry) }
                 mutableState.update { it.copy(map = body) }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) { mutableState.update { it.copy(mapError = e.message ?: "Map enrichment failed. Score retained.") } }

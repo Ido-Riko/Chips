@@ -27,7 +27,7 @@ Local logging needs no network or enrollment. Sync requires an operator-enrolled
 
 ## Beat Saber
 
-Normal-mode Today → Beat Saber → Explore scores opens the real-data explorer. Save a BeatLeader player ID using the enrolled CHIPS service, compare chart metrics and open exact-version BeatSaver details. Imports are cached separately for offline browsing. See [the API/storage contract](../docs/BEAT_SABER.md). The backend requires the additive Beat Saber update/migration; deployment/Poco acceptance remains open.
+Normal-mode Today → Beat Saber → Explore scores opens the real-data explorer. Enter a BeatLeader player ID; the phone calls public BeatLeader/BeatSaver APIs directly. No CHIPS server, enrollment or Tailscale is needed. Imports/map details need internet; saved-score browsing, reopening and local removal work offline. Compare chart metrics and open exact-version map details. See [the API/storage contract](../docs/BEAT_SABER.md). M4 follows the owner's local-first rule; server use is optional for sync or compute that actually needs it.
 
 ## Voice service
 

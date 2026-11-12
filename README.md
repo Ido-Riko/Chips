@@ -8,7 +8,7 @@ Start with the [Android build and test guide](chips-mobile/README.md), [implemen
 
 The [M4 integration plan](docs/M4_PLAN.md) records the agreed Beat Saber, Smart Band sleep/live-HR, barcode/receipt pantry, Japanese and drawing integrations, including references to reusable projects. Keep project plans, agent notes and READMEs version-controlled; credentials and generated caches remain local.
 
-The first [Beat Saber integration](docs/BEAT_SABER.md) adds authenticated BeatLeader imports, score exploration, exact-version BeatSaver enrichment and Android offline caching. It has local validation; backend deployment and Poco acceptance remain open.
+The first [Beat Saber integration](docs/BEAT_SABER.md) reads public BeatLeader/BeatSaver data directly on Android, with score exploration, exact-version map enrichment and offline caching/removal. No CHIPS server, enrollment or Tailscale is required. M4 follows the owner's local-first rule: retain useful features without a server; reserve server/PC use for optional sync or processing that needs it.
 
 This is a mono-repo containing both the mobile client and the Python backend services.
 

@@ -14,6 +14,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.net.ServerSocket
 import java.util.UUID
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import kotlin.concurrent.thread
 
 class BeatSaberTest {
@@ -73,7 +74,7 @@ class BeatSaberTest {
         compose.onNodeWithText("Retry map details").performScrollTo().assertIsDisplayed()
     }
 
-    @Test fun httpReadsBoundedJsonAndKeepsEnrollmentAtTheChipsService() = runBlocking {
+    @Test fun publicApiReadsMapDirectlyWithoutSendingAnEnrollmentToken() = runBlocking {
         ServerSocket(0).use { server ->
             var auth: String? = null
             val worker = thread {
@@ -84,14 +85,19 @@ class BeatSaberTest {
                         if (line.startsWith("Authorization:")) auth = line
                         line = reader.readLine()
                     }
-                    val body = "{\"player_id\":null,\"snapshot\":null}"
+                    val body = JSONObject().put("id", "test-map").put("metadata", JSONObject().put("bpm", 150))
+                        .put("versions", JSONArray().put(JSONObject().put("hash", "a".repeat(40))
+                            .put("diffs", JSONArray().put(JSONObject().put("characteristic", "Standard").put("difficulty", "ExpertPlus").put("nps", 5)))))
+                        .toString()
                     socket.getOutputStream().write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${body.length}\r\nConnection: close\r\n\r\n$body".toByteArray())
                 }
             }
-            val response = BeatSaberHttp(SyncCredentials.Config("http://127.0.0.1:${server.localPort}/api/v1", "isolated-test-token")).request("GET")
+            val response = BeatLeaderApi(saver = "http://127.0.0.1:${server.localPort}/".toHttpUrl())
+                .map("a".repeat(40), "Standard", "ExpertPlus")
             worker.join(3000)
-            assertTrue(response.isNull("snapshot"))
-            assertEquals("Authorization: Bearer isolated-test-token", auth)
+            assertEquals("test-map", response.getString("map_id"))
+            assertEquals(5.0, response.getDouble("nps"), 0.0)
+            assertNull(auth)
         }
     }
 }

@@ -1,5 +1,13 @@
 # Android implementation progress
 
+## M4 local-first correction — 13 November 2026
+
+After the phone could not reach the private CHIPS endpoint, read-only diagnosis found no active phone VPN, both phone/server offline in Tailscale and timed-out backend health. The owner explicitly declined requiring that server and confirmed **local-first across M4**, with optional server/PC use for sync or processing that actually needs it. This supersedes the backend-first Android dependency described in the earlier entry below.
+
+Android now calls public BeatLeader/BeatSaver APIs directly, without an enrollment token, service settings or VPN. Opens/reloads use local SQLite only; selection, import, cache, map details and removal no longer depend on the backend. Existing selected-enrollment snapshots can migrate once; removal preserves an empty marker to prevent old imports reappearing. Source requests are bounded/cancellable, busy responses retry once, and failure diagnostics name the public source without claiming saved data exists. All M4 plans/README/agent guidance now record the local-first rule; HR correlation and ordinary pantry/study/report state are to run on-device, while configured drawing/AI processing may still use the PC.
+
+Debug/unsigned-release builds, lint (zero errors, existing 29 warnings), 26 JVM tests and 36 API 37 emulator tests passed. Added coverage proves direct public parsing/pagination without credentials, exact-version matching, offline reopen/removal and retention after refresh failure. A separate one-off emulator test fetched the owner's real public profile/map directly and displayed the chart; it passed and is excluded from the deterministic CI suite. Updated the connected Poco in place successfully, preserving app data. The phone showed system/always-on-display UI, so interactive phone acceptance remains pending. See [local-first evidence](evidence/m4-beat-saber-local-first.json).
+
 ## M4 Beat Saber import/explorer — 13 November 2026
 
 The owner selected Beat Saber as the first M4 integration and requested checking online APIs beyond the prototype. Implemented authenticated owner-scoped BeatLeader selection/import/removal, atomic persisted snapshots, ranked accuracy portfolio, up to 300 recent retained scores, 30-day profile history and exact-version BeatSaver enrichment. Android adds a searchable explorer, selectable chart axes, source links, mistake/combo/hand-cut/improvement details and a separate enrollment-isolated SQLite cache. M2 activity and M3 conversation schemas remain unchanged; no automatic activity logging or full-attempt coverage is claimed.

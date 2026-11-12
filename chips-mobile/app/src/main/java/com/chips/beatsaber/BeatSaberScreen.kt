@@ -78,12 +78,12 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
                 OutlinedTextField(player, { player = it }, label = { Text("Player ID") }, singleLine = true,
                     enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("beat-player-id"))
                 Button(onClick = { selectedKey = null; onConnect(player) }, enabled = !state.busy && player.isNotBlank()) { Text("Save and import") }
-                Text("Use the ID from your BeatLeader profile. Imports use your enrolled CHIPS service.", style = MaterialTheme.typography.bodyMedium)
+                Text("Use the ID from your BeatLeader profile. Imported scores are saved on this phone; importing and refreshing need internet.", style = MaterialTheme.typography.bodyMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = onRefresh, enabled = !state.busy && state.playerId.isNotEmpty()) { Text("Refresh") }
                     TextButton(onClick = onReload, enabled = !state.busy) { Text("Reload saved") }
                 }
-                if (state.playerId.isNotEmpty()) TextButton(onClick = { confirmRemove = true }, enabled = !state.busy) { Text("Remove imported data") }
+                if (state.playerId.isNotEmpty()) TextButton(onClick = { confirmRemove = true }, enabled = !state.busy) { Text("Remove local imports") }
                 if (state.busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Loading scores…") }
                 state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("beat-error")) }
             }
@@ -140,8 +140,8 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
             }
         } else if (!state.busy) item { Text("Connect your profile to import real scores. Saved scores stay available offline.") }
     }
-    if (confirmRemove) AlertDialog(onDismissRequest = { confirmRemove = false }, title = { Text("Remove Beat Saber imports?") },
-        text = { Text("Removes the connection and imported snapshot from CHIPS and this enrollment's phone cache. BeatLeader scores and your activity logs remain available at their sources.") },
+    if (confirmRemove) AlertDialog(onDismissRequest = { confirmRemove = false }, title = { Text("Remove local Beat Saber imports?") },
+        text = { Text("Removes this phone's selected profile, imported scores and map cache. Your upstream scores and activity logs remain available.") },
         confirmButton = { TextButton(onClick = { confirmRemove = false; selectedKey = null; onRemove() }) { Text("Remove") } },
         dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Cancel") } })
 }
