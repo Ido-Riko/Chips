@@ -21,9 +21,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
@@ -40,7 +39,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) -> Unit,
+fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> Unit,
                     beatSaber: com.chips.beatsaber.BeatSaberState = com.chips.beatsaber.BeatSaberState(),
                     onBeatSaber: () -> Unit = {}, onJapanese: () -> Unit = {}, onDrawing: () -> Unit = {},
                     onPantry: () -> Unit = {}, pantryCount: Int = 0, japaneseDue: Int = 0, drawingCount: Int = 0, drawingSummary: String = "", onVoice: () -> Unit) {
@@ -91,12 +90,12 @@ fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) ->
             DashboardCard("Your rhythm", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "${state.completed.size} / 4 today") {
                 Text(if (state.demoMode) "Tap an activity to toggle its preview." else "Tap a checked activity to remove today's sessions.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 AdaptivePair(
-                    first = { ActivityTile(ActivityType.WORKOUT, state, onToggleActivity) },
-                    second = { ActivityTile(ActivityType.BEAT_SABER, state, onToggleActivity) }
+                    first = { ActivityTile(ActivityType.WORKOUT, state, onOpenActivity) },
+                    second = { ActivityTile(ActivityType.BEAT_SABER, state, onOpenActivity) }
                 )
                 AdaptivePair(
-                    first = { ActivityTile(ActivityType.DRAWING, state, onToggleActivity) },
-                    second = { ActivityTile(ActivityType.JAPANESE, state, onToggleActivity) }
+                    first = { ActivityTile(ActivityType.DRAWING, state, onOpenActivity) },
+                    second = { ActivityTile(ActivityType.JAPANESE, state, onOpenActivity) }
                 )
             }
         }
@@ -132,8 +131,8 @@ fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) ->
         item {
             DashboardCard("Keep showing up", trailing = if (state.demoMode) "Preview streaks" else "Daily streaks") {
                 if (LocalDensity.current.fontScale > 1.3f) {
-                    ActivityType.entries.chunked(2).forEach { pair -> StreakRow(pair, state) }
-                } else StreakRow(ActivityType.entries, state)
+                    ActivityType.entries.chunked(2).forEach { pair -> StreakRow(pair, state, onOpenActivity) }
+                } else StreakRow(ActivityType.entries, state, onOpenActivity)
             }
         }
         item {
@@ -186,15 +185,16 @@ private fun SleepCard(demo: Boolean) {
 }
 
 @Composable
-private fun ActivityTile(type: ActivityType, state: DashboardUiState, onLog: (ActivityType) -> Unit) {
+private fun ActivityTile(type: ActivityType, state: DashboardUiState, onOpen: (ActivityType) -> Unit) {
     val completed = type in state.completed
     val color = activityColor(type)
     Surface(
-        onClick = { onLog(type) }, shape = RoundedCornerShape(14.dp),
+        onClick = { onOpen(type) }, shape = RoundedCornerShape(14.dp),
         color = if (completed) color.copy(alpha = 0.13f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
         modifier = Modifier.fillMaxWidth().testTag("rhythm-${type.name}").semantics {
-            role = Role.Checkbox
-            toggleableState = if (completed) ToggleableState.On else ToggleableState.Off
+            role = Role.Button
+            contentDescription = "Open ${type.label}"
+            stateDescription = if (completed) "Completed today" else "Not completed today"
         }
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -206,11 +206,11 @@ private fun ActivityTile(type: ActivityType, state: DashboardUiState, onLog: (Ac
 }
 
 @Composable
-private fun StreakRow(types: List<ActivityType>, state: DashboardUiState) {
+private fun StreakRow(types: List<ActivityType>, state: DashboardUiState, onOpen: (ActivityType) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         types.forEach { type ->
             val days = if (state.demoMode) DemoData.streaks.getValue(type) else state.streak(type)
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f).testTag("streak-${type.name}").clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onOpen(type) }.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.size(48.dp).clearAndSetSemantics {
                     contentDescription = if (days == null) "${type.label}, no history" else "${type.label}, $days day ${if (state.demoMode) "preview " else ""}streak"
                 }, contentAlignment = Alignment.Center) {
@@ -240,7 +240,7 @@ private fun DetailRow(symbol: ChipsSymbol, color: Color, title: String, descript
 }
 
 @Composable
-fun QuickLogBar(demoMode: Boolean, onLog: (ActivityType) -> Unit) {
+fun QuickLogBar(demoMode: Boolean, onOpen: (ActivityType) -> Unit) {
     Surface(color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxWidth()) {
             HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
@@ -252,7 +252,7 @@ fun QuickLogBar(demoMode: Boolean, onLog: (ActivityType) -> Unit) {
                 ActivityType.entries.forEach { type ->
                     Column(
                         Modifier.weight(1f).testTag("quick-log-${type.name}")
-                            .clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onLog(type) }.padding(vertical = 8.dp),
+                            .clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onOpen(type) }.padding(vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         ChipsIcon(activitySymbol(type), activityColor(type), Modifier.size(20.dp))

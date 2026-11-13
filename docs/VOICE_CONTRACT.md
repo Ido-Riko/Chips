@@ -79,3 +79,7 @@ Android can be validated using a local test service for the protocol, same-ID re
 ## Pantry context for the deferred service
 
 The main assistant handles meal recommendations using authenticated-owner pantry inventory (`app.routers.pantry.inventory`). The existing legacy voice route now includes this reference context; the M3-compatible implementation must retain it without treating item names as instructions. Show missing ingredients, distinguish count from package size, check negative/conflicting stock and disclose last-sync freshness. Never decrement pantry stock as a side effect of generated suggestions. Pantry work does not change the legacy route’s protocol incompatibility.
+
+## Local assistant shortcuts
+
+The unlocked assistant also exposes Workout, Beat Saber, Japanese, Drawing and Pantry routes. These are local UI actions, independent of speech inference and microphone permission. Busy/recording states hide shortcuts; selecting one cancels any retained recording/request before routing. The Android session uses [startAssistantActivity](https://developer.android.com/reference/android/service/voice/VoiceInteractionSession#startAssistantActivity(android.content.Intent)) to open the app, with a validated feature extra consumed once by MainActivity. Opening a route never creates/deletes completion records. Workout requires manual confirmation; Beat Saber logs only through its explicit completed-session action.

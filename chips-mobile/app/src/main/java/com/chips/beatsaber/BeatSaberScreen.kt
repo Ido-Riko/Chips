@@ -62,7 +62,7 @@ fun BeatSaberSummary(state: BeatSaberState, onOpen: () -> Unit) {
 @Composable
 fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (String) -> Unit,
                     onRefresh: () -> Unit, onReload: () -> Unit, onRemove: () -> Unit,
-                    onMap: (BeatScore) -> Unit) {
+                    onMap: (BeatScore) -> Unit, onLogSession: (() -> Unit)? = null) {
     BackHandler(onBack = onBack)
     var player by rememberSaveable { mutableStateOf(state.playerId) }
     LaunchedEffect(state.playerId) { player = state.playerId }
@@ -87,7 +87,10 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
     }
     LazyColumn(Modifier.fillMaxSize().testTag("beat-saber-screen"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) { Text("← Today") }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) { Text("← Today") }
+                if(onLogSession != null) TextButton(onClick = onLogSession, modifier = Modifier.testTag("beat-log-session")) { Text("Log completed session") }
+            }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("Beat Saber", style = MaterialTheme.typography.headlineLarge)
@@ -340,7 +343,7 @@ internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selecte
 }
 
 @Composable
-private fun ScoreDetails(score: BeatScore, state: BeatSaberState, onMap: (BeatScore) -> Unit) {
+private fun ScoreDetails(score: BeatScore, state: BeatSaberState, onMap: (BeatScore) -> Unit, onLogSession: (() -> Unit)? = null) {
     val uri = LocalUriHandler.current
     var linkError by remember(score.key) { mutableStateOf(false) }
     fun open(url: String) { runCatching { uri.openUri(url) }.onFailure { linkError = true } }

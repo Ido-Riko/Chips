@@ -17,9 +17,11 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.chips.assistant.ChipsVoiceInteractionService
 import com.chips.ui.ChipsApp
+import com.chips.ui.FeatureRoute
 import com.chips.ui.theme.ChipsTheme
 
 class MainActivity : ComponentActivity() {
+    private var featureRequest by mutableStateOf<FeatureRoute?>(null)
     private var micPermissionGranted by mutableStateOf(false)
     private var isAssistant by mutableStateOf(false)
     private var settingsError by mutableStateOf<String?>(null)
@@ -34,10 +36,13 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
+        featureRequest = FeatureRoute.from(intent)
         updateStates()
         setContent {
             ChipsTheme {
                 ChipsApp(
+                    requestedFeature = featureRequest,
+                    onFeatureHandled = { featureRequest = null; intent.removeExtra(FeatureRoute.EXTRA) },
                     micPermissionGranted = micPermissionGranted,
                     isAssistant = isAssistant,
                     settingsError = settingsError,
@@ -53,6 +58,12 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        featureRequest = FeatureRoute.from(intent)
     }
 
     override fun onResume() {

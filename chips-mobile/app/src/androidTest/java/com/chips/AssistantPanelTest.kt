@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import com.chips.ui.AssistantPanel
 import com.chips.ui.AssistantPhase
+import com.chips.ui.FeatureRoute
 import com.chips.ui.theme.ChipsTheme
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -60,6 +61,27 @@ class AssistantPanelTest {
         compose.onNodeWithText(reply).assertExists()
         compose.onNodeWithText("Hold to speak").assertIsDisplayed().assertIsEnabled()
         compose.onNodeWithContentDescription("Close assistant").assertIsDisplayed()
+    }
+
+    @Test fun shortcutsScrollInCompactWindowWithoutMicrophoneAccess() {
+        val chosen = mutableListOf<FeatureRoute>()
+        val phase = mutableStateOf(AssistantPhase.READY)
+        compose.setContent {
+            ChipsTheme {
+                val density = LocalDensity.current
+                CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = 1.5f)) {
+                    Box(Modifier.requiredSize(320.dp,480.dp)) {
+                        AssistantPanel(phase.value,null,remember { MutableInteractionSource() },{},
+                            onFeature = { chosen += it },microphoneAvailable = false)
+                    }
+                }
+            }
+        }
+        for(route in FeatureRoute.entries) compose.onNodeWithTag("assistant-feature-${route.name}").performScrollTo().assertIsDisplayed().performClick()
+        compose.runOnIdle { assertTrue(chosen == FeatureRoute.entries.toList()) }
+        compose.onNodeWithText("Hold to speak").assertIsDisplayed().assertIsNotEnabled()
+        compose.runOnIdle { phase.value = AssistantPhase.PROCESSING }
+        compose.onNodeWithTag("assistant-feature-JAPANESE").assertDoesNotExist()
     }
 
     @Test fun retryAndCancelRemainReachableAtLargeTextInCompactWindow() {

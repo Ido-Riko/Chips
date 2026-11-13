@@ -4,6 +4,10 @@ Updated 12 November 2026. **M1 is complete. M2 is implemented, deployed and veri
 
 Use **M1–M5** in new chats, issues and implementation work. This historical filename is retained for continuity. The canonical numbering, status table and retired-phase mapping are in [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md#milestone-names-and-current-plan); do not maintain a parallel Phase 2–8 schedule.
 
+## Connected shortcut checkpoint — 13 November 2026
+
+Quick Log/rhythm/streak actions route through `ui/FeatureRoute.kt` to Japanese, drawing and Beat Saber. They no longer toggle/delete saved completions. Japanese reviews/drawing imports keep their existing linked activities; Beat Saber has explicit Log completed session with Undo, and Workout confirms manual logging pending the future tracker. In-app and Android assistant shortcuts include Pantry, work without microphone permission/server and remain blocked on the lockscreen. MainActivity consumes the requested feature once and handles warm intents. Keep the entry points connected to these shared routes rather than reintroducing generic completion buttons. See the latest progress entry for validation.
+
 ## Current M4 checkpoint — 13 November 2026
 
 PR #5 was merged; Japanese/drawing and pantry are on `codex/m4-japanese-drawing`, draft [PR #6](https://github.com/Ido-Riko/Chips/pull/6). These dated notes supersede older PR #4 publishing instructions below. Owner requested server-backed pantry, with recommendations delegated to the main AI. See [PANTRY.md](docs/PANTRY.md): independent SQLite immutable ledger, barcode scanner/direct Open Food Facts lookup, persistent reviewed receipt drafts, signed stock corrections, optional owner-bound sync/restoration and PostgreSQL migration 004. The existing assistant route receives owner inventory; the compatible M3 voice service is still deferred. Server is offline: production deployment, actual vision receipt reading and real phone sync acceptance are not complete. Preserve the unrelated IDE deployment selector edit.

@@ -61,7 +61,12 @@ class ChipsVoiceInteractionSession(context: Context) : VoiceInteractionSession(c
             setViewTreeSavedStateRegistryOwner(this@ChipsVoiceInteractionSession)
             setContent {
                 ChipsTheme {
-                    AssistantOverlayContent(onDismiss = { hide() }, reserveFingerprintSpace = true)
+                    AssistantOverlayContent(onDismiss = { hide() }, reserveFingerprintSpace = true, onFeature = { route ->
+                        if (!context.getSystemService(android.app.KeyguardManager::class.java).isDeviceLocked) {
+                            startAssistantActivity(com.chips.ui.featureIntent(context, route))
+                            hide()
+                        }
+                    })
                 }
             }
         }

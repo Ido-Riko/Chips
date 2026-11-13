@@ -80,3 +80,7 @@ Normal-mode Today → Japanese → Study opens 30 attributed offline kanji, answ
 ## Pantry
 
 Today → Open pantry supports local groceries, barcode lookup/scanning, receipt drafts and stock adjustments. Server sync retains the immutable inventory ledger in PostgreSQL and can restore it. Photo transcription requires the configured server vision model; offline manual entry works. See [pantry contract and acceptance](../docs/PANTRY.md).
+
+## Connected activity shortcuts
+
+Quick Log, rhythm tiles and streak rings open Japanese practice, drawing history or Beat Saber. Real reviews/imports update the same saved activities and streaks; opening a feature never toggles completion. Workout offers an explicit manual log, and Beat Saber has Log completed session with Undo. Ask CHIPS and Android’s digital assistant expose the same shortcuts plus Pantry without microphone permission or a server. The system assistant hands off to the requested screen, including when the app is already open; lockscreen access stays blocked.

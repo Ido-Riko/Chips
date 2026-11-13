@@ -14,6 +14,8 @@ The first [Beat Saber integration](docs/BEAT_SABER.md) reads public BeatLeader/B
 
 [Pantry](docs/PANTRY.md) adds offline groceries, barcode lookup, editable receipt drafts, stock adjustments and server-backed inventory. Meal recommendations belong to the main AI; the backend supplies owner-scoped inventory context. Production deployment and real receipt inference remain pending.
 
+Quick Log, rhythm tiles, streak rings and the digital assistant now open the implemented activity features. Japanese reviews/drawing imports update real completions; Workout and Beat Saber retain explicit manual logging.
+
 This is a mono-repo containing both the mobile client and the Python backend services.
 
 - **`chips-mobile/`**: The Android project built with Kotlin and Jetpack Compose. Contains the `VoiceInteractionService` to register as the default device assistant.
