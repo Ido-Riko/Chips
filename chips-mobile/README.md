@@ -19,7 +19,7 @@ The second command requires an emulator or USB-connected device with debugging e
 
 ## Daily logging and synchronization
 
-Today and Quick Log save Workout, Beat Saber, Drawing and Japanese to SQLite before confirming success. History, Today and streaks use those same records. Your rhythm tiles toggle the activity for today: tapping a checked tile removes all of today’s sessions for that activity, and tapping it again creates a new session. Quick Log adds individual sessions; multiple sessions count once for a daily streak. The Undo snackbar removes only the session just added. History supports editing the activity, date and note, and confirmed deletion.
+The Activities card opens Workout, Beat Saber, Drawing and Japanese. Japanese reviews/drawing imports save their linked activities; Workout explicitly confirms manual logging and Beat Saber has Log completed session. History, Today and streaks use those same records. Opening a feature never changes completion. The Undo snackbar removes only the manual session just added. History supports editing the activity, date and note, and confirmed deletion.
 
 The calendar date and IANA timezone are captured with each session. Travel does not reassign old sessions to another date. Today follows the phone’s current local date and updates while the app stays open. A streak counts consecutive completed dates ending today, or yesterday if today is incomplete. An explicit date correction in History changes completion/streak attribution without changing the original capture timestamp.
 
@@ -33,7 +33,7 @@ Normal-mode Today → Beat Saber → Explore scores opens the real-data explorer
 
 Android now requires the [version-1 voice service contract](../docs/VOICE_CONTRACT.md). The existing demo/plain-text server needs an update; server work is deferred. Android checks authenticated `/voice-capabilities` before sending audio, and requires real structured transcript/answer responses and advertised request idempotency. Settings → Synchronization supplies the HTTPS endpoint/device token. STT and LLM model/provider selection is independently configured on the service; PC and explicitly selected API providers are supported by the contract. Provider keys stay on the service.
 
-To use the overlay, select CHIPS as the device assistant from Settings. To use voice without changing that selection, grant microphone access and tap Ask CHIPS on Today. Voice and private replies require an unlocked phone. System invocation on a locked phone reveals only unlock guidance.
+To use the overlay, select CHIPS as the device assistant from Settings. To use voice without changing that selection, grant microphone access and tap Ask CHIPS on Today. Lockscreen voice/replies and feature screens are enabled by default. Settings → Assistant security → Allow assistant while locked can require unlocking instead. Settings explains that personal information may be visible to anyone holding the phone; changing the switch itself requires an unlocked phone.
 
 Captures use MPEG-4/AAC (`.m4a`, `audio/mp4`), reject clips shorter than 400 ms, and stop/discard at 60 seconds. Cancelled hold gestures discard audio. Closing/backgrounding cancels recording/network work. Uploading, processing and saving have separate visible states. Retry request reuses the recording and request UUID; Retry saving only repeats local storage. Discard/close removes retry audio. A cold app start clears clips abandoned by process death.
 
@@ -42,9 +42,9 @@ Successful real transcripts/replies are saved to SQLite before success is shown 
 ## Manual acceptance checks
 
 - Fresh launch opens Today without a permission prompt or assistant requirement.
-- All dashboard sections scroll; Quick Log stays pinned. Activity buttons use a two-column grid at normal text size and stack at larger text sizes. Verify both gesture/button navigation on the Poco X6 Pro.
+- All dashboard sections scroll; only bottom navigation stays pinned. The Activities card replaces the duplicated rhythm/Quick Log controls. Activity buttons use a two-column grid at normal text size and stack at larger text sizes. Verify both gesture/button navigation on the Poco X6 Pro.
 - Normal mode has no fictional scores. Settings → Show preview data explicitly enables sample values and charts.
-- Today and Quick Log preview actions share completion state, say nothing was saved, and never create history. Turning preview off clears those completions.
+- Activities and streak preview actions share completion state and never create history. Turning preview off clears those completions.
 - Ask CHIPS without microphone permission opens Settings. Denial leaves normal navigation usable; permanent denial has an App settings route.
 - Returning from Android settings refreshes permission/assistant status. Check in-app and system-overlay recording separately.
 - Choose device assistant opens the system assistant-settings screen, with a Default apps fallback if the manufacturer omits that screen. The assistant-button regression test intercepts the outgoing intent and never changes the selected assistant.
@@ -58,7 +58,7 @@ All three instrumentation tests also passed locally on the Android 17 / API 37 e
 
 ## M2 device acceptance
 
-1. Turn off Wi-Fi/mobile data. Tap Workout in Your rhythm, then tap it again to uncheck it. Confirm Today, History and streaks agree. Repeat for each activity. Add two Workout sessions through Quick Log, then uncheck Workout in Your rhythm: both of today’s Workout sessions should disappear while other activities and earlier days remain. Separately, Undo a new Quick Log session and confirm the earlier one remains.
+1. Turn off Wi-Fi/mobile data. Open Japanese/Drawing/Beat Saber from Activities and confirm opening never creates/deletes completion. Complete a review/import and confirm Today, History and streaks agree. Save two manual Workout sessions, then Undo the second and confirm the earlier remains. Use History for explicit editing/deletion.
 2. Force-stop CHIPS from Android App settings, reopen it, and confirm the first session remains. Repeat for the other activities.
 3. In History, edit an activity/date/note, then delete it. Restart while offline and confirm each change persists.
 4. Enroll the device against the migrated HTTPS service. Reconnect, retry repeatedly and restart during sync. Each stable ID must appear once on the server, with the latest revision and no restored deletions.
@@ -83,4 +83,4 @@ Today → Open pantry supports local groceries, barcode lookup/scanning, receipt
 
 ## Connected activity shortcuts
 
-Quick Log, rhythm tiles and streak rings open Japanese practice, drawing history or Beat Saber. Real reviews/imports update the same saved activities and streaks; opening a feature never toggles completion. Workout offers an explicit manual log, and Beat Saber has Log completed session with Undo. Ask CHIPS and Android’s digital assistant expose the same shortcuts plus Pantry without microphone permission or a server. The system assistant hands off to the requested screen, including when the app is already open; lockscreen access stays blocked.
+The single Activities card and streak rings open Japanese practice, drawing history or Beat Saber. Real reviews/imports update the same saved activities and streaks; opening a feature never toggles completion. Workout offers an explicit manual log, and Beat Saber has Log completed session with Undo. Ask CHIPS and Android’s digital assistant expose the same shortcuts plus Pantry without microphone permission or a server. The system assistant hands off to the requested screen, including when the app is already open; lockscreen access follows the Assistant security switch (default on).

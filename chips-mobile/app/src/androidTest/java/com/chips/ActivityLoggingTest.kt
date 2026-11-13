@@ -19,10 +19,10 @@ class ActivityLoggingTest {
         val seed = store.log(ActivityType.JAPANESE)
         val before = store.load()
         try {
-            for(prefix in listOf("quick-log", "rhythm", "streak")) {
+            for(prefix in listOf("activity", "streak")) {
                 for((type, screen) in listOf(ActivityType.JAPANESE to "japanese-screen", ActivityType.DRAWING to "drawing-screen", ActivityType.BEAT_SABER to "beat-saber-screen")) {
                     val tag = "$prefix-${type.name}"
-                    if(prefix != "quick-log") compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag(tag))
+                    compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag(tag))
                     compose.onNodeWithTag(tag).performClick()
                     compose.onNodeWithTag(screen).assertIsDisplayed()
                     compose.onNodeWithText("Quick log").assertDoesNotExist()
@@ -36,7 +36,8 @@ class ActivityLoggingTest {
     @Test fun workoutLoggingIsExplicitSurvivesRecreationAndSupportsUndo() {
         val before = store.load().map { it.id }.toSet()
         try {
-            compose.onNodeWithTag("quick-log-WORKOUT").performClick()
+            compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("activity-WORKOUT"))
+            compose.onNodeWithTag("activity-WORKOUT").performClick()
             assertTrue(store.load().none { it.id !in before })
             compose.onNodeWithTag("save-workout").performClick()
             compose.waitUntil(5000) { store.load().any { !it.deleted && it.id !in before } }
@@ -46,7 +47,8 @@ class ActivityLoggingTest {
             compose.activityRule.scenario.recreate()
             compose.onNodeWithTag("record-$created").assertIsDisplayed()
             compose.onNodeWithTag("nav-DASHBOARD").performClick()
-            compose.onNodeWithTag("quick-log-WORKOUT").performClick()
+            compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("activity-WORKOUT"))
+            compose.onNodeWithTag("activity-WORKOUT").performClick()
             compose.onNodeWithTag("save-workout").performClick()
             compose.waitUntil(5000) { store.load().count { !it.deleted && it.id !in before } == 2 }
             compose.onNodeWithText("Undo", useUnmergedTree = true).performClick()
@@ -57,7 +59,8 @@ class ActivityLoggingTest {
     @Test fun beatSaberLogsOnlyOnExplicitCompletedSessionAction() {
         val before = store.load().map { it.id }.toSet()
         try {
-            compose.onNodeWithTag("quick-log-BEAT_SABER").performClick()
+            compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("activity-BEAT_SABER"))
+            compose.onNodeWithTag("activity-BEAT_SABER").performClick()
             compose.onNodeWithTag("beat-saber-screen").assertIsDisplayed()
             assertTrue(store.load().none { it.id !in before })
             compose.onNodeWithTag("beat-log-session").performClick()

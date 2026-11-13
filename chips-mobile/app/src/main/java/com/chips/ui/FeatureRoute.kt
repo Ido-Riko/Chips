@@ -15,7 +15,8 @@ enum class FeatureRoute(val label: String) {
     }
 }
 
-fun featureIntent(context: Context, route: FeatureRoute) = Intent(context, MainActivity::class.java)
+fun featureIntent(context: Context, route: FeatureRoute?, fromLockscreen: Boolean = false) = Intent(context,
+    if(fromLockscreen) com.chips.assistant.LockscreenAssistantActivity::class.java else MainActivity::class.java)
     .setAction(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-    .putExtra(FeatureRoute.EXTRA, route.name)
+    .putExtra(FeatureRoute.EXTRA, route?.name)
     .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)

@@ -1,5 +1,14 @@
 # Android implementation progress
 
+## One Activities section and owner-controlled lockscreen assistant — 13 November 2026
+
+Owner requested removal of duplicate rhythm/Quick Log controls and lockscreen assistant use. Removed the pinned Quick Log bar and renamed the existing activity grid Activities; streak links and all real feature routes remain. Removed obsolete tap-to-remove guidance. Manual logging, practice-linked completions, Undo and history persist as before.
+
+Lockscreen access defaults **on**, per the owner's direction. Added Settings → Assistant security → Allow assistant while locked with a clear personal-data visibility notice; the switch changes only while the device is unlocked. One persistent policy governs session visibility, recording/retry, private replies, feature handoff and assistant window visibility. Opt-out restores unlock guidance and capture cancellation. Android metadata now advertises keyguard launch, the service implements its launch callback, and a non-exported LockscreenAssistantActivity opens the shared assistant/feature UI over the keyguard without dismissing it. Closing that assistant while locked finishes its window. Ordinary launcher opens do not request lockscreen visibility.
+
+Android debug/unsigned-release builds, 29 JVM tests, lint (zero errors, 53 warnings) and all 59 API 37 emulator tests passed. Installed the final APK on the Poco in place, preserving data; automated interaction was restricted to the emulator. A separate instrumentation run with a real temporary emulator PIN verified assistant entry, Drawing handoff and recreation while KeyguardManager remained locked. Preference persistence/default, opt-out cancellation/content hiding, allowed recording/reply behavior with mocked inference and UI switch persistence are covered. The temporary emulator PIN was cleared afterward. Actual Poco invocation gestures/firmware and real inference remain device/service acceptance; no real model response was inferred from mocked voice tests.
+
+
 ## Quick Log, rhythm, streak and assistant feature routing — 13 November 2026
 
 Connected all three dashboard entry points to a shared FeatureRoute contract. Japanese opens its persisted review queue, Drawing opens the sketchbook, and Beat Saber opens the saved explorer. Streak rings are now accessible buttons. Opening an activity never creates a generic completion or clears real saved completions; Japanese reviews/drawing imports continue their existing stable linked logging. Workout asks for an explicit manual completion until its tracker exists. Beat Saber provides Log completed session with Undo, without inferring a play from score browsing/import. History editing/deletion stays available.

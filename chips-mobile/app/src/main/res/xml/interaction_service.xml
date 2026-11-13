@@ -4,4 +4,4 @@
     android:sessionService="com.chips.assistant.ChipsVoiceInteractionSessionService"
     android:recognitionService="com.chips.assistant.ChipsRecognitionService"
     android:supportsAssist="true"
-    android:supportsLaunchVoiceAssistFromKeyguard="false" />
+    android:supportsLaunchVoiceAssistFromKeyguard="true" />

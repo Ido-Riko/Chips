@@ -87,8 +87,8 @@ fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> U
         if (state.storageError != null) item { Text(state.storageError, color = MaterialTheme.colorScheme.error) }
         item { SleepCard(state.demoMode) }
         item {
-            DashboardCard("Your rhythm", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "${state.completed.size} / 4 today") {
-                Text(if (state.demoMode) "Tap an activity to toggle its preview." else "Tap a checked activity to remove today's sessions.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            DashboardCard("Activities", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "${state.completed.size} / 4 today") {
+                if (state.demoMode) Text("Tap an activity to toggle its preview.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 AdaptivePair(
                     first = { ActivityTile(ActivityType.WORKOUT, state, onOpenActivity) },
                     second = { ActivityTile(ActivityType.BEAT_SABER, state, onOpenActivity) }
@@ -191,7 +191,7 @@ private fun ActivityTile(type: ActivityType, state: DashboardUiState, onOpen: (A
     Surface(
         onClick = { onOpen(type) }, shape = RoundedCornerShape(14.dp),
         color = if (completed) color.copy(alpha = 0.13f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-        modifier = Modifier.fillMaxWidth().testTag("rhythm-${type.name}").semantics {
+        modifier = Modifier.fillMaxWidth().testTag("activity-${type.name}").semantics {
             role = Role.Button
             contentDescription = "Open ${type.label}"
             stateDescription = if (completed) "Completed today" else "Not completed today"
@@ -235,31 +235,6 @@ private fun DetailRow(symbol: ChipsSymbol, color: Color, title: String, descript
             Text(title, style = MaterialTheme.typography.labelLarge)
             Text(description, style = MaterialTheme.typography.bodyMedium)
             Text(note, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-fun QuickLogBar(demoMode: Boolean, onOpen: (ActivityType) -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxWidth()) {
-            HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
-            Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Quick log", style = MaterialTheme.typography.labelMedium)
-                Text(if (demoMode) "Preview only" else "Saved on this phone", modifier = Modifier.testTag("quick-log-status"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-            }
-            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp)) {
-                ActivityType.entries.forEach { type ->
-                    Column(
-                        Modifier.weight(1f).testTag("quick-log-${type.name}")
-                            .clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onOpen(type) }.padding(vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        ChipsIcon(activitySymbol(type), activityColor(type), Modifier.size(20.dp))
-                        Text(type.label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
-                    }
-                }
-            }
         }
     }
 }

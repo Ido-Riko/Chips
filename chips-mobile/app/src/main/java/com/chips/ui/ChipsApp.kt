@@ -45,6 +45,9 @@ fun ChipsApp(
     onRequestMicrophone: () -> Unit,
     onAssistantSettings: () -> Unit,
     onAppSettings: () -> Unit,
+    requestedAssistant: Boolean = false,
+    onAssistantHandled: () -> Unit = {},
+    onAssistantClosed: () -> Unit = {},
     requestedFeature: FeatureRoute? = null,
     onFeatureHandled: () -> Unit = {},
     dashboard: DashboardViewModel = viewModel(factory = viewModelFactory {
@@ -81,6 +84,7 @@ fun ChipsApp(
             FeatureRoute.WORKOUT -> showWorkoutLog = true
         }
     }
+    LaunchedEffect(requestedAssistant) { if(requestedAssistant) { showVoice = true; onAssistantHandled() } }
     LaunchedEffect(requestedFeature) {
         requestedFeature?.let { openFeature(it); onFeatureHandled() }
     }
@@ -108,7 +112,6 @@ fun ChipsApp(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             Column {
-                if (destination == Destination.DASHBOARD && !showBeatSaber && practicePage.isEmpty()) QuickLogBar(state.demoMode, onShortcut)
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column {
                         HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
@@ -181,9 +184,9 @@ fun ChipsApp(
         confirmButton = { TextButton(onClick = { showWorkoutLog = false; onLog(ActivityType.WORKOUT) }, modifier = Modifier.testTag("save-workout")) { Text("Save workout") } },
         dismissButton = { TextButton(onClick = { showWorkoutLog = false }) { Text("Cancel") } })
     if (showVoice) {
-        Dialog(onDismissRequest = { showVoice = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Dialog(onDismissRequest = { showVoice = false; onAssistantClosed() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(Modifier.fillMaxSize()) {
-                AssistantOverlayContent(onDismiss = { showVoice = false }, onFeature = openFeature)
+                AssistantOverlayContent(onDismiss = { showVoice = false; onAssistantClosed() }, onFeature = openFeature)
             }
         }
     }
@@ -216,6 +219,7 @@ private fun SettingsScreen(
                 )
             }
         }
+        AssistantSecurityCard()
         SyncSettingsCard()
         DashboardCard("Microphone") {
             Text(if (microphoneGranted) "Microphone access granted" else "Microphone access is off")
@@ -236,7 +240,27 @@ private fun SettingsScreen(
         DashboardCard("Voice service") {
             Text("Voice uses your saved service enrollment. The service selects speech recognition and the answer model independently; either may run on your PC or use an explicitly configured API.")
             Text("A compatible service must return a real transcript and reply. Successful conversations are saved on this phone. The earlier demo service needs an update before it can be used.")
-            Text("Voice is available only while the phone is unlocked. Closing the assistant discards any recording waiting for retry.")
+            Text("Lockscreen access follows your security setting above. Closing the assistant discards any recording waiting for retry.")
         }
+    }
+}
+
+@Composable
+internal fun AssistantSecurityCard() {
+    val context = LocalContext.current
+    val access = remember { com.chips.assistant.AssistantAccessSettings(context) }
+    val keyguard = remember { context.getSystemService(android.app.KeyguardManager::class.java) }
+    var enabled by remember { mutableStateOf(access.allowLocked()) }
+    var unlocked by remember { mutableStateOf(!keyguard.isDeviceLocked) }
+    LaunchedEffect(Unit) { while(true) { unlocked = !keyguard.isDeviceLocked; enabled = access.allowLocked(); kotlinx.coroutines.delay(250) } }
+    DashboardCard("Assistant security", modifier = Modifier.testTag("assistant-security")) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Allow assistant while locked", Modifier.weight(1f))
+            Switch(checked = enabled, enabled = unlocked, onCheckedChange = { value ->
+                if(!keyguard.isDeviceLocked) { access.setAllowLocked(value); enabled = value }
+            }, modifier = Modifier.semantics { contentDescription = "Allow assistant while locked" })
+        }
+        Text("Voice, replies and activity screens can be used without unlocking. Anyone holding your phone may see that information.", style = MaterialTheme.typography.bodyMedium)
+        if(!unlocked) Text("Unlock your phone to change this setting.", style = MaterialTheme.typography.bodySmall)
     }
 }

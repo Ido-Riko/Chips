@@ -1,6 +1,6 @@
 # CHIPS (Conversational Humanlike Intelligence for Programming Simplification)
 
-**CHIPS** is a personal Android dashboard and Digital Assistant in development. The app opens to Today, with History and Settings navigation. Assistant enrollment is optional for browsing; voice can also be opened in the app. Voice and private replies require an unlocked device; emulator system/secure-lock checks passed, while physical Poco acceptance remains open.
+**CHIPS** is a personal Android dashboard and Digital Assistant in development. The app opens to Today, with History and Settings navigation. Assistant enrollment is optional for browsing; voice can also be opened in the app. Assistant voice and feature access are enabled on the lockscreen by default, with an owner-controlled Settings switch to require unlocking. Physical Poco lockscreen acceptance remains open.
 
 Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity logging, History and streaks now use local SQLite, with an authenticated background sync path. The M3 Android voice client is implemented and locally verified, including saved conversations. Full M3 remains open for a compatible service, real inference and physical Poco acceptance; Japanese study and the drawing sketchbook are implemented locally; drawing server deployment/real AI analysis and the remaining M4 integrations are still open.
 
@@ -14,7 +14,7 @@ The first [Beat Saber integration](docs/BEAT_SABER.md) reads public BeatLeader/B
 
 [Pantry](docs/PANTRY.md) adds offline groceries, barcode lookup, editable receipt drafts, stock adjustments and server-backed inventory. Meal recommendations belong to the main AI; the backend supplies owner-scoped inventory context. Production deployment and real receipt inference remain pending.
 
-Quick Log, rhythm tiles, streak rings and the digital assistant now open the implemented activity features. Japanese reviews/drawing imports update real completions; Workout and Beat Saber retain explicit manual logging.
+The single Activities card, streak rings and digital assistant open the implemented activity features. The duplicate pinned Quick Log bar has been removed. Japanese reviews/drawing imports update real completions; Workout and Beat Saber retain explicit manual logging.
 
 This is a mono-repo containing both the mobile client and the Python backend services.
 

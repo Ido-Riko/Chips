@@ -17,6 +17,8 @@ Updated 13 November 2026. This is the saved M4 integration plan: owner-confirmed
 
 The owner selected **Beat Saber first** on 13 November, overriding the earlier proposed Japanese → drawing → Beat Saber order. The direct import/explorer implementation and online API review are recorded in [BEAT_SABER.md](BEAT_SABER.md); on-device acceptance remains, while backend deployment is not required. Other integrations retain their scope; subsequent order follows owner priorities. Each integration needs local persistence/cache, visible freshness and recovery, deletion behavior and on-device acceptance. Link domain completions to M2 records without duplicating imported/manual sessions.
 
+Owner UI/security decision, 13 November 2026: consolidate rhythm/Quick Log into one Activities card. The digital assistant is intended to work from the lockscreen; access defaults on with an Assistant security opt-out switch. The previous blanket unlock-only policy is superseded. Keep voice/retry/feature entry and window policy consistent with that choice; see [the voice contract](VOICE_CONTRACT.md).
+
 ## Beat Saber — owner-provided reference
 
 The owner identified the private repository [Ido-Riko/beat_leader_maps](https://github.com/Ido-Riko/beat_leader_maps) as a rough working showcase of the APIs and intended functionality. Inspected its default `master` branch on 13 November 2026. Use its data flow and interactions as the reference, without requiring its Python/Matplotlib structure to be copied.
