@@ -1,5 +1,12 @@
 # Android implementation progress
 
+## Point selection previews and temporary song ordering — 13 November 2026
+
+The first graph-point tap now highlights it, shows its song name/stars/difficulty, and places the song first in the list without opening a sheet, scrolling or fetching map details. A second tap on the same point, a preview tap or a song-card tap opens full details. Another point replaces the temporary first song; changing search, sort/direction, axes, ranked/recent view, profile or imported snapshot clears the temporary selection. The original sorted order is derived afresh, without changing saved scores. Dismissing full details retains the current graph selection.
+
+Debug and unsigned-release builds, lint and all nine focused Beat Saber emulator tests passed. The new interaction regression verifies the initial preview, first-place list position, absence of an initial detail/API request, clearing on sort change and explicit opening of details. Installed the updated debug APK on the connected Poco in place, retaining data. The preceding layout checkpoint retains the full 41-test emulator and 28-test JVM evidence; these suites were not rerun for this focused UI change.
+
+
 ## Beat Saber visual simplification — 13 November 2026
 
 The explorer now opens directly to the chart and compact song list. Axis names are tappable menus without X/Y prefixes. Removed visible point counts, zoom status, persistent gesture instructions and stacked metric/sort chips. Help is available on demand; zoom/pan/reset remain functional. Profile setup/import coverage/history sit behind Profile after connection, sorting uses a dropdown, and selecting a point/song opens a fully expanded, scrollable detail sheet. The Quick Log bar is hidden only inside the explorer. All ratings remain accessible in song details.

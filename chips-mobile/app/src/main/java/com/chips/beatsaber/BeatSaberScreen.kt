@@ -72,7 +72,8 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
     var y by rememberSaveable { mutableStateOf("accuracy") }
     var sortBy by rememberSaveable { mutableStateOf("timestamp") }
     var ascending by rememberSaveable { mutableStateOf(false) }
-    var selectedKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var selectedKey by rememberSaveable(state.playerId, state.snapshot?.fetchedAt, graphMode, search, x, y, sortBy, ascending) { mutableStateOf<String?>(null) }
+    var detailKey by rememberSaveable(state.playerId, graphMode) { mutableStateOf<String?>(null) }
     var showProfile by rememberSaveable { mutableStateOf(false) }
     var sortMenu by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
@@ -80,6 +81,10 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
     val source = if (graphMode) snapshot?.graph.orEmpty() else snapshot?.scores.orEmpty()
     val points = source.filter { search.isBlank() || "${it.song} ${it.difficulty} ${it.mode} ${it.modifiers}".contains(search, true) }
     val selected = points.firstOrNull { it.key == selectedKey }
+    val detail = points.firstOrNull { it.key == detailKey }
+    val ordered = sortBeatScores(points, sortBy, ascending).let { sorted ->
+        if (selected == null) sorted else listOf(selected) + sorted.filterNot { it.key == selected.key }
+    }
     LazyColumn(Modifier.fillMaxSize().testTag("beat-saber-screen"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) { Text("← Today") }
@@ -125,7 +130,19 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
                 }
                 Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        ScoreScatter(points, x, y, selectedKey, onXChange = { x = it }, onYChange = { y = it }) { score -> selectedKey = score.key; onMap(score) }
+                        ScoreScatter(points, x, y, selectedKey, onXChange = { x = it }, onYChange = { y = it }) { score ->
+                            if (selectedKey == score.key) { detailKey = score.key; onMap(score) }
+                            else selectedKey = score.key
+                        }
+                        selected?.let { score ->
+                            Surface(onClick = { detailKey = score.key; onMap(score) }, shape = RoundedCornerShape(12.dp),
+                                color = ChipsMint.copy(alpha = 0.10f), modifier = Modifier.fillMaxWidth().testTag("beat-point-preview")) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(score.song, style = MaterialTheme.typography.titleSmall)
+                                    Text("${fmt(score.metric("stars"))} ★ · ${score.difficulty}", style = MaterialTheme.typography.bodySmall, color = ChipsMint)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -150,9 +167,9 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
                     shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth())
             }
             if (points.isEmpty()) item { Text("No songs match your search.") }
-            items(sortBeatScores(points, sortBy, ascending), key = { it.key }) { score ->
-                Surface(onClick = { selectedKey = score.key; onMap(score) }, shape = RoundedCornerShape(18.dp),
-                    color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().testTag("beat-score-${score.key}")) {
+            items(ordered, key = { it.key }) { score ->
+                Surface(onClick = { if (selectedKey != score.key) selectedKey = null; detailKey = score.key; onMap(score) }, shape = RoundedCornerShape(18.dp),
+                    color = if (selectedKey == score.key) ChipsMint.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().testTag("beat-score-${score.key}")) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(score.song, style = MaterialTheme.typography.titleMedium)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -167,9 +184,9 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
             }
         }
     }
-    if (selected != null) ModalBottomSheet(onDismissRequest = { selectedKey = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (detail != null) ModalBottomSheet(onDismissRequest = { detailKey = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 32.dp)) {
-            ScoreDetails(selected, state, onMap)
+            ScoreDetails(detail, state, onMap)
         }
     }
     if (confirmRemove) AlertDialog(onDismissRequest = { confirmRemove = false }, title = { Text("Remove local Beat Saber imports?") },
@@ -318,7 +335,7 @@ internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selecte
         TextButton(onClick = { showHelp = true }, modifier = Modifier.width(48.dp).semantics { contentDescription = "Chart help" }) { Text("?") }
     }
     if (showHelp) AlertDialog(onDismissRequest = { showHelp = false }, title = { Text("Explore your scores") },
-        text = { Text("Tap an axis name to change it. Pinch to zoom and drag with two fingers to pan, or use the buttons. Tap a point for song details.\n\nSongs with missing measurements stay in the list. Unknown BPM sorts last.") },
+        text = { Text("Tap an axis name to change it. Pinch to zoom and drag with two fingers to pan, or use the buttons. Tap a point to preview it and bring its song first in the list. Tap it again, the preview or the song card for details.\n\nSongs with missing measurements stay in the list. Unknown BPM sorts last.") },
         confirmButton = { TextButton(onClick = { showHelp = false }) { Text("Got it") } })
 }
 

@@ -94,6 +94,36 @@ class BeatSaberTest {
         compose.onNodeWithTag("beat-player-id").assertExists()
     }
 
+    @Test fun firstPointTapPreviewsAndTemporarilyPromotesSongWithoutOpeningDetails() {
+        val graph = JSONArray().put(point().put("timestamp", 1794400000L))
+            .put(point().put("key", "newer").put("song_name", "Newer song").put("timestamp", 1794500000L))
+        val data = BeatSnapshot.decode(snapshot().put("graph", graph))
+        var requests = 0
+        compose.setContent { ChipsTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            BeatSaberScreen(BeatSaberState(playerId = "player1", snapshot = data), {}, {}, {}, {}, {}, { requests++ })
+        } } }
+        // Both points share coordinates; the first imported point wins this overlap.
+        compose.onNodeWithTag("beat-saber-screen").performScrollToNode(hasTestTag("beat-scatter"))
+        compose.onNodeWithTag("beat-scatter").performTouchInput { click(center) }
+        compose.onNodeWithTag("beat-point-preview").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("beat-point-preview").assert(hasText("Test song"))
+        compose.onNodeWithTag("beat-point-preview").assert(hasText("${fmt(8.0)} ★ · ExpertPlus"))
+        compose.onNodeWithTag("beat-detail-stars").assertDoesNotExist()
+        compose.runOnIdle { assertEquals(0, requests) }
+        compose.onNodeWithTag("beat-saber-screen").performScrollToNode(hasTestTag("beat-score-newer"))
+        val promoted = compose.onNodeWithTag("beat-score-board91").fetchSemanticsNode().boundsInRoot.top
+        val other = compose.onNodeWithTag("beat-score-newer").fetchSemanticsNode().boundsInRoot.top
+        assertTrue(promoted < other)
+        compose.onNodeWithTag("beat-sort-menu").performScrollTo().performClick()
+        compose.onNodeWithTag("beat-sort-stars").performClick()
+        compose.onNodeWithTag("beat-point-preview").assertDoesNotExist()
+        compose.onNodeWithTag("beat-saber-screen").performScrollToNode(hasTestTag("beat-scatter"))
+        compose.onNodeWithTag("beat-scatter").performTouchInput { click(center) }
+        compose.onNodeWithTag("beat-point-preview").performScrollTo().performClick()
+        compose.onNodeWithTag("beat-detail-stars").assertExists()
+        compose.runOnIdle { assertEquals(1, requests) }
+    }
+
     @Test fun bpmSortReusesSavedSongDataAndKeepsMissingValuesLast() {
         val recent = point().put("bpm", 180)
         val imported = BeatSnapshot.decode(snapshot().put("scores", JSONArray().put(recent)))
