@@ -122,7 +122,7 @@ class VoiceContractTest {
             ActivityStore(context, name).use { db ->
                 db.log(ActivityType.WORKOUT)
                 db.saveVoiceConversation(record)
-                assertEquals(2, db.readableDatabase.version)
+                assertEquals(3, db.readableDatabase.version)
             }
             ActivityStore(context, name).use { db ->
                 assertEquals(record, db.loadVoiceHistory().single())

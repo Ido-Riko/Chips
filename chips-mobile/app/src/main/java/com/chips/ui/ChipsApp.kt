@@ -69,6 +69,8 @@ fun ChipsApp(
     var practicePage by rememberSaveable { mutableStateOf("") }
     var showBeatSaber by rememberSaveable { mutableStateOf(false) }
     var showWorkoutLog by rememberSaveable { mutableStateOf(false) }
+    var focusedHr by rememberSaveable { mutableStateOf<String?>(null) }
+    var focusedActivity by rememberSaveable { mutableStateOf<String?>(null) }
     val openFeature: (FeatureRoute) -> Unit = { feature ->
         dashboard.setDemoMode(false)
         showVoice = false
@@ -82,7 +84,7 @@ fun ChipsApp(
             FeatureRoute.BEAT_SABER -> { showBeatSaber = true; beatSaber.load() }
             FeatureRoute.PANTRY -> { practicePage = "pantry"; pantry.refresh() }
             FeatureRoute.WORKOUT -> showWorkoutLog = true
-            FeatureRoute.HEART_RATE -> practicePage = "heart_rate"
+            FeatureRoute.HEART_RATE -> { focusedHr = null; practicePage = "heart_rate" }
         }
     }
     LaunchedEffect(requestedAssistant) { if(requestedAssistant) { showVoice = true; onAssistantHandled() } }
@@ -91,6 +93,7 @@ fun ChipsApp(
     }
     LaunchedEffect(destination) { if (destination == Destination.DASHBOARD) beatSaber.load() }
     LaunchedEffect(Unit) { ActivitySyncWorker.schedule(context) }
+    com.chips.heartrate.HrStopPrompt()
     val onLog: (ActivityType) -> Unit = { type ->
         if (state.demoMode) dashboard.previewActivity(type)
         else scope.launch {
@@ -143,7 +146,8 @@ fun ChipsApp(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                Destination.DASHBOARD -> if (practicePage == "heart_rate") com.chips.heartrate.HrScreen(onBack = { practicePage = "" })
+                Destination.DASHBOARD -> if (practicePage == "heart_rate") com.chips.heartrate.HrScreen(onBack = { practicePage = "" }, focusSession = focusedHr,
+                    onOpenActivity = { focusedActivity = it; destination = Destination.HISTORY })
                 else if (practicePage == "pantry") PantryScreen(pantryState, pantry, onBack = { practicePage = "" })
                 else if (practicePage == "japanese") JapaneseScreen(practiceState,
                     onBack = { practicePage = "" }, onRate = practice::rate, onReset = practice::reset, onRefresh = practice::reload)
@@ -170,7 +174,8 @@ fun ChipsApp(
                             FilterChip(selected = conversations, onClick = { conversations = true }, label = { Text("Conversations") })
                         }
                         Box(Modifier.weight(1f)) {
-                            if (conversations) VoiceHistoryScreen() else ActivityHistoryScreen(state, dashboard)
+                            if (conversations) VoiceHistoryScreen() else ActivityHistoryScreen(state, dashboard, focusedActivity,
+                                onOpenHeartRate = { focusedHr = it; practicePage = "heart_rate"; destination = Destination.DASHBOARD })
                         }
                     }
                 }

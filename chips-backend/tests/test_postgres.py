@@ -16,6 +16,7 @@ from app.models.activity import Device
 from app.routers.activities import router
 from app.routers.drawings import router as drawing_router
 from app.routers.pantry import router as pantry_router
+from app.routers.heart_rate import router as hr_router
 
 
 @pytest.mark.skipif(not os.environ.get("TEST_POSTGRES_URL"), reason="Disposable PostgreSQL not configured")
@@ -52,6 +53,7 @@ def test_migration_and_concurrent_sync():
     app.include_router(router)
     app.include_router(drawing_router)
     app.include_router(pantry_router)
+    app.include_router(hr_router)
     async def database():
         async with sessions() as db: yield db
     app.dependency_overrides[get_db] = database
@@ -89,5 +91,33 @@ def test_migration_and_concurrent_sync():
                 assert set(pool.map(purchase, range(4))) == {200}
             stock = pantry_client.get("/api/v1/pantry/inventory", headers=auth).json()
             assert len(stock) == 1 and stock[0]["quantity"] == "2"
+        # Check the actual PostgreSQL HR schema, same-ID retries and delete/upload races.
+        from test_heart_rate import manifest, run
+        hr_manifest = manifest()
+        hr_path = f"/api/v1/heart-rate/{hr_manifest['id']}"
+        with TestClient(app, base_url="https://testserver") as hr_client:
+            assert hr_client.put(hr_path, json=hr_manifest, headers=auth).status_code == 200
+            def hr_run(_):
+                return hr_client.put(hr_path + "/runs/0", json={"records": [run()]}, headers=auth).status_code
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                assert set(pool.map(hr_run, range(4))) == {200}
+            assert hr_client.put(hr_path + "/events/0", json={"records": [dict(at=4000, state="disconnected")]}, headers=auth).status_code == 200
+            assert hr_client.post(hr_path + "/complete", headers=auth).status_code == 200
+            linked = body | dict(id=str(uuid4()), revision=1, type="BEAT_SABER", hr_session_id=hr_manifest["id"])
+            linked_path = f"/api/v1/activities/{linked['id']}"
+            assert hr_client.put(linked_path, json=linked, headers=auth).status_code == 200
+            assert hr_client.get(hr_path + "/runs/0", headers=auth).json()["records"] == [run()]
+            def race(index):
+                if index % 2:
+                    return hr_client.delete(hr_path, headers=auth).status_code
+                return hr_run(index)
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                assert set(pool.map(race, range(8))) <= {200, 410}
+            assert hr_client.get(hr_path, headers=auth).status_code == 410
+            assert not hr_client.get(linked_path, headers=auth).json()["deleted"]
+            async def erased():
+                async with engine.connect() as conn:
+                    assert await conn.scalar(text("SELECT COUNT(*) FROM heart_rate_chunks WHERE session_id=:id"), {"id": hr_manifest["id"]}) == 0
+            asyncio.run(erased())
     finally:
         asyncio.run(cleanup())

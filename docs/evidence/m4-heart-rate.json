@@ -1,18 +1,18 @@
 {
   "date": "2026-11-13",
-  "scope": "Android direct MiBand-Converter source port with CHIPS persistence and foreground capture notification",
+  "scope": "Android direct MiBand Converter port, durable linked Beat Saber stop/save flow, local-first HR archive and activity sync",
   "reference_revision": "a472d64a6743454db0b63c902684be36426f2ff9",
-  "poco_install": "Verified debug APK installed in place with adb install -r; no automated phone interaction",
+  "poco_install": "Previous live-HR APK installed in place. Latest linked-save APK is built and verified but installation is blocked because the Poco is no longer connected to ADB.",
   "validation": {
     "debug_build": "passed",
     "unsigned_release_build": "passed",
     "jvm_tests": 34,
-    "emulator_tests": 73,
+    "emulator_tests": 85,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
     "lint_errors": 0,
-    "lint_warnings": 54,
+    "lint_warnings": 55,
     "emulator": "Fresh isolated API 37 AVD; swangle, Vulkan disabled",
     "capture_transport": "Direct ported-manager callback/state/socket tests plus injected CHIPS service transport; no sustained real band reception claimed",
     "checks": [
@@ -35,7 +35,15 @@
       "Real SQLite v1-to-v2 migration preserves reception times, ended sessions and connection events",
       "Active restart intent and applied output configuration survive recreation; Stop disarms recovery",
       "Live BLE/OSC enable, disable and OSC retargeting preserve the reader and session; invalid targets retain the last applied target",
-      "Normal Stop flushes all accepted buffered readings"
+      "Normal Stop flushes all accepted buffered readings",
+      "Normal and notification Stop offer durable Beat Saber save or HR only",
+      "Confirmed Beat Saber and HR saves link in both UI directions; captured timezone/date retained",
+      "Stable linked activity ID survives cross-database crash boundaries without duplicates or resurrection",
+      "HR/activity v1/v2-to-v3 migrations preserve readings, activities, practice, voice and sync identity",
+      "Only sealed ended HR archives upload; ordinary process-death recovery retains its identity",
+      "Immutable bounded chunk retries and checked acknowledgements preserve exact HR reception timing",
+      "HR upload completes before its linked activity; lost activity acknowledgements retry one completion",
+      "Local deletion during upload stays queued; either saved record can be deleted independently"
     ],
     "rerun_note": "An existing assistant-settings intent test had one emulator window-focus failure; isolated rerun and subsequent complete 67- and final 68-test runs passed without changing that test.",
     "os_process_death_check": {
@@ -45,7 +53,7 @@
       "recovery_event": true,
       "explicit_stop": "passed",
       "restart_intent_cleared": true,
-      "method": "Isolated API 37 emulator: active real foreground service with synthetic band address, app process killed with SIGKILL; no real band measurements claimed"
+      "save_prompt_survives_process_death": "passed"
     }
   },
   "remaining": [
@@ -57,5 +65,14 @@
   ],
   "source_port_manifest": "miband-converter-port.json",
   "source_port_diff": "miband-converter-port.patch",
-  "storage": "Lossless equal-value runs; database batches every 2 seconds or 32 measurements. Abrupt process loss can discard the last roughly 2 seconds of uncommitted samples."
+  "storage": "Lossless equal-value runs; database batches every 2 seconds or 32 measurements. Abrupt process loss can discard the last roughly 2 seconds of uncommitted samples.",
+  "backend": {
+    "passed": 50,
+    "skipped": 4,
+    "skipped_reason": "PowerShell not installed locally; existing PowerShell deployment checks remain for CI",
+    "postgres": "Disposable PostgreSQL 16: migrations repeated over existing data; concurrent HR chunk retries and upload/deletion races; no deleted HR chunks remain",
+    "release_archive": "Packaged successfully, including required migration 005",
+    "production_deployed": false
+  },
+  "linked_save_evidence": "hr-linked-sessions.json"
 }

@@ -25,7 +25,17 @@ class ActivitySyncWorker(context: Context, params: WorkerParameters) : Coroutine
                 val credentials = SyncCredentials(applicationContext)
                 if (!credentials.connected()) return@withLock Result.success()
                 val config = credentials.read() ?: return@withLock Result.success()
-                ActivitySynchronizer(store, HttpActivityRemote(config)).sync()
+                val remote = HttpActivityRemote(config)
+                val identity = remote.identity()
+                store.bind(identity)
+                com.chips.heartrate.HrStore(applicationContext).use { hr ->
+                    hr.bind(identity)
+                    ActivitySynchronizer(store, remote) { record ->
+                        record.hrSessionId?.let { id ->
+                            if(hr.exists(id)) com.chips.heartrate.HrSyncWorker.upload(hr, com.chips.heartrate.HttpHrRemote(config), id)
+                        }
+                    }.sync()
+                }
                 status.edit().remove("error").apply()
                 Result.success()
             } catch (e: CancellationException) { throw e }
@@ -45,6 +55,7 @@ class ActivitySyncWorker(context: Context, params: WorkerParameters) : Coroutine
             if (!SyncCredentials(context).connected()) return
             com.chips.practice.DrawingSyncWorker.schedule(context, retryNow)
             com.chips.pantry.PantrySyncWorker.schedule(context, retryNow)
+            com.chips.heartrate.HrSyncWorker.schedule(context, retryNow)
             val manager = WorkManager.getInstance(context)
             manager.enqueueUniqueWork("activity-sync", if (retryNow) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.APPEND_OR_REPLACE,
                 OneTimeWorkRequestBuilder<ActivitySyncWorker>().setConstraints(constraints)
@@ -58,6 +69,8 @@ class ActivitySyncWorker(context: Context, params: WorkerParameters) : Coroutine
             WorkManager.getInstance(context).cancelUniqueWork("activity-sync-periodic")
             WorkManager.getInstance(context).cancelUniqueWork("pantry-sync")
             WorkManager.getInstance(context).cancelUniqueWork("pantry-periodic")
+            WorkManager.getInstance(context).cancelUniqueWork("hr-sync")
+            WorkManager.getInstance(context).cancelUniqueWork("hr-periodic")
             context.getSharedPreferences("sync_state", Context.MODE_PRIVATE).edit().remove("error").apply()
         }
     }
@@ -87,10 +100,12 @@ class HttpActivityRemote(private val config: SyncCredentials.Config) : ActivityR
     }
     private fun encode(r: ActivityRecord): JSONObject = JSONObject().put("id", r.id).put("type", r.type.name)
         .put("occurred_at", r.occurredAt).put("zone_id", r.zoneId).put("local_day", r.localDay)
-        .put("note", r.note).put("revision", r.revision).put("deleted", r.deleted)
+        .put("note", r.note).put("revision", r.revision).put("deleted", r.deleted).apply {
+            r.hrSessionId?.let { put("hr_session_id", it) }
+        }
     private fun decode(j: JSONObject) = ActivityRecord(j.getString("id"), ActivityType.valueOf(j.getString("type")),
         j.getLong("occurred_at"), j.getString("zone_id"), j.getString("local_day"), j.getString("note"),
-        j.getLong("revision"), j.getBoolean("deleted"), "SYNCED")
+        j.getLong("revision"), j.getBoolean("deleted"), "SYNCED", hrSessionId = if(j.isNull("hr_session_id")) null else j.getString("hr_session_id"))
 }
 
 private suspend fun Call.awaitResponse(): Response = suspendCancellableCoroutine { continuation ->

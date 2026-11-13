@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chips.dashboard.DashboardCard
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.text.DateFormat
@@ -71,10 +72,11 @@ private class HrDiscovery(context: Context, private val result: (HrDevice) -> Un
 }
 
 @Composable
-fun HrScreen(onBack: () -> Unit) {
+fun HrScreen(onBack: () -> Unit, focusSession: String? = null, onOpenActivity: (String) -> Unit = {}) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val state by HrCaptureService.state.collectAsStateWithLifecycle()
+    val activities by com.chips.data.ActivityStore.get(context).records.collectAsStateWithLifecycle()
     val preferences = remember { context.getSharedPreferences("heart_rate", Context.MODE_PRIVATE) }
     var selected by rememberSaveable { mutableStateOf(preferences.getString("device", "").orEmpty()) }
     var deviceName by rememberSaveable { mutableStateOf(preferences.getString("name", "").orEmpty()) }
@@ -88,6 +90,8 @@ fun HrScreen(onBack: () -> Unit) {
     var now by remember { mutableLongStateOf(android.os.SystemClock.elapsedRealtime()) }
     var devices by remember { mutableStateOf(emptyList<HrDevice>()) }
     var sessions by remember { mutableStateOf(emptyList<HrSession>()) }
+    var loaded by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
     var deletion by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf<String?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
@@ -109,9 +113,16 @@ fun HrScreen(onBack: () -> Unit) {
         owner.lifecycle.addObserver(observer)
         onDispose { owner.lifecycle.removeObserver(observer); discovery.close() }
     }
-    LaunchedEffect(refresh) {
+    LaunchedEffect(refresh, focusSession) {
         while(true) {
-            try { sessions = withContext(Dispatchers.IO) { HrStore(context).use { it.sessions() } } }
+            try {
+                sessions = withContext(Dispatchers.IO) { HrStore(context).use { hr ->
+                    val all = hr.sessions()
+                    val focus = focusSession?.let { hr.sessions(it).singleOrNull() }
+                    if(focus == null) all else listOf(focus) + all.filterNot { it.id == focus.id }
+                } }
+                loaded = true
+            }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { message = "Could not read saved captures. Try reopening Heart rate." }
             now = android.os.SystemClock.elapsedRealtime()
@@ -120,14 +131,17 @@ fun HrScreen(onBack: () -> Unit) {
     }
     LaunchedEffect(deletion) {
         deletion?.let { id ->
-            try { withContext(Dispatchers.IO) { HrStore(context).use { it.delete(id) } } }
+            try {
+                withContext(Dispatchers.IO) { HrStore(context).use { it.delete(id) } }
+                com.chips.data.ActivitySyncWorker.schedule(context)
+            }
             catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (_: Exception) { message = "Could not delete capture. Try again." }
             deletion = null; refresh++
         }
     }
     if(confirmDelete != null) AlertDialog(onDismissRequest = { confirmDelete = null }, title = { Text("Delete capture?") },
-        text = { Text("This removes the session and its HR samples from this phone.") },
+        text = { Text("Remove this HR capture and its readings from this phone and queue deletion on the server. A linked Beat Saber activity stays saved.") },
         confirmButton = { TextButton(onClick = { deletion = confirmDelete; confirmDelete = null }) { Text("Delete") } },
         dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text("Cancel") } })
     Column(Modifier.fillMaxSize().testTag("heart-rate-screen").verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -208,12 +222,35 @@ fun HrScreen(onBack: () -> Unit) {
             }
         }
         Text("Saved captures", style = MaterialTheme.typography.titleLarge)
+        if(loaded && focusSession != null && sessions.none { it.id == focusSession }) Text("This linked HR capture is unavailable on this phone. The activity stays saved.")
         if(sessions.isEmpty()) Text("No saved captures yet.")
-        sessions.forEach { session -> DashboardCard(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(session.started))) {
+        sessions.forEach { session -> DashboardCard(DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(session.started)), modifier = Modifier.testTag("hr-session-${session.id}")) {
             Text("${session.status} · ${session.samples} received samples")
             Text(if(session.average == null) "No HR samples received" else "Average %.1f bpm · peak %d bpm".format(session.average, session.peak))
             Text("Statistics describe received samples. Disconnects and missing samples are not zero HR.")
-            if(session.ended != null) TextButton(onClick = { confirmDelete = session.id }) { Text("Delete capture") }
+            if(session.ended != null) {
+                Text(when(session.syncStatus) { "SYNCED" -> "HR saved on this phone and server"; "WAITING_RECOVERY" -> "Interrupted · waiting for recovery or your save choice"; else -> "HR saved on this phone · waiting for server sync" })
+                if(session.syncError.isNotBlank()) Text(session.syncError, color = MaterialTheme.colorScheme.error)
+                val linked = activities.firstOrNull { it.hrSessionId == session.id }
+                if(linked != null) {
+                    Text(if(linked.deleted) "Linked Beat Saber activity was deleted. HR is retained." else "Linked to a Beat Saber session")
+                    if(!linked.deleted) TextButton(onClick = { onOpenActivity(linked.id) }, modifier = Modifier.testTag("hr-open-activity-${session.id}")) { Text("Open Beat Saber session") }
+                } else TextButton(onClick = { scope.launch {
+                    try { withContext(Dispatchers.IO) { HrStore(context).use { it.requestPrompt(session.id) } } }
+                    catch(e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch(_: Exception) { message = "Could not open the save choice. Your HR capture is retained." }
+                } }) { Text("Save Beat Saber session") }
+                if(session.syncStatus == "WAITING_RECOVERY") TextButton(onClick = { scope.launch {
+                    try {
+                        check(withContext(Dispatchers.IO) { HrStore(context).use { it.seal(session.id) } })
+                        com.chips.data.ActivitySyncWorker.schedule(context)
+                        refresh++
+                    } catch(e: kotlinx.coroutines.CancellationException) { throw e }
+                    catch(_: Exception) { message = "Could not finalize this capture. If it recovered, stop it first." }
+                } }) { Text("Keep interrupted HR capture") }
+                TextButton(onClick = { com.chips.data.ActivitySyncWorker.schedule(context, retryNow = true) }) { Text("Retry sync") }
+                TextButton(onClick = { confirmDelete = session.id }) { Text("Delete capture") }
+            }
         } }
     }
 }

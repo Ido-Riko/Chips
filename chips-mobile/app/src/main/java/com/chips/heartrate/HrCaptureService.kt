@@ -69,6 +69,7 @@ class HrCaptureService : Service() {
     private var workerStarted = false
     private var shuttingDown = false
     private var ending = "stopped"
+    private var offerBeatSaber = false
     private var stoppedAt: Long? = null
     private var ticker: Job? = null
     private var lastWakeRefresh = 0L
@@ -106,7 +107,12 @@ class HrCaptureService : Service() {
         val recovering = request == null
         val intent = request ?: recovery.restart(this) ?: run { stopSelf(); return START_NOT_STICKY }
         when(intent.action) {
-            STOP -> shutdown()
+            STOP -> {
+                val expected = intent.getStringExtra("session")
+                if(running && expected != null && expected != mutable.value.session) return START_STICKY
+                offerBeatSaber = running
+                shutdown()
+            }
             RECONNECT -> { if(running) reader?.reconnect() else stopSelf() }
             UPDATE_OUTPUTS -> {
                 if(running) {
@@ -203,7 +209,10 @@ class HrCaptureService : Service() {
                         }
                     } finally {
                         runCatching { flush() }
-                        id?.let { runCatching { store.end(it, ending, stoppedAt ?: System.currentTimeMillis()) } }
+                        id?.let { runCatching {
+                            store.end(it, ending, stoppedAt ?: System.currentTimeMillis(), offerBeatSaber = offerBeatSaber)
+                            com.chips.data.ActivitySyncWorker.schedule(this@HrCaptureService)
+                        } }
                         runCatching { osc?.close() }; osc = null
                         runCatching { store.close() }
                         delay((cleanupDeadline - SystemClock.elapsedRealtime()).coerceAtLeast(0))
@@ -319,6 +328,8 @@ class HrCaptureService : Service() {
         val fresh = current.elapsed?.let { SystemClock.elapsedRealtime() - it < 15_000 } == true
         val text = if(fresh) "${current.bpm} bpm · saving on this phone" else if(current.received != null) "No recent HR · check band connection" else current.status
         fun action(action: String) = PendingIntent.getService(this, action.hashCode(), Intent(this, HrCaptureService::class.java).setAction(action), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val stop = PendingIntent.getActivity(this, current.session?.hashCode() ?: STOP.hashCode(),
+            Intent(this, HrStopActivity::class.java).putExtra("session", current.session), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(com.chips.R.drawable.ic_hr_notification)
             .setContentTitle(if(current.stopping) "CHIPS · stopping HR capture" else "CHIPS · HR capture is on").setContentText(text)
@@ -326,7 +337,7 @@ class HrCaptureService : Service() {
             .setOngoing(true).setOnlyAlertOnce(true).setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
-            .addAction(0, "Reconnect", action(RECONNECT)).addAction(0, "Stop", action(STOP)).build()
+            .addAction(0, "Reconnect", action(RECONNECT)).addAction(0, "Stop", stop).build()
     }
     private fun shutdown(interrupted: Boolean = false) {
         if(shuttingDown) return

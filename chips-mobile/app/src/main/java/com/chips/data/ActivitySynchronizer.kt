@@ -10,11 +10,13 @@ interface ActivityRemote {
 }
 
 /** Network results update SQLite; the UI never depends on an HTTP response. */
-class ActivitySynchronizer(private val store: ActivityStore, private val remote: ActivityRemote) {
+class ActivitySynchronizer(private val store: ActivityStore, private val remote: ActivityRemote,
+    private val beforePut: suspend (ActivityRecord) -> Unit = {}) {
     suspend fun sync() {
         store.bind(remote.identity())
         store.load().filter { it.syncStatus != "SYNCED" }.forEach { record ->
             try {
+                beforePut(record)
                 val response = remote.put(record)
                 currentCoroutineContext().ensureActive()
                 store.merge(response)

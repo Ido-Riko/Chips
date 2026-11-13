@@ -3,13 +3,14 @@ from typing import Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import require_device
 from app.database import get_db
 from app.models.activity import Activity, Device
+from app.models.heart_rate import HeartRateArchive
 
 router = APIRouter(prefix="/api/v1")
 
@@ -24,6 +25,13 @@ class ActivityBody(BaseModel):
     note: str = Field(default="", max_length=2000)
     revision: int = Field(ge=1, le=9223372036854775807)
     deleted: bool = False
+    hr_session_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def valid_hr_link(self):
+        if self.hr_session_id is not None and self.type != "BEAT_SABER":
+            raise ValueError("HR-linked activity must be Beat Saber")
+        return self
 
     @field_validator("zone_id")
     @classmethod
@@ -74,6 +82,14 @@ async def put_activity(record_id: UUID, body: ActivityBody, device: Device = Dep
     if record_id != body.id:
         raise HTTPException(422, "Path and body IDs differ")
     record = await db.get(Activity, (device.owner_id, str(record_id)), with_for_update=True)
+    if body.hr_session_id is not None:
+        capture = await db.get(HeartRateArchive, (device.owner_id, str(body.hr_session_id)))
+        if capture is None or not (capture.complete or capture.deleted):
+            raise HTTPException(409, "Upload the completed HR capture before linking its activity")
+        if record is None and capture.device_id != device.id:
+            raise HTTPException(409, "Only the capture's originating device may create its activity link")
+    if record is not None and record.hr_session_id != (str(body.hr_session_id) if body.hr_session_id else None):
+        raise HTTPException(409, "The HR capture link is immutable")
     if record is None:
         record = Activity(owner_id=device.owner_id, device_id=device.id, **payload(body))
         db.add(record)

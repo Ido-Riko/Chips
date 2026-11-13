@@ -75,7 +75,7 @@ class HrStoreTest {
                     assertEquals(2500L, session.lastSample)
                     assertEquals(5000L, session.ended)
                     store.readableDatabase.rawQuery("SELECT state FROM events", null).use { it.moveToFirst(); assertEquals("disconnected", it.getString(0)) }
-                    assertEquals(2, store.readableDatabase.version)
+                    assertEquals(3, store.readableDatabase.version)
                 }
             }
         } finally { context.deleteDatabase(name) }

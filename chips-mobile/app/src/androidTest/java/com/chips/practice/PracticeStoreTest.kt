@@ -14,16 +14,17 @@ class PracticeStoreTest {
     @Test fun additiveMigrationPreservesRealVersionOneData() {
         val name = "upgrade-${UUID.randomUUID()}.db"
         try {
-            ActivityStore(context,name).use { db ->
-                db.log(ActivityType.WORKOUT)
-                db.saveVoiceConversation(com.chips.voice.VoiceConversation("prior",1234,"spoken","answer"))
-                // Reconstruct the exact previous schema, then let SQLiteOpenHelper upgrade it.
-                db.writableDatabase.execSQL("DROP TABLE kanji_reviews")
-                db.writableDatabase.execSQL("DROP TABLE drawings")
-                db.writableDatabase.version=1
+            context.openOrCreateDatabase(name,android.content.Context.MODE_PRIVATE,null).use { db ->
+                db.execSQL("CREATE TABLE activities(id TEXT PRIMARY KEY,type TEXT NOT NULL,occurred_at INTEGER NOT NULL,zone_id TEXT NOT NULL,local_day TEXT NOT NULL,note TEXT NOT NULL,revision INTEGER NOT NULL,deleted INTEGER NOT NULL,sync_status TEXT NOT NULL,error TEXT NOT NULL)")
+                db.execSQL("CREATE INDEX activity_day ON activities(local_day,deleted)")
+                db.execSQL("CREATE TABLE sync_identity(slot INTEGER PRIMARY KEY,identity TEXT NOT NULL)")
+                db.execSQL("CREATE TABLE voice_history(id TEXT PRIMARY KEY,occurred_at INTEGER NOT NULL,transcript TEXT NOT NULL,answer TEXT NOT NULL,sync_status TEXT NOT NULL)")
+                db.execSQL("INSERT INTO activities VALUES('old','WORKOUT',1000,'UTC','2026-11-13','',1,0,'PENDING','')")
+                db.execSQL("INSERT INTO voice_history VALUES('prior',1234,'spoken','answer','LOCAL')")
+                db.version=1
             }
             ActivityStore(context,name).use { db ->
-                assertEquals(2,db.readableDatabase.version)
+                assertEquals(3,db.readableDatabase.version)
                 assertEquals(1,db.load().size)
                 assertEquals("spoken",db.loadVoiceHistory().single().transcript)
                 assertTrue(PracticeStore(db).reviews().isEmpty())
