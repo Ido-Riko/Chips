@@ -4,6 +4,10 @@ Updated 12 November 2026. **M1 is complete. M2 is implemented, deployed and veri
 
 Use **M1–M5** in new chats, issues and implementation work. This historical filename is retained for continuity. The canonical numbering, status table and retired-phase mapping are in [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md#milestone-names-and-current-plan); do not maintain a parallel Phase 2–8 schedule.
 
+## Current M4 checkpoint — 13 November 2026
+
+PR #5 was merged; Japanese/drawing and pantry are on `codex/m4-japanese-drawing`, draft [PR #6](https://github.com/Ido-Riko/Chips/pull/6). These dated notes supersede older PR #4 publishing instructions below. Owner requested server-backed pantry, with recommendations delegated to the main AI. See [PANTRY.md](docs/PANTRY.md): independent SQLite immutable ledger, barcode scanner/direct Open Food Facts lookup, persistent reviewed receipt drafts, signed stock corrections, optional owner-bound sync/restoration and PostgreSQL migration 004. The existing assistant route receives owner inventory; the compatible M3 voice service is still deferred. Server is offline: production deployment, actual vision receipt reading and real phone sync acceptance are not complete. Preserve the unrelated IDE deployment selector edit.
+
 ## Read this before continuing
 
 - Owner decision on 13 November: **local-first across M4**. Do public imports and ordinary persistence/reports on Android; keep useful features working without the CHIPS server. Server/PC use is optional for sync/backup or inference/processing that actually needs it. Beat Saber now calls BeatLeader/BeatSaver directly; its Android acceptance does not depend on backend deployment.

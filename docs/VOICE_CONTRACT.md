@@ -75,3 +75,7 @@ Voice input and private replies require an unlocked device. The system service d
 ## Acceptance split
 
 Android can be validated using a local test service for the protocol, same-ID retry, error states, transcript display, SQLite reopen/deletion, UI cancellation, resource cleanup and privacy gating. This does not prove real STT, answer quality, server-side idempotency or provider cancellation. Final M3 acceptance still requires ten representative real utterances, independently selectable PC/API inference, unavailable-PC recovery and physical-device scenarios.
+
+## Pantry context for the deferred service
+
+The main assistant handles meal recommendations using authenticated-owner pantry inventory (`app.routers.pantry.inventory`). The existing legacy voice route now includes this reference context; the M3-compatible implementation must retain it without treating item names as instructions. Show missing ingredients, distinguish count from package size, check negative/conflicting stock and disclose last-sync freshness. Never decrement pantry stock as a side effect of generated suggestions. Pantry work does not change the legacy route’s protocol incompatibility.

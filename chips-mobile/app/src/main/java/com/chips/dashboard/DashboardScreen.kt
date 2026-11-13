@@ -43,7 +43,7 @@ import java.util.Locale
 fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) -> Unit,
                     beatSaber: com.chips.beatsaber.BeatSaberState = com.chips.beatsaber.BeatSaberState(),
                     onBeatSaber: () -> Unit = {}, onJapanese: () -> Unit = {}, onDrawing: () -> Unit = {},
-                    japaneseDue: Int = 0, drawingCount: Int = 0, drawingSummary: String = "", onVoice: () -> Unit) {
+                    onPantry: () -> Unit = {}, pantryCount: Int = 0, japaneseDue: Int = 0, drawingCount: Int = 0, drawingSummary: String = "", onVoice: () -> Unit) {
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -140,9 +140,10 @@ fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) ->
             DashboardCard("At your own pace") {
                 DetailRow(
                     ChipsSymbol.MEAL, ChipsWarning, "Meal ideas",
-                    if (state.demoMode) DemoData.meal else "Your pantry is a blank page.",
-                    if (state.demoMode) DemoData.pantry else "No pantry connected"
+                    if (state.demoMode) DemoData.meal else if (pantryCount == 0) "Your pantry starts here." else "$pantryCount pantry items ready for meal ideas.",
+                    if (state.demoMode) DemoData.pantry else "Saved locally · server sync available"
                 )
+                if (!state.demoMode) OutlinedButton(onClick = onPantry, modifier = Modifier.testTag("open-pantry")) { Text("Open pantry") }
                 HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
                 DetailRow(
                     ChipsSymbol.DRAWING, ChipsAccent, "Drawing",

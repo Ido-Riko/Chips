@@ -51,6 +51,9 @@ android {
 }
 
 dependencies {
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+    // Scanner transitively requests Fragment 1.0; Activity Result requires a modern release.
+    implementation("androidx.fragment:fragment:1.8.9")
     implementation("androidx.work:work-runtime-ktx:2.11.2")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

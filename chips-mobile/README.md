@@ -76,3 +76,7 @@ Full M3 still requires the deferred compatible service and Poco acceptance. Once
 ## Japanese and drawing
 
 Normal-mode Today → Japanese → Study opens 30 attributed offline kanji, answer reveal and saved self-rated reviews (up to three new cards/day). Today → Open sketchbook imports images through the photo picker, retaining local images/thumbnails/notes. Send for feedback queues server upload/analysis; saved drawings remain usable offline. Server storage retains the normalized JPEG and configured AI feedback. Each feature links completion to activity history without duplicate retries. See [behavior, source attribution and server setup](../docs/JAPANESE_DRAWING.md). The server is offline at implementation time, so deployment and real-model acceptance are still required.
+
+## Pantry
+
+Today → Open pantry supports local groceries, barcode lookup/scanning, receipt drafts and stock adjustments. Server sync retains the immutable inventory ledger in PostgreSQL and can restore it. Photo transcription requires the configured server vision model; offline manual entry works. See [pantry contract and acceptance](../docs/PANTRY.md).

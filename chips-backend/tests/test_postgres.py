@@ -15,6 +15,7 @@ from app.database import get_db
 from app.models.activity import Device
 from app.routers.activities import router
 from app.routers.drawings import router as drawing_router
+from app.routers.pantry import router as pantry_router
 
 
 @pytest.mark.skipif(not os.environ.get("TEST_POSTGRES_URL"), reason="Disposable PostgreSQL not configured")
@@ -50,6 +51,7 @@ def test_migration_and_concurrent_sync():
     app = FastAPI()
     app.include_router(router)
     app.include_router(drawing_router)
+    app.include_router(pantry_router)
     async def database():
         async with sessions() as db: yield db
     app.dependency_overrides[get_db] = database
@@ -78,5 +80,14 @@ def test_migration_and_concurrent_sync():
             assert drawing_client.get(drawing_path + "/image", headers=auth).content == jpeg()
             assert drawing_client.delete(drawing_path, headers=auth).json()["deleted"]
             assert drawing_client.get(drawing_path + "/image", headers=auth).status_code == 404
+        from test_pantry import movement
+        tx = movement()
+        with TestClient(app, base_url="https://testserver") as pantry_client:
+            def purchase(_):
+                return pantry_client.put(f"/api/v1/pantry/transactions/{tx['id']}", json=tx, headers=auth).status_code
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                assert set(pool.map(purchase, range(4))) == {200}
+            stock = pantry_client.get("/api/v1/pantry/inventory", headers=auth).json()
+            assert len(stock) == 1 and stock[0]["quantity"] == "2"
     finally:
         asyncio.run(cleanup())

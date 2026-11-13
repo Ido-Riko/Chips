@@ -12,6 +12,8 @@ The first [Beat Saber integration](docs/BEAT_SABER.md) reads public BeatLeader/B
 
 [Japanese and drawing](docs/JAPANESE_DRAWING.md) add offline kanji reviews and a local sketchbook with queued server analysis. Drawing images are retained in PostgreSQL; real feedback requires the updated server and an explicitly configured vision model.
 
+[Pantry](docs/PANTRY.md) adds offline groceries, barcode lookup, editable receipt drafts, stock adjustments and server-backed inventory. Meal recommendations belong to the main AI; the backend supplies owner-scoped inventory context. Production deployment and real receipt inference remain pending.
+
 This is a mono-repo containing both the mobile client and the Python backend services.
 
 - **`chips-mobile/`**: The Android project built with Kotlin and Jetpack Compose. Contains the `VoiceInteractionService` to register as the default device assistant.

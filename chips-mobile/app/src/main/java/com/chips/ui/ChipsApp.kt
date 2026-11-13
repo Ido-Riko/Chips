@@ -15,6 +15,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.chips.data.*
 import com.chips.beatsaber.*
 import com.chips.practice.*
+import com.chips.pantry.*
 import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -58,6 +59,8 @@ fun ChipsApp(
     val beatState by beatSaber.state.collectAsStateWithLifecycle()
     val practice: PracticeViewModel = viewModel(factory = viewModelFactory { initializer { PracticeViewModel(context.applicationContext as android.app.Application) } })
     val practiceState by practice.state.collectAsStateWithLifecycle()
+    val pantry: PantryViewModel = viewModel(factory = viewModelFactory { initializer { PantryViewModel(context.applicationContext as android.app.Application) } })
+    val pantryState by pantry.state.collectAsStateWithLifecycle()
     var practicePage by rememberSaveable { mutableStateOf("") }
     var showBeatSaber by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(destination) { if (destination == Destination.DASHBOARD) beatSaber.load() }
@@ -119,7 +122,8 @@ fun ChipsApp(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                Destination.DASHBOARD -> if (practicePage == "japanese") JapaneseScreen(practiceState,
+                Destination.DASHBOARD -> if (practicePage == "pantry") PantryScreen(pantryState, pantry, onBack = { practicePage = "" })
+                else if (practicePage == "japanese") JapaneseScreen(practiceState,
                     onBack = { practicePage = "" }, onRate = practice::rate, onReset = practice::reset, onRefresh = practice::reload)
                 else if (practicePage == "drawing") DrawingScreen(practiceState, onBack = { practicePage = "" },
                     onImport = practice::importDrawing, onSend = practice::send, onNotes = practice::notes, onDelete = practice::remove, onRefresh = practice::reload)
@@ -129,6 +133,7 @@ fun ChipsApp(
                     onRemove = beatSaber::remove, onMap = beatSaber::map
                 ) else DashboardScreen(state, { onActivity(it, true) }, beatState,
                     onBeatSaber = { showBeatSaber = true; beatSaber.load() },
+                    onPantry = { practicePage = "pantry"; pantry.refresh() }, pantryCount = pantryState.items.size,
                     onJapanese = { practicePage = "japanese"; practice.refresh() }, onDrawing = { practicePage = "drawing"; practice.refresh() },
                     japaneseDue = practiceState.due.size, drawingCount = practiceState.drawings.size,
                     drawingSummary = practiceState.drawings.firstOrNull { it.feedback.isNotEmpty() }?.feedback?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(120).orEmpty()) {

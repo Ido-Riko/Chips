@@ -86,6 +86,10 @@ Acceptance before retiring the standalone converter: capture with screen off, ve
 
 Upstream contribution of the live-HR integration to Gadgetbridge is an optional later project, explicitly lower priority than CHIPS. It is not an M4 dependency or acceptance gate; no publication is requested now.
 
+## Pantry implementation checkpoint — 13 November 2026
+
+Owner requested pantry now, explicitly saved on the server, with meal recommendations delegated to the main AI. [PANTRY.md](PANTRY.md) records the implemented Android ledger/barcode lookup/receipt review, optional authenticated server synchronization, PostgreSQL migration 004 and owner-scoped assistant inventory context. Receipt photo transcription uses the configured server vision runtime, while manual entry and all inventory operations remain local. Production deployment, real scans/receipts and phone sync acceptance remain pending. This supersedes the earlier unspecified-sync proposal; recipe generation is delegated rather than a standalone pantry feature.
+
 ## Meals and pantry — barcode and receipt input
 
 Owner confirmed barcode scanning of products and scanning shopping receipts as the intended ways to add pantry inventory. Both must feed the same editable pantry ledger rather than separate inventories.

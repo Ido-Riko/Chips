@@ -1,5 +1,16 @@
 # Android implementation progress
 
+## Pantry ledger, barcode/receipt entry and server storage — 13 November 2026
+
+Owner requested pantry next, saved on the server, with recommendations handled by the main AI. Added an independent local SQLite immutable movement ledger, manual/barcode product entry, cached Open Food Facts lookup, count/package/expiry distinction, decimal stock consumption/corrections, editable name/low-stock levels and receipt drafts. Receipt photo reading is explicit server vision processing; the owner reviews text before confirming one stable purchase transaction. Photos/drafts survive restart and are removed on confirmation/discard. Exact-photo/text repeat imports require an explicit override. No recipe generator or automatic ingredient consumption was added.
+
+Pantry WorkManager synchronization binds enrollment, verifies immutable acknowledgements, restores owner transactions through cursor pages and retains pending work across failure. Disconnect pauses/cancels jobs. PostgreSQL migration 004 and authenticated inventory/transaction/receipt routes are packaged; assistant context includes only the authenticated owner's derived inventory. The existing legacy voice endpoint remains incompatible with the deferred M3 contract; pantry context is ready for that service rather than proof that phone voice recommendations work.
+
+Debug and unsigned-release builds, all 29 JVM tests and all 52 API 37 emulator instrumentation tests passed, including four pantry persistence/UI tests. Lint has zero errors and 50 warnings (35 at the prior checkpoint; additional scanner dependencies and framework/KTX suggestions). Backend Python 3.12: 40 passed including disposable PostgreSQL repeated migrations preserving old voice data and concurrent retry-safe pantry writes; four PowerShell-only checks skipped. Main-assistant context isolation and receipt draft-only behavior were verified with mocked inference. Installed the debug APK in place on the Poco, preserving app data; automated interaction stayed on the emulator. Visually inspected the rendered pantry screen. See [feature contract/deployment](PANTRY.md).
+
+Read-only Tailscale inspection again confirmed `chips-server` offline. No production deployment or actual model receipt transcription was performed. Real barcode recognition, regional lookup coverage, Hebrew receipt quality, phone reconnection/restoration and duplicate barcode/receipt acceptance remain open.
+
+
 ## Japanese reviews and drawing sketchbook — 13 November 2026
 
 Added offline Japanese practice (30 attributed KANJIDIC2/kanjiapi entries, reveal/self-rated recall, three-new-card daily limit and a persistent due queue) plus drawing import/history/thumbnails/local notes. Both write stable, nonduplicating completion activities. SQLite schema 2 adds only practice tables; migration tests preserve existing activity and voice rows. The existing Undo test now waits for the correct Drawing snackbar and cleans all its test records, avoiding a timing race with the previous snackbar.
