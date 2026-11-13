@@ -47,6 +47,8 @@ Load the owner's real data, compare representative points with the reference/sou
 
 ## Sleep and heart rate — Xiaomi Smart Band 10 / Gadgetbridge
 
+Implementation checkpoint, 13 November: [Android live HR capture](HEART_RATE.md) now includes explicit local sessions and unfiltered received samples, reconnect controls, a persistent foreground notification with Stop, and optional BLE relay/OSC outputs using the directly ported MiBand-Converter connection/state/peripheral/advertising/OSC classes. Real Smart Band/Poco/Gadgetbridge/Quest acceptance remains open. Health Connect sleep/history import and the combined Beat Saber report are still unimplemented. The planning references below describe the source and acceptance requirements.
+
 Owner confirmed on 13 November 2026: their wearable is the **Xiaomi Smart Band 10**, and **Gadgetbridge** is the intended companion/data source. The owner also requested combining live heart-rate data with the day's Beat Saber scores into a report.
 
 ### Verified documentation and proposed transport

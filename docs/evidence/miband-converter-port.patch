@@ -1,0 +1,362 @@
+--- MiBand-Converter/a472d64/app/src/main/java/com/mibandconverter/managers/AdvertisingConfig.kt
++++ chips-mobile/app/src/main/java/com/chips/heartrate/converter/AdvertisingConfig.kt
+@@ -1,4 +1,6 @@
+-package com.mibandconverter.managers
++// Ported from Ido-Riko/MiBand-Converter @ a472d64a6743454db0b63c902684be36426f2ff9.
++// Owner-authorized reuse. CHIPS changes are listed in docs/HEART_RATE.md.
++package com.chips.heartrate.converter
+ 
+ import android.bluetooth.le.AdvertiseSettings
+ 
+--- MiBand-Converter/a472d64/app/src/main/java/com/mibandconverter/managers/BleConnectionManager.kt
++++ chips-mobile/app/src/main/java/com/chips/heartrate/converter/BleConnectionManager.kt
+@@ -1,5 +1,7 @@
++// Ported from Ido-Riko/MiBand-Converter @ a472d64a6743454db0b63c902684be36426f2ff9.
++// Owner-authorized reuse. CHIPS changes are listed in docs/HEART_RATE.md.
+ // Fixed: app/src/main/java/com/mibandconverter/BleConnectionManager.kt
+-package com.mibandconverter.managers
++package com.chips.heartrate.converter
+ 
+ import android.Manifest
+ import android.annotation.SuppressLint
+@@ -9,6 +11,8 @@
+ import android.content.SharedPreferences
+ import android.os.Handler
+ import android.os.Looper
++import android.os.SystemClock
++import com.chips.heartrate.HrProtocol
+ import android.util.Log
+ import androidx.annotation.RequiresPermission
+ import androidx.core.content.edit
+@@ -45,6 +49,8 @@
+     interface BleConnectionCallback {
+         fun onConnectionStateChanged(state: ConnectionStateMachine.State)
+         fun onHeartRateReceived(hr: Int)
++        // CHIPS: receive every valid sample before the original UI/output filtering.
++        fun onHeartRateSample(hr: Int, received: Long, elapsed: Long) {}
+         fun onError(message: String)
+     }
+ 
+@@ -61,6 +67,9 @@
+     private var pendingReconnectRunnable: Runnable? = null
+     private var lastHrUpdateTime = 0L
+     private var lastReportedHr = -1
++    private var disconnectRequested = false
++    private var subscribed = false
++    private var connectionGeneration = 0
+ 
+     private val isClosed = AtomicBoolean(false)
+     private val isScanning = AtomicBoolean(false)
+@@ -112,6 +121,8 @@
+             Log.d(TAG, "Already connected")
+             return
+         }
++
++        disconnectRequested = false
+ 
+         // Cancel any pending reconnects and reset counter when user manually scans
+         pendingReconnectRunnable?.let {
+@@ -218,6 +229,7 @@
+                 stopScan()
+                 stateMachine.transition(ConnectionStateMachine.Event.SCAN_TIMEOUT)
+                 callback.onError("Scan timeout - no Mi-Band found")
++                resumeAfterScanFailure()
+             }
+         }
+         handler.postDelayed(scanTimeoutRunnable!!, SCAN_TIMEOUT_MS)
+@@ -290,6 +302,7 @@
+                 else -> "Unknown error: $errorCode"
+             }
+             callback.onError("Scan failed: $errorMsg")
++            resumeAfterScanFailure()
+         }
+     }
+ 
+@@ -298,6 +311,7 @@
+     @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN])
+     fun disconnect() {
+         if (isClosed.get()) return
++        disconnectRequested = true
+ 
+         val currentState = stateMachine.getCurrentState()
+         Log.i(TAG, "Disconnect requested (Current state: $currentState)")
+@@ -409,9 +423,10 @@
+ 
+         // Always close previous connection before starting a new one
+         closeGatt()
++        val generation = connectionGeneration
+ 
+         handler.postDelayed({
+-            if (!isClosed.get()) {
++            if (!isClosed.get() && generation == connectionGeneration && !disconnectRequested) {
+                 continueConnectionAttempt(device, isReconnect)
+             }
+         }, 300) // Delay to allow resources to be freed
+@@ -476,7 +491,9 @@
+                 context,
+                 false, // autoConnect = false for faster connection
+                 gattCallback,
+-                BluetoothDevice.TRANSPORT_LE
++                BluetoothDevice.TRANSPORT_LE,
++                BluetoothDevice.PHY_LE_1M_MASK,
++                handler // CHIPS: serialize GATT callbacks with original handler timers.
+             )
+ 
+             if (bluetoothGatt == null) {
+@@ -531,7 +548,7 @@
+ 
+     @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN])
+     private fun scheduleReconnect(device: BluetoothDevice) {
+-        if (isClosed.get()) return
++        if (isClosed.get() || disconnectRequested) return
+ 
+         if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+             Log.w(TAG, "Max reconnection attempts reached ($MAX_RECONNECT_ATTEMPTS)")
+@@ -588,6 +605,8 @@
+ 
+     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+     private fun closeGatt() {
++        connectionGeneration++
++        subscribed = false
+         if (bluetoothGatt == null) return
+         Log.d(TAG, "Closing GATT connection")
+         try {
+@@ -601,7 +620,7 @@
+     private val gattCallback = object : BluetoothGattCallback() {
+         @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN])
+         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
+-            if (isClosed.get()) return
++            if (isClosed.get() || gatt !== bluetoothGatt) return
+ 
+             val stateStr = when (newState) {
+                 BluetoothProfile.STATE_CONNECTED -> "CONNECTED"
+@@ -627,7 +646,7 @@
+ 
+                     connectionSucceeded.set(true)
+                     bluetoothGatt = gatt
+-                    reconnectAttempts = 0
++                    // Retry budget resets only after subscription succeeds.
+ 
+                     if (!stateMachine.transition(ConnectionStateMachine.Event.CONNECTED)) {
+                         Log.w(TAG, "Failed to transition to CONNECTED state")
+@@ -635,11 +654,17 @@
+                     }
+ 
+                     saveLastConnectedDevice(gatt.device)
++                    connectTimeoutRunnable = Runnable {
++                        if (!isClosed.get() && gatt === bluetoothGatt && !subscribed) {
++                            handleConnectionFailure(gatt.device, "HR subscription timed out")
++                        }
++                    }
++                    handler.postDelayed(connectTimeoutRunnable!!, CONNECT_TIMEOUT_MS)
+ 
+                     // Start service discovery - reduced delay from 600ms to 400ms
+                     Log.d(TAG, "Starting service discovery...")
+                     handler.postDelayed({
+-                        if (!isClosed.get() && bluetoothGatt != null) {
++                        if (!isClosed.get() && gatt === bluetoothGatt) {
+                             var discoveryStarted = false
+                             try {
+                                 discoveryStarted = gatt.discoverServices()
+@@ -663,6 +688,7 @@
+                     val currentState = stateMachine.getCurrentState()
+                     if (currentState == ConnectionStateMachine.State.DISCONNECTING || currentState == ConnectionStateMachine.State.CONNECTED) {
+                         stateMachine.transition(ConnectionStateMachine.Event.DISCONNECTED)
++                        if (!disconnectRequested) scheduleReconnect(gatt.device)
+                     } else if (currentState == ConnectionStateMachine.State.CONNECTING) {
+                         val reason = when (status) {
+                             133 -> "GATT_ERROR (133)"
+@@ -676,7 +702,7 @@
+ 
+         @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN])
+         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
+-            if (isClosed.get()) return
++            if (isClosed.get() || gatt !== bluetoothGatt) return
+ 
+             Log.i(TAG, "onServicesDiscovered: status=$status")
+ 
+@@ -755,9 +781,13 @@
+             characteristic: BluetoothGattCharacteristic,
+             value: ByteArray
+         ) {
+-            if (isClosed.get()) return
+-
+-            if (characteristic.uuid == HR_MEASUREMENT_UUID && value.isNotEmpty()) {
++            if (isClosed.get() || gatt !== bluetoothGatt) return
++
++            if (subscribed && characteristic.uuid == HR_MEASUREMENT_UUID && value.isNotEmpty()) {
++                // Store valid receptions before unchanged-value suppression / UI throttling.
++                HrProtocol.parse(value)?.let { hr ->
++                    callback.onHeartRateSample(hr, System.currentTimeMillis(), SystemClock.elapsedRealtime())
++                }
+                 try {
+                     val flag = value[0].toInt()
+                     // Parse HR value based on format bit (bit 0)
+@@ -807,9 +837,16 @@
+             }
+         }
+ 
+-        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
++        @Suppress("DEPRECATION")
++        override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
++            if (android.os.Build.VERSION.SDK_INT < 33) {
++                characteristic.value?.let { onCharacteristicChanged(gatt, characteristic, it.copyOf()) }
++            }
++        }
++
++        @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN])
+         override fun onDescriptorWrite(gatt: BluetoothGatt, descriptor: BluetoothGattDescriptor, status: Int) {
+-            if (isClosed.get()) return
++            if (isClosed.get() || gatt !== bluetoothGatt) return
+ 
+             Log.i(TAG, "onDescriptorWrite: status=$status descriptor=${descriptor.uuid}")
+ 
+@@ -819,6 +856,9 @@
+                     val value = descriptor.value
+                     @Suppress("DEPRECATION")
+                     if (value.contentEquals(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)) {
++                        subscribed = true
++                        reconnectAttempts = 0
++                        cancelConnectTimeout()
+                         Log.i(TAG, "✅ CCCD write successful - notifications enabled")
+                     } else if (value.contentEquals(BluetoothGattDescriptor.DISABLE_NOTIFICATION_VALUE)) {
+                          Log.i(TAG, "✅ CCCD write successful - notifications disabled. Proceeding to disconnect.")
+@@ -829,9 +869,33 @@
+                     // Even if it failed, if we were trying to disconnect, we should probably just proceed
+                    if (stateMachine.getCurrentState() == ConnectionStateMachine.State.DISCONNECTING) {
+                        forceDisconnect()
++                   } else {
++                       handleConnectionFailure(gatt.device, "HR subscription failed: $status")
+                    }
+                 }
+             }
++        }
++    }
++
++    @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN])
++    fun reconnect() {
++        if (isClosed.get()) return
++        disconnect()
++        handler.postDelayed({
++            if (!isClosed.get()) {
++                closeGatt()
++                stateMachine.forceState(ConnectionStateMachine.State.DISCONNECTED, "manual reconnect")
++                startScan()
++            }
++        }, 1_100L)
++    }
++
++    @android.annotation.SuppressLint("MissingPermission")
++    private fun resumeAfterScanFailure() {
++        if (isClosed.get() || disconnectRequested) return
++        targetDeviceAddress?.let { address ->
++            try { scheduleReconnect(bluetoothAdapter.getRemoteDevice(address)) }
++            catch (_: Exception) { callback.onError("Could not reconnect. Please scan again.") }
+         }
+     }
+ 
+--- MiBand-Converter/a472d64/app/src/main/java/com/mibandconverter/managers/ConnectionStateMachine.kt
++++ chips-mobile/app/src/main/java/com/chips/heartrate/converter/ConnectionStateMachine.kt
+@@ -1,5 +1,7 @@
++// Ported from Ido-Riko/MiBand-Converter @ a472d64a6743454db0b63c902684be36426f2ff9.
++// Owner-authorized reuse. CHIPS changes are listed in docs/HEART_RATE.md.
+ // Fixed: ConnectionStateMachine.kt
+-package com.mibandconverter.managers
++package com.chips.heartrate.converter
+ 
+ import android.util.Log
+ 
+--- MiBand-Converter/a472d64/app/src/main/java/com/mibandconverter/managers/OscSender.kt
++++ chips-mobile/app/src/main/java/com/chips/heartrate/converter/OscSender.kt
+@@ -1,4 +1,6 @@
+-package com.mibandconverter.managers
++// Ported from Ido-Riko/MiBand-Converter @ a472d64a6743454db0b63c902684be36426f2ff9.
++// Owner-authorized reuse. CHIPS changes are listed in docs/HEART_RATE.md.
++package com.chips.heartrate.converter
+ 
+ import android.util.Log
+ import java.net.DatagramPacket
+@@ -11,7 +13,7 @@
+ import java.util.concurrent.TimeUnit
+ import java.util.concurrent.atomic.AtomicBoolean
+ 
+-class OscSender(defaultIp: String = "255.255.255.255", defaultPort: Int = 9000) {
++class OscSender(defaultIp: String = "255.255.255.255", defaultPort: Int = 9000, private val onError: (String) -> Unit = {}) {
+     companion object {
+         private const val TAG = "OscSender"
+         private const val SHUTDOWN_TIMEOUT_MS = 2000L
+@@ -115,6 +117,8 @@
+                 Log.d(TAG, "Sent HR $hrValue to $ip:$port")
+             } catch (e: Exception) {
+                 Log.e(TAG, "Failed to send HR $hrValue to $ip:$port: ${e.message}", e)
++
++                onError("OSC send failed; capture continues")
+ 
+                 // Close socket to force recreation on next send attempt
+                 closeSocket()
+--- MiBand-Converter/a472d64/app/src/main/java/com/mibandconverter/managers/PeripheralManager.kt
++++ chips-mobile/app/src/main/java/com/chips/heartrate/converter/PeripheralManager.kt
+@@ -1,4 +1,6 @@
+-package com.mibandconverter.managers
++// Ported from Ido-Riko/MiBand-Converter @ a472d64a6743454db0b63c902684be36426f2ff9.
++// Owner-authorized reuse. CHIPS changes are listed in docs/HEART_RATE.md.
++package com.chips.heartrate.converter
+ 
+ import android.Manifest
+ import android.bluetooth.*
+@@ -96,7 +98,7 @@
+ 
+     var bandMacAddress: String? = null
+     // Local copy of HR value for read requests (replaces deprecated characteristic.value)
+-    private var currentHeartRateValue: ByteArray = byteArrayOf(0x06, 0)
++    private var currentHeartRateValue: ByteArray = byteArrayOf(0x04, 0)
+ 
+     // NEW: Track legitimate (non-loopback) connected devices
+     val connectedDevices: Set<BluetoothDevice>
+@@ -375,7 +377,7 @@
+             try {
+                 val filter = IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
+                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+-                    context.registerReceiver(bondStateReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
++                    context.registerReceiver(bondStateReceiver, filter, Context.RECEIVER_EXPORTED)
+                 } else {
+                     context.registerReceiver(bondStateReceiver, filter)
+                 }
+@@ -391,7 +393,7 @@
+             try {
+                 val filter = IntentFilter(BluetoothDevice.ACTION_PAIRING_REQUEST)
+                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+-                    context.registerReceiver(pairingRequestReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
++                    context.registerReceiver(pairingRequestReceiver, filter, Context.RECEIVER_EXPORTED)
+                 } else {
+                     context.registerReceiver(pairingRequestReceiver, filter)
+                 }
+@@ -426,6 +428,7 @@
+         // Even if our map is empty, the OS might hold a connection (e.g. Nrf Connect).
+         // We must kill these to force the client to rediscover services.
+         val connectedDevices = bluetoothManager.getConnectedDevices(BluetoothProfile.GATT)
++            .filterNot { it.address.equals(bandMacAddress, ignoreCase = true) }
+         if (connectedDevices.isNotEmpty()) {
+             Log.w(TAG, "⚠️ Found ${connectedDevices.size} orphaned OS connections on startup. Forcing disconnect.")
+             connectedDevices.forEach { device ->
+@@ -475,6 +478,7 @@
+         
+         // Check actual OS connections, not just our internal map
+         val osConnectedDevices = bluetoothManager.getConnectedDevices(BluetoothProfile.GATT)
++            .filterNot { it.address.equals(bandMacAddress, ignoreCase = true) }
+         val hasConnections = connectedDevices.isNotEmpty() || osConnectedDevices.isNotEmpty()
+         
+         if (!hasConnections || bluetoothOff || force) {
+@@ -563,8 +567,10 @@
+         // Treat -1 as "no HR" and convert to 0 for BLE transmission
+         val hrValue = if (hr < 0) 0 else hr
+ 
+-        val flags: Byte = 0x06  // 16-bit value, contact detected
+-        val value = byteArrayOf(flags, hrValue.toByte())
++        // CHIPS: keep the converter's contact bits and encode wide HR without truncation.
++        val value = if (hr < 0) byteArrayOf(0x04, 0)
++            else if (hrValue <= 255) byteArrayOf(0x06, hrValue.toByte())
++            else byteArrayOf(0x07, hrValue.toByte(), (hrValue shr 8).toByte())
+         
+         // Update local copy first
+         currentHeartRateValue = value

@@ -82,6 +82,7 @@ fun ChipsApp(
             FeatureRoute.BEAT_SABER -> { showBeatSaber = true; beatSaber.load() }
             FeatureRoute.PANTRY -> { practicePage = "pantry"; pantry.refresh() }
             FeatureRoute.WORKOUT -> showWorkoutLog = true
+            FeatureRoute.HEART_RATE -> practicePage = "heart_rate"
         }
     }
     LaunchedEffect(requestedAssistant) { if(requestedAssistant) { showVoice = true; onAssistantHandled() } }
@@ -142,7 +143,8 @@ fun ChipsApp(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                Destination.DASHBOARD -> if (practicePage == "pantry") PantryScreen(pantryState, pantry, onBack = { practicePage = "" })
+                Destination.DASHBOARD -> if (practicePage == "heart_rate") com.chips.heartrate.HrScreen(onBack = { practicePage = "" })
+                else if (practicePage == "pantry") PantryScreen(pantryState, pantry, onBack = { practicePage = "" })
                 else if (practicePage == "japanese") JapaneseScreen(practiceState,
                     onBack = { practicePage = "" }, onRate = practice::rate, onReset = practice::reset, onRefresh = practice::reload)
                 else if (practicePage == "drawing") DrawingScreen(practiceState, onBack = { practicePage = "" },
@@ -154,6 +156,7 @@ fun ChipsApp(
                 ) else DashboardScreen(state, onShortcut, beatState,
                     onBeatSaber = { openFeature(FeatureRoute.BEAT_SABER) },
                     onPantry = { openFeature(FeatureRoute.PANTRY) }, pantryCount = pantryState.items.size,
+                    onHeartRate = { openFeature(FeatureRoute.HEART_RATE) },
                     onJapanese = { openFeature(FeatureRoute.JAPANESE) }, onDrawing = { openFeature(FeatureRoute.DRAWING) },
                     japaneseDue = practiceState.due.size, drawingCount = practiceState.drawings.size,
                     drawingSummary = practiceState.drawings.firstOrNull { it.feedback.isNotEmpty() }?.feedback?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(120).orEmpty()) {
@@ -180,7 +183,7 @@ fun ChipsApp(
     }
     if(showWorkoutLog) AlertDialog(
         onDismissRequest = { showWorkoutLog = false }, title = { Text("Log a workout") },
-        text = { Text("Save a completed workout on this phone. Live heart-rate tracking is not connected yet.") },
+        text = { Text("Save a completed workout on this phone. Open Heart rate from Today to capture live HR separately.") },
         confirmButton = { TextButton(onClick = { showWorkoutLog = false; onLog(ActivityType.WORKOUT) }, modifier = Modifier.testTag("save-workout")) { Text("Save workout") } },
         dismissButton = { TextButton(onClick = { showWorkoutLog = false }) { Text("Cancel") } })
     if (showVoice) {
