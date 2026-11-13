@@ -17,9 +17,18 @@ import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.chips.assistant.ChipsVoiceInteractionService
 import com.chips.ui.ChipsApp
+import com.chips.ui.FeatureRoute
 import com.chips.ui.theme.ChipsTheme
 
-class MainActivity : ComponentActivity() {
+open class MainActivity : ComponentActivity() {
+    companion object { const val OPEN_ASSISTANT = "com.chips.OPEN_ASSISTANT" }
+    private var assistantRequest by mutableStateOf(false)
+    private var assistantWindow = false
+    private val access by lazy { com.chips.assistant.AssistantAccessSettings(this) }
+    private val accessListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if(key == com.chips.assistant.AssistantAccessSettings.KEY) updateAssistantWindow()
+    }
+    private var featureRequest by mutableStateOf<FeatureRoute?>(null)
     private var micPermissionGranted by mutableStateOf(false)
     private var isAssistant by mutableStateOf(false)
     private var settingsError by mutableStateOf<String?>(null)
@@ -34,10 +43,20 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
         )
+        featureRequest = FeatureRoute.from(intent)
+        assistantRequest = intent.getBooleanExtra(OPEN_ASSISTANT, false)
+        assistantWindow = this is com.chips.assistant.LockscreenAssistantActivity || featureRequest != null || assistantRequest || savedInstanceState?.getBoolean("assistant_window") == true
+        access.preferences.registerOnSharedPreferenceChangeListener(accessListener)
+        updateAssistantWindow()
         updateStates()
         setContent {
             ChipsTheme {
                 ChipsApp(
+                    requestedAssistant = assistantRequest,
+                    onAssistantHandled = { assistantRequest = false; intent.removeExtra(OPEN_ASSISTANT) },
+                    onAssistantClosed = { if(assistantWindow && getSystemService(android.app.KeyguardManager::class.java).isDeviceLocked) finish() },
+                    requestedFeature = featureRequest,
+                    onFeatureHandled = { featureRequest = null; intent.removeExtra(FeatureRoute.EXTRA) },
                     micPermissionGranted = micPermissionGranted,
                     isAssistant = isAssistant,
                     settingsError = settingsError,
@@ -55,8 +74,36 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        featureRequest = FeatureRoute.from(intent)
+        assistantRequest = intent.getBooleanExtra(OPEN_ASSISTANT, false)
+        assistantWindow = this is com.chips.assistant.LockscreenAssistantActivity || featureRequest != null || assistantRequest
+        updateAssistantWindow()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("assistant_window", assistantWindow)
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onDestroy() {
+        access.preferences.unregisterOnSharedPreferenceChangeListener(accessListener)
+        super.onDestroy()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun updateAssistantWindow() {
+        val show = assistantWindow && access.allowLocked()
+        if(android.os.Build.VERSION.SDK_INT >= 27) setShowWhenLocked(show)
+        else if(show) window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+        else window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
+    }
+
     override fun onResume() {
         super.onResume()
+        updateAssistantWindow()
         updateStates()
     }
 

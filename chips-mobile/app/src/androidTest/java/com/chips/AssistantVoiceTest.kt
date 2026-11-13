@@ -115,6 +115,26 @@ class AssistantVoiceTest {
         }
     }
 
+    @Test fun allowedLockscreenSupportsRecordingReplyAndFeatureActions() {
+        val recorder = Recorder()
+        var uploads = 0
+        var selected: com.chips.ui.FeatureRoute? = null
+        compose.setContent {
+            val scope = rememberCoroutineScope()
+            val controller = remember { VoiceController(recorder, scope, VoiceService { request, _ ->
+                uploads++; VoiceReply(request.id, "locked transcript", "locked reply")
+            }, {}) }
+            ChipsTheme { AssistantVoiceContent(controller, {},
+                accessAllowed = com.chips.assistant.assistantAccessAllowed(deviceLocked = true,allowLocked = true),
+                onFeature = { selected = it }) }
+        }
+        compose.onNodeWithText("Hold to speak").performTouchInput { down(center) }
+        compose.onNodeWithText("Release to send").performTouchInput { up() }
+        compose.onNodeWithText("locked reply").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("assistant-feature-DRAWING").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(1,uploads); assertEquals(com.chips.ui.FeatureRoute.DRAWING,selected) }
+    }
+
     @Test fun lockedSurfaceDiscardsCaptureAndHidesPrivateContent() {
         val recorder = Recorder()
         val unlocked = mutableStateOf(true)
@@ -124,7 +144,7 @@ class AssistantVoiceTest {
             val controller = remember { VoiceController(recorder, scope, VoiceService { request, _ ->
                 uploads++; VoiceReply(request.id, "private transcript", "private reply")
             }, {}) }
-            ChipsTheme { AssistantVoiceContent(controller, {}, unlocked = unlocked.value) }
+            ChipsTheme { AssistantVoiceContent(controller, {}, accessAllowed = unlocked.value) }
         }
         compose.onNodeWithText("Hold to speak").performTouchInput { down(center) }
         compose.onNodeWithText("Release to send").assertIsDisplayed()

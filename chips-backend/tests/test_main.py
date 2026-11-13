@@ -12,6 +12,7 @@ client = TestClient(app)
 async def override_get_db():
     db = AsyncMock()
     db.add = Mock()
+    db.scalars.return_value = Mock(all=Mock(return_value=[]))
     yield db
 
 @pytest.fixture(autouse=True)

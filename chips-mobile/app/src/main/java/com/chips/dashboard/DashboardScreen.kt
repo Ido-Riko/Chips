@@ -21,9 +21,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.semantics
@@ -40,9 +39,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) -> Unit,
+fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> Unit,
                     beatSaber: com.chips.beatsaber.BeatSaberState = com.chips.beatsaber.BeatSaberState(),
-                    onBeatSaber: () -> Unit = {}, onVoice: () -> Unit) {
+                    onBeatSaber: () -> Unit = {}, onJapanese: () -> Unit = {}, onDrawing: () -> Unit = {},
+                    onPantry: () -> Unit = {}, pantryCount: Int = 0, japaneseDue: Int = 0, drawingCount: Int = 0, drawingSummary: String = "", onVoice: () -> Unit) {
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -87,15 +87,15 @@ fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) ->
         if (state.storageError != null) item { Text(state.storageError, color = MaterialTheme.colorScheme.error) }
         item { SleepCard(state.demoMode) }
         item {
-            DashboardCard("Your rhythm", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "${state.completed.size} / 4 today") {
-                Text(if (state.demoMode) "Tap an activity to toggle its preview." else "Tap a checked activity to remove today's sessions.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            DashboardCard("Activities", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "${state.completed.size} / 4 today") {
+                if (state.demoMode) Text("Tap an activity to toggle its preview.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 AdaptivePair(
-                    first = { ActivityTile(ActivityType.WORKOUT, state, onToggleActivity) },
-                    second = { ActivityTile(ActivityType.BEAT_SABER, state, onToggleActivity) }
+                    first = { ActivityTile(ActivityType.WORKOUT, state, onOpenActivity) },
+                    second = { ActivityTile(ActivityType.BEAT_SABER, state, onOpenActivity) }
                 )
                 AdaptivePair(
-                    first = { ActivityTile(ActivityType.DRAWING, state, onToggleActivity) },
-                    second = { ActivityTile(ActivityType.JAPANESE, state, onToggleActivity) }
+                    first = { ActivityTile(ActivityType.DRAWING, state, onOpenActivity) },
+                    second = { ActivityTile(ActivityType.JAPANESE, state, onOpenActivity) }
                 )
             }
         }
@@ -121,7 +121,8 @@ fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) ->
                         } else {
                             IconTile(ChipsSymbol.JAPANESE, ChipsMint)
                             Text("A little, often.", style = MaterialTheme.typography.titleLarge)
-                            Text("No reviews yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (japaneseDue > 0) "$japaneseDue ready to study" else "Ready when you are", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            OutlinedButton(onClick = onJapanese, modifier = Modifier.testTag("open-japanese")) { Text("Study") }
                         }
                     }
                 }
@@ -130,23 +131,25 @@ fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) ->
         item {
             DashboardCard("Keep showing up", trailing = if (state.demoMode) "Preview streaks" else "Daily streaks") {
                 if (LocalDensity.current.fontScale > 1.3f) {
-                    ActivityType.entries.chunked(2).forEach { pair -> StreakRow(pair, state) }
-                } else StreakRow(ActivityType.entries, state)
+                    ActivityType.entries.chunked(2).forEach { pair -> StreakRow(pair, state, onOpenActivity) }
+                } else StreakRow(ActivityType.entries, state, onOpenActivity)
             }
         }
         item {
             DashboardCard("At your own pace") {
                 DetailRow(
                     ChipsSymbol.MEAL, ChipsWarning, "Meal ideas",
-                    if (state.demoMode) DemoData.meal else "Your pantry is a blank page.",
-                    if (state.demoMode) DemoData.pantry else "No pantry connected"
+                    if (state.demoMode) DemoData.meal else if (pantryCount == 0) "Your pantry starts here." else "$pantryCount pantry items ready for meal ideas.",
+                    if (state.demoMode) DemoData.pantry else "Saved locally · server sync available"
                 )
+                if (!state.demoMode) OutlinedButton(onClick = onPantry, modifier = Modifier.testTag("open-pantry")) { Text("Open pantry") }
                 HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
                 DetailRow(
                     ChipsSymbol.DRAWING, ChipsAccent, "Drawing",
-                    if (state.demoMode) DemoData.drawingFeedback else "Make a little room to create.",
-                    if (state.demoMode) "Example feedback · no drawing uploaded" else "No drawings yet"
+                    if (state.demoMode) DemoData.drawingFeedback else drawingSummary.ifEmpty { "Make a little room to create." },
+                    if (state.demoMode) "Example feedback · no drawing uploaded" else if (drawingCount == 0) "Your sketchbook starts here" else "$drawingCount saved drawings"
                 )
+                if (!state.demoMode) OutlinedButton(onClick = onDrawing, modifier = Modifier.testTag("open-drawing")) { Text("Open sketchbook") }
             }
         }
     }
@@ -182,15 +185,16 @@ private fun SleepCard(demo: Boolean) {
 }
 
 @Composable
-private fun ActivityTile(type: ActivityType, state: DashboardUiState, onLog: (ActivityType) -> Unit) {
+private fun ActivityTile(type: ActivityType, state: DashboardUiState, onOpen: (ActivityType) -> Unit) {
     val completed = type in state.completed
     val color = activityColor(type)
     Surface(
-        onClick = { onLog(type) }, shape = RoundedCornerShape(14.dp),
+        onClick = { onOpen(type) }, shape = RoundedCornerShape(14.dp),
         color = if (completed) color.copy(alpha = 0.13f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-        modifier = Modifier.fillMaxWidth().testTag("rhythm-${type.name}").semantics {
-            role = Role.Checkbox
-            toggleableState = if (completed) ToggleableState.On else ToggleableState.Off
+        modifier = Modifier.fillMaxWidth().testTag("activity-${type.name}").semantics {
+            role = Role.Button
+            contentDescription = "Open ${type.label}"
+            stateDescription = if (completed) "Completed today" else "Not completed today"
         }
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -202,11 +206,11 @@ private fun ActivityTile(type: ActivityType, state: DashboardUiState, onLog: (Ac
 }
 
 @Composable
-private fun StreakRow(types: List<ActivityType>, state: DashboardUiState) {
+private fun StreakRow(types: List<ActivityType>, state: DashboardUiState, onOpen: (ActivityType) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         types.forEach { type ->
             val days = if (state.demoMode) DemoData.streaks.getValue(type) else state.streak(type)
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f).testTag("streak-${type.name}").clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onOpen(type) }.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.size(48.dp).clearAndSetSemantics {
                     contentDescription = if (days == null) "${type.label}, no history" else "${type.label}, $days day ${if (state.demoMode) "preview " else ""}streak"
                 }, contentAlignment = Alignment.Center) {
@@ -231,31 +235,6 @@ private fun DetailRow(symbol: ChipsSymbol, color: Color, title: String, descript
             Text(title, style = MaterialTheme.typography.labelLarge)
             Text(description, style = MaterialTheme.typography.bodyMedium)
             Text(note, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
-@Composable
-fun QuickLogBar(demoMode: Boolean, onLog: (ActivityType) -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxWidth()) {
-            HorizontalDivider(color = Color.White.copy(alpha = 0.07f))
-            Row(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Quick log", style = MaterialTheme.typography.labelMedium)
-                Text(if (demoMode) "Preview only" else "Saved on this phone", modifier = Modifier.testTag("quick-log-status"), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
-            }
-            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp)) {
-                ActivityType.entries.forEach { type ->
-                    Column(
-                        Modifier.weight(1f).testTag("quick-log-${type.name}")
-                            .clip(RoundedCornerShape(12.dp)).clickable(role = Role.Button) { onLog(type) }.padding(vertical = 8.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        ChipsIcon(activitySymbol(type), activityColor(type), Modifier.size(20.dp))
-                        Text(type.label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
-                    }
-                }
-            }
         }
     }
 }

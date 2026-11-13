@@ -14,6 +14,8 @@ from app.auth import token_digest
 from app.database import get_db
 from app.models.activity import Device
 from app.routers.activities import router
+from app.routers.drawings import router as drawing_router
+from app.routers.pantry import router as pantry_router
 
 
 @pytest.mark.skipif(not os.environ.get("TEST_POSTGRES_URL"), reason="Disposable PostgreSQL not configured")
@@ -48,6 +50,8 @@ def test_migration_and_concurrent_sync():
     asyncio.run(setup())
     app = FastAPI()
     app.include_router(router)
+    app.include_router(drawing_router)
+    app.include_router(pantry_router)
     async def database():
         async with sessions() as db: yield db
     app.dependency_overrides[get_db] = database
@@ -64,5 +68,26 @@ def test_migration_and_concurrent_sync():
             assert len(records) == 1 and records[0]["revision"] == 5
             assert client.delete(path, headers=auth).json()["deleted"]
             assert client.put(path, json=body | dict(revision=99), headers=auth).json()["deleted"]
+        # The same additive migration must store/retrieve actual JPEG BYTEA, not just metadata.
+        from test_drawings import jpeg
+        drawing_id = str(uuid4())
+        drawing_path = f"/api/v1/drawings/{drawing_id}"
+        with TestClient(app, base_url="https://testserver") as drawing_client:
+            result = drawing_client.put(drawing_path, headers=auth,
+                files={"image": ("drawing.jpg", jpeg(), "image/jpeg")},
+                data={"goal": "Shading", "created_at": "1794500000000"})
+            assert result.status_code == 200, result.text
+            assert drawing_client.get(drawing_path + "/image", headers=auth).content == jpeg()
+            assert drawing_client.delete(drawing_path, headers=auth).json()["deleted"]
+            assert drawing_client.get(drawing_path + "/image", headers=auth).status_code == 404
+        from test_pantry import movement
+        tx = movement()
+        with TestClient(app, base_url="https://testserver") as pantry_client:
+            def purchase(_):
+                return pantry_client.put(f"/api/v1/pantry/transactions/{tx['id']}", json=tx, headers=auth).status_code
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                assert set(pool.map(purchase, range(4))) == {200}
+            stock = pantry_client.get("/api/v1/pantry/inventory", headers=auth).json()
+            assert len(stock) == 1 and stock[0]["quantity"] == "2"
     finally:
         asyncio.run(cleanup())

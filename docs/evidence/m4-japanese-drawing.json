@@ -1,0 +1,45 @@
+{
+  "date": "2026-11-13",
+  "source_sha256": {
+    "chips-mobile/app/src/main/java/com/chips/practice/PracticeStore.kt": "b9f697a426ed27754fb007f5a4eaaadfc95736daf28c147da8a37a24d3740146",
+    "chips-mobile/app/src/main/java/com/chips/practice/PracticeScreens.kt": "627da1235e8111342b5c973d15d2d1fbbbedd9e9238d3f29ca757c73161e3496",
+    "chips-mobile/app/src/main/java/com/chips/practice/PracticeViewModel.kt": "250f73c2da335e17021fb5eca28bd342d3874c1c13b7ca25c1810a88675eb60b",
+    "chips-mobile/app/src/main/java/com/chips/practice/DrawingSync.kt": "206716d181be6e841617a94129a01d08a1179fb1d95b81f59011a0d6e2daca80",
+    "chips-backend/app/services/drawing.py": "09a82b0785957784cf2a97d285a2ac7969fb0c444a82b23097d3eefd18d6a0f4",
+    "chips-backend/app/routers/drawings.py": "57eca48ab41026252ce93d4bd39889bcadb5b69df1941d29432eb4f84db9d0d3",
+    "chips-backend/app/models/drawing.py": "34bc2bf8000b61e2cc3553512e2de752b532a30f2532cddd08bbb4213ef6843f",
+    "chips-backend/migrations/003_drawings.sql": "f5f3bfd8cd0d83b83f79cdc9255b7244aea57129c7133ada87d07de4848b211b",
+    "chips-mobile/app/src/main/assets/kanji.json": "ae953a60eb3a59ee853acf4c73926a919eed06d7c800afe7252862d951fc8748"
+  },
+  "android": {
+    "debug": "passed",
+    "unsigned_release": "passed",
+    "unit_tests": 29,
+    "emulator_tests": 48,
+    "failures": 0,
+    "lint_errors": 0,
+    "lint_warnings": 35,
+    "phone_install": "Poco installed in place; no data clear or automated phone input",
+    "visual_check": "Normal emulator Japanese practice screen inspected"
+  },
+  "backend": {
+    "python": "3.12.16",
+    "passed": 30,
+    "skipped": 4,
+    "skipped_reason": "PowerShell unavailable locally",
+    "postgres": "Disposable PostgreSQL 16; additive migration repeated, voice data preserved, authenticated drawing bytes roundtrip/deletion passed",
+    "vision": "Mocked compatible image-input transport tested; no real model inference",
+    "release_archive": "Built successfully; includes migration 003"
+  },
+  "sources": [
+    "https://kanjiapi.dev/",
+    "https://www.edrdg.org/edrdg/licence.html",
+    "https://docs.ollama.com/api/openai-compatibility"
+  ],
+  "limitations": [
+    "chips-server is offline; production deployment not performed",
+    "A vision-capable model must be explicitly configured",
+    "Real drawing upload/analysis and phone interactions still require acceptance",
+    "Android server gallery restore is not wired; the phone retains its local working copy"
+  ]
+}

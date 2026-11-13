@@ -70,8 +70,18 @@ History → Conversations reads saved transcripts/replies, expands full conversa
 
 Audio is kept only in the app cache while recording, uploading or waiting for an explicit retry. It is removed after success, terminal failure, discard, cancellation or dismissal. Abandoned `chips_voice_*` files are removed on cold process startup. Audio is not stored in history or Android backup.
 
-Voice input and private replies require an unlocked device. The system service does not advertise launch from keyguard. If lockscreen appears during a session, that session hides; the shared UI also checks device lock state and denies recording/retry while locked. The locked surface contains only unlock guidance, no transcript, history or microphone action. Actual Poco system invocation, lockscreen behavior and microphone revocation/contention remain physical-device acceptance gates.
+Owner decision, 13 November 2026: assistant access while locked is enabled by default. Settings → Assistant security → Allow assistant while locked persists the owner’s choice; changing it requires an unlocked phone. The notice explains that voice replies and activity screens may reveal personal information to anyone holding the phone. Voice/retry/feature actions all read the same policy. When disabled, locking cancels captures/requests and hides private content behind unlock guidance.
+
+The service advertises launch from keyguard and implements [onLaunchVoiceAssistFromKeyguard](https://developer.android.com/reference/android/service/voice/VoiceInteractionService#onLaunchVoiceAssistFromKeyguard()) by opening an internal, non-exported LockscreenAssistantActivity when enabled. Its show-when-locked flag follows the preference; ordinary launcher windows do not gain lockscreen visibility. Session invocation and feature handoff also respect the preference. Show-when-locked does not dismiss or unlock Android’s keyguard. Closing the activity-based assistant while locked finishes that assistant window. Physical Poco invocation/firmware behavior and real speech inference remain separate acceptance gates.
 
 ## Acceptance split
 
 Android can be validated using a local test service for the protocol, same-ID retry, error states, transcript display, SQLite reopen/deletion, UI cancellation, resource cleanup and privacy gating. This does not prove real STT, answer quality, server-side idempotency or provider cancellation. Final M3 acceptance still requires ten representative real utterances, independently selectable PC/API inference, unavailable-PC recovery and physical-device scenarios.
+
+## Pantry context for the deferred service
+
+The main assistant handles meal recommendations using authenticated-owner pantry inventory (`app.routers.pantry.inventory`). The existing legacy voice route now includes this reference context; the M3-compatible implementation must retain it without treating item names as instructions. Show missing ingredients, distinguish count from package size, check negative/conflicting stock and disclose last-sync freshness. Never decrement pantry stock as a side effect of generated suggestions. Pantry work does not change the legacy route’s protocol incompatibility.
+
+## Local assistant shortcuts
+
+The assistant also exposes Workout, Beat Saber, Japanese, Drawing and Pantry routes. These are local UI actions, independent of speech inference and microphone permission. Busy/recording states hide shortcuts; selecting one cancels any retained recording/request before routing. The Android session uses [startAssistantActivity](https://developer.android.com/reference/android/service/voice/VoiceInteractionSession#startAssistantActivity(android.content.Intent)) to open the app, with a validated feature extra consumed once by MainActivity. Opening a route never creates/deletes completion records. Workout requires manual confirmation; Beat Saber logs only through its explicit completed-session action.

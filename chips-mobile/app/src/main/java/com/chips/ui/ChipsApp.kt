@@ -14,6 +14,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.chips.data.*
 import com.chips.beatsaber.*
+import com.chips.practice.*
+import com.chips.pantry.*
 import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -43,6 +45,11 @@ fun ChipsApp(
     onRequestMicrophone: () -> Unit,
     onAssistantSettings: () -> Unit,
     onAppSettings: () -> Unit,
+    requestedAssistant: Boolean = false,
+    onAssistantHandled: () -> Unit = {},
+    onAssistantClosed: () -> Unit = {},
+    requestedFeature: FeatureRoute? = null,
+    onFeatureHandled: () -> Unit = {},
     dashboard: DashboardViewModel = viewModel(factory = viewModelFactory {
         initializer { DashboardViewModel(ActivityStore.get(this[androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY]!!)) }
     })
@@ -55,24 +62,42 @@ fun ChipsApp(
     val context = LocalContext.current
     val beatSaber: BeatSaberViewModel = viewModel(factory = viewModelFactory { initializer { BeatSaberViewModel(context.applicationContext as android.app.Application) } })
     val beatState by beatSaber.state.collectAsStateWithLifecycle()
+    val practice: PracticeViewModel = viewModel(factory = viewModelFactory { initializer { PracticeViewModel(context.applicationContext as android.app.Application) } })
+    val practiceState by practice.state.collectAsStateWithLifecycle()
+    val pantry: PantryViewModel = viewModel(factory = viewModelFactory { initializer { PantryViewModel(context.applicationContext as android.app.Application) } })
+    val pantryState by pantry.state.collectAsStateWithLifecycle()
+    var practicePage by rememberSaveable { mutableStateOf("") }
     var showBeatSaber by rememberSaveable { mutableStateOf(false) }
+    var showWorkoutLog by rememberSaveable { mutableStateOf(false) }
+    val openFeature: (FeatureRoute) -> Unit = { feature ->
+        dashboard.setDemoMode(false)
+        showVoice = false
+        showWorkoutLog = false
+        destination = Destination.DASHBOARD
+        showBeatSaber = false
+        practicePage = ""
+        when(feature) {
+            FeatureRoute.JAPANESE -> { practicePage = "japanese"; practice.refresh() }
+            FeatureRoute.DRAWING -> { practicePage = "drawing"; practice.refresh() }
+            FeatureRoute.BEAT_SABER -> { showBeatSaber = true; beatSaber.load() }
+            FeatureRoute.PANTRY -> { practicePage = "pantry"; pantry.refresh() }
+            FeatureRoute.WORKOUT -> showWorkoutLog = true
+        }
+    }
+    LaunchedEffect(requestedAssistant) { if(requestedAssistant) { showVoice = true; onAssistantHandled() } }
+    LaunchedEffect(requestedFeature) {
+        requestedFeature?.let { openFeature(it); onFeatureHandled() }
+    }
     LaunchedEffect(destination) { if (destination == Destination.DASHBOARD) beatSaber.load() }
     LaunchedEffect(Unit) { ActivitySyncWorker.schedule(context) }
-    val onActivity: (ActivityType, Boolean) -> Unit = { type, toggle ->
-        if (state.demoMode) {
-            dashboard.previewActivity(type)
-            snackbar.currentSnackbarData?.dismiss()
-            if (!toggle) scope.launch {
-                snackbar.showSnackbar("${type.label}: preview changed. Nothing saved.")
-            }
-        } else scope.launch {
+    val onLog: (ActivityType) -> Unit = { type ->
+        if (state.demoMode) dashboard.previewActivity(type)
+        else scope.launch {
             try {
-                val saved = if (toggle) dashboard.toggleToday(type) else dashboard.log(type)
+                val saved = dashboard.log(type)
                 runCatching { ActivitySyncWorker.schedule(context) }
                 snackbar.currentSnackbarData?.dismiss()
-                // The checked tile itself confirms a rhythm toggle. A snackbar can cover
-                // that same tile on compact screens and intercept the next tap.
-                if (!toggle && saved != null && snackbar.showSnackbar("${type.label} saved on this phone", "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
+                if (snackbar.showSnackbar("${type.label} saved on this phone", "Undo", duration = SnackbarDuration.Long) == SnackbarResult.ActionPerformed) {
                     dashboard.delete(saved.id)
                     ActivitySyncWorker.schedule(context)
                 }
@@ -80,11 +105,13 @@ fun ChipsApp(
             catch (_: Exception) { snackbar.showSnackbar("Could not save this change. Try again.") }
         }
     }
+    val onShortcut: (ActivityType) -> Unit = { type ->
+        if(state.demoMode) dashboard.previewActivity(type) else openFeature(FeatureRoute.activity(type))
+    }
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             Column {
-                if (destination == Destination.DASHBOARD && !showBeatSaber) QuickLogBar(state.demoMode) { onActivity(it, false) }
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column {
                         HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
@@ -96,7 +123,7 @@ fun ChipsApp(
                                     Modifier.weight(1f).testTag("nav-${target.name}")
                                         .clip(RoundedCornerShape(14.dp))
                                         .selectable(selected = selected, role = Role.Tab, onClick = {
-                                            if (target == Destination.DASHBOARD) showBeatSaber = false
+                                            if (target == Destination.DASHBOARD) { showBeatSaber = false; practicePage = "" }
                                             destination = target
                                         })
                                         .padding(vertical = 8.dp),
@@ -115,13 +142,22 @@ fun ChipsApp(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                Destination.DASHBOARD -> if (showBeatSaber) BeatSaberScreen(beatState,
+                Destination.DASHBOARD -> if (practicePage == "pantry") PantryScreen(pantryState, pantry, onBack = { practicePage = "" })
+                else if (practicePage == "japanese") JapaneseScreen(practiceState,
+                    onBack = { practicePage = "" }, onRate = practice::rate, onReset = practice::reset, onRefresh = practice::reload)
+                else if (practicePage == "drawing") DrawingScreen(practiceState, onBack = { practicePage = "" },
+                    onImport = practice::importDrawing, onSend = practice::send, onNotes = practice::notes, onDelete = practice::remove, onRefresh = practice::reload)
+                else if (showBeatSaber) BeatSaberScreen(beatState,
                     onBack = { showBeatSaber = false }, onConnect = beatSaber::connect,
                     onRefresh = beatSaber::refresh, onReload = beatSaber::load,
-                    onRemove = beatSaber::remove, onMap = beatSaber::map
-                ) else DashboardScreen(state, { onActivity(it, true) }, beatState,
-                    onBeatSaber = { showBeatSaber = true; beatSaber.load() }) {
-                    if (micPermissionGranted) showVoice = true else destination = Destination.SETTINGS
+                    onRemove = beatSaber::remove, onMap = beatSaber::map, onLogSession = { onLog(ActivityType.BEAT_SABER) }
+                ) else DashboardScreen(state, onShortcut, beatState,
+                    onBeatSaber = { openFeature(FeatureRoute.BEAT_SABER) },
+                    onPantry = { openFeature(FeatureRoute.PANTRY) }, pantryCount = pantryState.items.size,
+                    onJapanese = { openFeature(FeatureRoute.JAPANESE) }, onDrawing = { openFeature(FeatureRoute.DRAWING) },
+                    japaneseDue = practiceState.due.size, drawingCount = practiceState.drawings.size,
+                    drawingSummary = practiceState.drawings.firstOrNull { it.feedback.isNotEmpty() }?.feedback?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(120).orEmpty()) {
+                    showVoice = true
                 }
                 Destination.HISTORY -> {
                     var conversations by rememberSaveable { mutableStateOf(false) }
@@ -142,10 +178,15 @@ fun ChipsApp(
             }
         }
     }
-    if (showVoice && micPermissionGranted) {
-        Dialog(onDismissRequest = { showVoice = false }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    if(showWorkoutLog) AlertDialog(
+        onDismissRequest = { showWorkoutLog = false }, title = { Text("Log a workout") },
+        text = { Text("Save a completed workout on this phone. Live heart-rate tracking is not connected yet.") },
+        confirmButton = { TextButton(onClick = { showWorkoutLog = false; onLog(ActivityType.WORKOUT) }, modifier = Modifier.testTag("save-workout")) { Text("Save workout") } },
+        dismissButton = { TextButton(onClick = { showWorkoutLog = false }) { Text("Cancel") } })
+    if (showVoice) {
+        Dialog(onDismissRequest = { showVoice = false; onAssistantClosed() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(Modifier.fillMaxSize()) {
-                AssistantOverlayContent(onDismiss = { showVoice = false })
+                AssistantOverlayContent(onDismiss = { showVoice = false; onAssistantClosed() }, onFeature = openFeature)
             }
         }
     }
@@ -178,6 +219,7 @@ private fun SettingsScreen(
                 )
             }
         }
+        AssistantSecurityCard()
         SyncSettingsCard()
         DashboardCard("Microphone") {
             Text(if (microphoneGranted) "Microphone access granted" else "Microphone access is off")
@@ -198,7 +240,27 @@ private fun SettingsScreen(
         DashboardCard("Voice service") {
             Text("Voice uses your saved service enrollment. The service selects speech recognition and the answer model independently; either may run on your PC or use an explicitly configured API.")
             Text("A compatible service must return a real transcript and reply. Successful conversations are saved on this phone. The earlier demo service needs an update before it can be used.")
-            Text("Voice is available only while the phone is unlocked. Closing the assistant discards any recording waiting for retry.")
+            Text("Lockscreen access follows your security setting above. Closing the assistant discards any recording waiting for retry.")
         }
+    }
+}
+
+@Composable
+internal fun AssistantSecurityCard() {
+    val context = LocalContext.current
+    val access = remember { com.chips.assistant.AssistantAccessSettings(context) }
+    val keyguard = remember { context.getSystemService(android.app.KeyguardManager::class.java) }
+    var enabled by remember { mutableStateOf(access.allowLocked()) }
+    var unlocked by remember { mutableStateOf(!keyguard.isDeviceLocked) }
+    LaunchedEffect(Unit) { while(true) { unlocked = !keyguard.isDeviceLocked; enabled = access.allowLocked(); kotlinx.coroutines.delay(250) } }
+    DashboardCard("Assistant security", modifier = Modifier.testTag("assistant-security")) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text("Allow assistant while locked", Modifier.weight(1f))
+            Switch(checked = enabled, enabled = unlocked, onCheckedChange = { value ->
+                if(!keyguard.isDeviceLocked) { access.setAllowLocked(value); enabled = value }
+            }, modifier = Modifier.semantics { contentDescription = "Allow assistant while locked" })
+        }
+        Text("Voice, replies and activity screens can be used without unlocking. Anyone holding your phone may see that information.", style = MaterialTheme.typography.bodyMedium)
+        if(!unlocked) Text("Unlock your phone to change this setting.", style = MaterialTheme.typography.bodySmall)
     }
 }

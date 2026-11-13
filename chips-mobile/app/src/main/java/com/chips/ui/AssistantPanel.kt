@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -47,7 +48,9 @@ internal fun AssistantPanel(
     canRetry: Boolean = false,
     retrySaving: Boolean = false,
     onRetry: () -> Unit = {},
-    onDiscard: () -> Unit = {}
+    onDiscard: () -> Unit = {},
+    onFeature: ((FeatureRoute) -> Unit)? = null,
+    microphoneAvailable: Boolean = true
 ) {
     val busy = phase in setOf(AssistantPhase.UPLOADING, AssistantPhase.PROCESSING, AssistantPhase.SAVING)
     val colors = MaterialTheme.colorScheme
@@ -112,7 +115,7 @@ internal fun AssistantPanel(
                     if (phase == AssistantPhase.READY) {
                         Text("What’s on your mind?", style = MaterialTheme.typography.headlineMedium,
                             textAlign = TextAlign.Center)
-                        Text("Hold the button, speak, then release to send. Up to 60 seconds.", style = MaterialTheme.typography.bodyLarge,
+                        Text(if(microphoneAvailable) "Hold the button, speak, then release to send. Up to 60 seconds." else "Choose an activity below, or enable microphone access in Settings.", style = MaterialTheme.typography.bodyLarge,
                             color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
                     } else if (phase == AssistantPhase.LISTENING) {
                         Text("I’m listening.", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
@@ -153,6 +156,17 @@ internal fun AssistantPanel(
                                 textAlign = TextAlign.Center)
                         }
                     }
+                    if(onFeature != null && !busy && phase != AssistantPhase.LISTENING) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            FeatureRoute.entries.chunked(2).forEach { pair ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    pair.forEach { route ->
+                                        AssistChip(onClick = { onFeature(route) }, label = { Text(route.label) }, modifier = Modifier.weight(1f).testTag("assistant-feature-${route.name}"))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 HorizontalDivider(Modifier.padding(horizontal = 24.dp), color = Color.White.copy(alpha = 0.06f))
                 Column(
@@ -161,7 +175,7 @@ internal fun AssistantPanel(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Button(
-                        onClick = {}, enabled = !busy,
+                        onClick = {}, enabled = !busy && microphoneAvailable,
                         interactionSource = interactionSource,
                         colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = colors.onPrimary),
                         shape = RoundedCornerShape(20.dp),
@@ -192,7 +206,7 @@ internal fun AssistantPanel(
                     if (busy) TextButton(onClick = onDiscard) {
                         Text(if (phase == AssistantPhase.SAVING) "Dismiss" else "Cancel request")
                     }
-                    if (!busy && phase != AssistantPhase.ERROR) Text("Conversations are saved on this phone.",
+                    if (!busy && phase != AssistantPhase.ERROR) Text(if(microphoneAvailable) "Conversations are saved on this phone." else "Enable microphone access in Settings to speak. Shortcuts work without it.",
                         style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
                         textAlign = TextAlign.Center)
                 }

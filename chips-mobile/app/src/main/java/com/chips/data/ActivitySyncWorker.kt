@@ -43,6 +43,8 @@ class ActivitySyncWorker(context: Context, params: WorkerParameters) : Coroutine
         private val constraints = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         fun schedule(context: Context, retryNow: Boolean = false) {
             if (!SyncCredentials(context).connected()) return
+            com.chips.practice.DrawingSyncWorker.schedule(context, retryNow)
+            com.chips.pantry.PantrySyncWorker.schedule(context, retryNow)
             val manager = WorkManager.getInstance(context)
             manager.enqueueUniqueWork("activity-sync", if (retryNow) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.APPEND_OR_REPLACE,
                 OneTimeWorkRequestBuilder<ActivitySyncWorker>().setConstraints(constraints)
@@ -54,6 +56,8 @@ class ActivitySyncWorker(context: Context, params: WorkerParameters) : Coroutine
             SyncCredentials(context).disconnect()
             WorkManager.getInstance(context).cancelUniqueWork("activity-sync")
             WorkManager.getInstance(context).cancelUniqueWork("activity-sync-periodic")
+            WorkManager.getInstance(context).cancelUniqueWork("pantry-sync")
+            WorkManager.getInstance(context).cancelUniqueWork("pantry-periodic")
             context.getSharedPreferences("sync_state", Context.MODE_PRIVATE).edit().remove("error").apply()
         }
     }

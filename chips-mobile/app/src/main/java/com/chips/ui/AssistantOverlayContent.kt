@@ -23,27 +23,39 @@ import com.chips.voice.VoiceController
 import com.chips.voice.VoicePhase
 
 @Composable
-fun AssistantOverlayContent(onDismiss: () -> Unit, reserveFingerprintSpace: Boolean = false) {
+fun AssistantOverlayContent(onDismiss: () -> Unit, reserveFingerprintSpace: Boolean = false, onFeature: ((FeatureRoute) -> Unit)? = null) {
     val context = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
     val controller = remember(context, scope) {
         val api = ApiClient(context)
         VoiceController(AudioRecorder(context), scope, api, VoiceHistoryStore.get(context)::save)
     }
+    val access = remember(context) { com.chips.assistant.AssistantAccessSettings(context) }
     val keyguard = remember(context) { context.getSystemService(KeyguardManager::class.java) }
-    var unlocked by remember { mutableStateOf(!keyguard.isDeviceLocked) }
+    var microphoneAvailable by remember { mutableStateOf(false) }
+    var accessible by remember { mutableStateOf(access.allowed(keyguard.isDeviceLocked)) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(lifecycle, controller) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             while (true) {
-                unlocked = !keyguard.isDeviceLocked
-                if (!unlocked) controller.cancel()
+                microphoneAvailable = androidx.core.content.ContextCompat.checkSelfPermission(context, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                accessible = access.allowed(keyguard.isDeviceLocked)
+                if (!accessible) controller.cancel()
                 delay(250)
             }
         }
     }
-    AssistantVoiceContent(controller, onDismiss, reserveFingerprintSpace, unlocked,
-        canUseVoice = { !keyguard.isDeviceLocked })
+    AssistantVoiceContent(controller, onDismiss, reserveFingerprintSpace, accessible,
+        canUseVoice = { access.allowed(keyguard.isDeviceLocked) && microphoneAvailable }, microphoneAvailable = microphoneAvailable,
+        onFeature = { route ->
+            if(access.allowed(keyguard.isDeviceLocked)) {
+                controller.cancel()
+                if(onFeature != null) onFeature(route) else {
+                    context.startActivity(featureIntent(context, route, fromLockscreen = keyguard.isDeviceLocked).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                    onDismiss()
+                }
+            }
+        })
 }
 
 @Composable
@@ -51,8 +63,10 @@ internal fun AssistantVoiceContent(
     controller: VoiceController,
     onDismiss: () -> Unit,
     reserveFingerprintSpace: Boolean = false,
-    unlocked: Boolean = true,
-    canUseVoice: () -> Boolean = { true }
+    accessAllowed: Boolean = true,
+    canUseVoice: () -> Boolean = { true },
+    onFeature: ((FeatureRoute) -> Unit)? = null,
+    microphoneAvailable: Boolean = true
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -66,8 +80,8 @@ internal fun AssistantVoiceContent(
             controller.cancel()
         }
     }
-    LaunchedEffect(unlocked) { if (!unlocked) controller.cancel() }
-    if (!unlocked) {
+    LaunchedEffect(accessAllowed) { if (!accessAllowed) controller.cancel() }
+    if (!accessAllowed) {
         LockedVoicePanel(onDismiss)
         return
     }
@@ -95,7 +109,7 @@ internal fun AssistantVoiceContent(
         onDismiss()
     }, reserveFingerprintSpace, state.transcript, state.canRetry, state.retrySaving,
         onRetry = { if (canUseVoice()) controller.retry() else controller.cancel() },
-        onDiscard = controller::cancel)
+        onDiscard = controller::cancel, onFeature = onFeature, microphoneAvailable = microphoneAvailable)
 }
 
 @Composable

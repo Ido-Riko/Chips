@@ -114,7 +114,7 @@ class VoiceContractTest {
         }
     }
 
-    @Test fun reservedVersionOneSchemaRetainsActivityAndVoiceRows() {
+    @Test fun versionTwoSchemaRetainsActivityAndVoiceRows() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val name = "voice-schema-${UUID.randomUUID()}.db"
         val record = VoiceConversation(UUID.randomUUID().toString(), 1234, "spoken", "reply")
@@ -122,7 +122,7 @@ class VoiceContractTest {
             ActivityStore(context, name).use { db ->
                 db.log(ActivityType.WORKOUT)
                 db.saveVoiceConversation(record)
-                assertEquals(1, db.readableDatabase.version)
+                assertEquals(2, db.readableDatabase.version)
             }
             ActivityStore(context, name).use { db ->
                 assertEquals(record, db.loadVoiceHistory().single())

@@ -40,8 +40,7 @@ class ChipsVoiceInteractionSession(context: Context) : VoiceInteractionSession(c
 
     override fun onLockscreenShown() {
         super.onLockscreenShown()
-        // Never leave private replies or an active microphone above the lockscreen.
-        hide()
+        if (!AssistantAccessSettings(context).allowLocked()) hide()
     }
 
     override fun onHide() {
@@ -61,7 +60,12 @@ class ChipsVoiceInteractionSession(context: Context) : VoiceInteractionSession(c
             setViewTreeSavedStateRegistryOwner(this@ChipsVoiceInteractionSession)
             setContent {
                 ChipsTheme {
-                    AssistantOverlayContent(onDismiss = { hide() }, reserveFingerprintSpace = true)
+                    AssistantOverlayContent(onDismiss = { hide() }, reserveFingerprintSpace = true, onFeature = { route ->
+                        if (AssistantAccessSettings(context).allowed(context.getSystemService(android.app.KeyguardManager::class.java).isDeviceLocked)) {
+                            startAssistantActivity(com.chips.ui.featureIntent(context, route, fromLockscreen = context.getSystemService(android.app.KeyguardManager::class.java).isDeviceLocked))
+                            hide()
+                        }
+                    })
                 }
             }
         }

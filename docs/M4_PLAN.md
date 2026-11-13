@@ -17,6 +17,8 @@ Updated 13 November 2026. This is the saved M4 integration plan: owner-confirmed
 
 The owner selected **Beat Saber first** on 13 November, overriding the earlier proposed Japanese → drawing → Beat Saber order. The direct import/explorer implementation and online API review are recorded in [BEAT_SABER.md](BEAT_SABER.md); on-device acceptance remains, while backend deployment is not required. Other integrations retain their scope; subsequent order follows owner priorities. Each integration needs local persistence/cache, visible freshness and recovery, deletion behavior and on-device acceptance. Link domain completions to M2 records without duplicating imported/manual sessions.
 
+Owner UI/security decision, 13 November 2026: consolidate rhythm/Quick Log into one Activities card. The digital assistant is intended to work from the lockscreen; access defaults on with an Assistant security opt-out switch. The previous blanket unlock-only policy is superseded. Keep voice/retry/feature entry and window policy consistent with that choice; see [the voice contract](VOICE_CONTRACT.md).
+
 ## Beat Saber — owner-provided reference
 
 The owner identified the private repository [Ido-Riko/beat_leader_maps](https://github.com/Ido-Riko/beat_leader_maps) as a rough working showcase of the APIs and intended functionality. Inspected its default `master` branch on 13 November 2026. Use its data flow and interactions as the reference, without requiring its Python/Matplotlib structure to be copied.
@@ -86,6 +88,10 @@ Acceptance before retiring the standalone converter: capture with screen off, ve
 
 Upstream contribution of the live-HR integration to Gadgetbridge is an optional later project, explicitly lower priority than CHIPS. It is not an M4 dependency or acceptance gate; no publication is requested now.
 
+## Pantry implementation checkpoint — 13 November 2026
+
+Owner requested pantry now, explicitly saved on the server, with meal recommendations delegated to the main AI. [PANTRY.md](PANTRY.md) records the implemented Android ledger/barcode lookup/receipt review, optional authenticated server synchronization, PostgreSQL migration 004 and owner-scoped assistant inventory context. Receipt photo transcription uses the configured server vision runtime, while manual entry and all inventory operations remain local. Production deployment, real scans/receipts and phone sync acceptance remain pending. This supersedes the earlier unspecified-sync proposal; recipe generation is delegated rather than a standalone pantry feature.
+
 ## Meals and pantry — barcode and receipt input
 
 Owner confirmed barcode scanning of products and scanning shopping receipts as the intended ways to add pantry inventory. Both must feed the same editable pantry ledger rather than separate inventories.
@@ -100,6 +106,10 @@ Owner confirmed barcode scanning of products and scanning shopping receipts as t
 6. Prefer on-device scanning/OCR where practical; select and verify the runtime during implementation. Any configured backend image processing follows the existing provider approach. Define receipt-image retention/deletion and avoid retaining unrelated receipt details when parsed pantry entries suffice.
 
 Acceptance: real product barcode and receipt imports, unknown codes, OCR errors, quantity corrections, offline drafts, duplicate detection, repeated synchronization, consumption, low-stock behavior and deletion. The same purchase entered by barcode and receipt must be reviewable without silently double-counting stock.
+
+## Japanese/drawing implementation checkpoint — 13 November 2026
+
+The owner requested Japanese next and drawing with server-retained images for AI analysis. The first Android/backend increment is implemented in [JAPANESE_DRAWING.md](JAPANESE_DRAWING.md): offline attributed 30-kanji reviews, daily completion deduplication, local sketchbook/notes/thumbnails, durable server upload/cleanup and configured vision feedback. PostgreSQL retains image bytes. The server is offline, so deployment, a real vision model and physical-device interaction acceptance remain pending. Other M4 integrations and the separate M3 voice service are not completed by this increment.
 
 ## Japanese — delegated implementation
 

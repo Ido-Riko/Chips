@@ -4,6 +4,18 @@ Updated 12 November 2026. **M1 is complete. M2 is implemented, deployed and veri
 
 Use **M1–M5** in new chats, issues and implementation work. This historical filename is retained for continuity. The canonical numbering, status table and retired-phase mapping are in [ANDROID_ROADMAP.md](ANDROID_ROADMAP.md#milestone-names-and-current-plan); do not maintain a parallel Phase 2–8 schedule.
 
+## Activity consolidation and lockscreen access — 13 November 2026
+
+Owner rejected duplicate rhythm/Quick Log controls and the earlier blanket lockscreen block. Keep one Activities card; the pinned Quick Log bar is removed. Assistant lockscreen access now defaults on through `AssistantAccessSettings`, with Settings → Assistant security → Allow assistant while locked as the opt-out. The notice covers visible replies/activity screens, and the switch can change only while unlocked. The service advertises/handles keyguard launch; assistant/feature windows show above the keyguard without unlocking it. Shared voice/retry/feature guards and window visibility respect opt-out. This supersedes the locked-only policy in older notes below.
+
+## Connected shortcut checkpoint — 13 November 2026
+
+Quick Log/rhythm/streak actions route through `ui/FeatureRoute.kt` to Japanese, drawing and Beat Saber. They no longer toggle/delete saved completions. Japanese reviews/drawing imports keep their existing linked activities; Beat Saber has explicit Log completed session with Undo, and Workout confirms manual logging pending the future tracker. In-app and Android assistant shortcuts include Pantry, work without microphone permission/server and remain blocked on the lockscreen. MainActivity consumes the requested feature once and handles warm intents. Keep the entry points connected to these shared routes rather than reintroducing generic completion buttons. See the latest progress entry for validation.
+
+## Current M4 checkpoint — 13 November 2026
+
+PR #5 was merged; Japanese/drawing and pantry are on `codex/m4-japanese-drawing`, draft [PR #6](https://github.com/Ido-Riko/Chips/pull/6). These dated notes supersede older PR #4 publishing instructions below. Owner requested server-backed pantry, with recommendations delegated to the main AI. See [PANTRY.md](docs/PANTRY.md): independent SQLite immutable ledger, barcode scanner/direct Open Food Facts lookup, persistent reviewed receipt drafts, signed stock corrections, optional owner-bound sync/restoration and PostgreSQL migration 004. The existing assistant route receives owner inventory; the compatible M3 voice service is still deferred. Server is offline: production deployment, actual vision receipt reading and real phone sync acceptance are not complete. Preserve the unrelated IDE deployment selector edit.
+
 ## Read this before continuing
 
 - Owner decision on 13 November: **local-first across M4**. Do public imports and ordinary persistence/reports on Android; keep useful features working without the CHIPS server. Server/PC use is optional for sync/backup or inference/processing that actually needs it. Beat Saber now calls BeatLeader/BeatSaver directly; its Android acceptance does not depend on backend deployment.
@@ -183,3 +195,7 @@ M5 then validates normal updates, populated-database migration, backup/restore/e
 | Assume the named LAN backend, database and Redis are running | Revalidate the actual deployment, configuration and authorization before using or changing it |
 
 Do not add new platform targets, public registration, billing, wake-word listening or autonomous phone actions to this delivery without a separate scope decision. The immediate objective remains a trustworthy personal Android app.
+
+## Japanese/drawing increment — 13 November 2026
+
+Owner requested Japanese and drawing next, with drawings kept on the server for AI. See `docs/JAPANESE_DRAWING.md`, `com/chips/practice/` and drawing backend routes/service/model plus migration 003. Japanese has an attributed offline 30-kanji deck and persisted calendar review queue; drawing has a local image/thumbnail/notes gallery and durable server upload/analysis/deletion. Both link stable activity completions. PostgreSQL retains drawing bytes and successful feedback; configured vision is independent of M3. `chips-server` is offline: do not claim deployed storage, actual AI feedback or physical-phone acceptance. Update the server and explicitly select a vision-capable runtime before real analysis acceptance. M4's sleep/HR/pantry work and M3 service remain open.

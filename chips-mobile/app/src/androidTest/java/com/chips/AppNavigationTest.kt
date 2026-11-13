@@ -9,6 +9,32 @@ class AppNavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
+    fun practiceScreensOpenFromDashboardAndTodayClosesThem() {
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-japanese"))
+        compose.onNodeWithTag("open-japanese").performClick()
+        compose.onNodeWithTag("japanese-screen").assertIsDisplayed()
+        compose.onNodeWithText("Quick log").assertDoesNotExist()
+        compose.onNodeWithTag("nav-DASHBOARD").performClick()
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-drawing"))
+        compose.onNodeWithTag("open-drawing").performClick()
+        compose.onNodeWithTag("drawing-screen").assertIsDisplayed()
+        compose.onNodeWithTag("nav-DASHBOARD").performClick()
+        compose.onNodeWithText("Your day, at a glance").assertIsDisplayed()
+    }
+
+    @Test fun lockscreenSecuritySwitchPersistsAcrossRecreation() {
+        val access = com.chips.assistant.AssistantAccessSettings(androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext)
+        val before = access.allowLocked()
+        try {
+            access.setAllowLocked(true)
+            compose.onNodeWithTag("nav-SETTINGS").performClick()
+            compose.onNodeWithContentDescription("Allow assistant while locked").performScrollTo().assertIsOn().performClick()
+            compose.activityRule.scenario.recreate()
+            compose.onNodeWithContentDescription("Allow assistant while locked").performScrollTo().assertIsOff()
+        } finally { access.setAllowLocked(before) }
+    }
+
+    @Test
     fun todayTabClosesScoreExplorerEvenWhenAlreadySelected() {
         compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-beat-saber"))
         compose.onNodeWithTag("open-beat-saber").performClick()
@@ -26,8 +52,9 @@ class AppNavigationTest {
     @Test
     fun dashboardIsUsableWithoutAssistantSetup() {
         compose.onNodeWithText("Your day, at a glance").assertIsDisplayed()
-        compose.onNodeWithText("Quick log").assertIsDisplayed()
-        compose.onNodeWithTag("quick-log-status").assertTextEquals("Saved on this phone").assertIsDisplayed()
+        compose.onNodeWithText("Quick log").assertDoesNotExist()
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("activity-WORKOUT"))
+        compose.onNodeWithText("Activities").assertIsDisplayed()
         compose.onNodeWithTag("nav-HISTORY").performClick()
         compose.onNodeWithText("No saved entries yet").assertIsDisplayed()
         compose.onNodeWithTag("nav-SETTINGS").performClick()
@@ -41,8 +68,8 @@ class AppNavigationTest {
         compose.onNodeWithContentDescription("Show preview data").performClick()
         compose.onNodeWithTag("nav-DASHBOARD").performClick()
         compose.onNodeWithText("Preview · fictional data · nothing is saved").assertIsDisplayed()
-        // The pinned bar is available even when the Today card is below the viewport.
-        compose.onNodeWithTag("quick-log-WORKOUT").performClick()
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("activity-WORKOUT"))
+        compose.onNodeWithTag("activity-WORKOUT").performClick()
         compose.onNodeWithTag("nav-HISTORY").performClick()
         compose.onNodeWithText("No saved entries yet").assertIsDisplayed()
     }

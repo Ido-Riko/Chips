@@ -65,3 +65,11 @@ As the service user in the application directory:
 Record the stable owner/device UUIDs and store the token securely. Enter the final trusted `https://HOST/api/v1` address and token in Android Settings. Use that same service address, owner UUID and device UUID for later token rotation; the Android database binds to them before uploading. Treat enrollment as an operator step, not a public registration endpoint.
 
 Once the phone is available, verify pending logs upload once, repeated retries/restarts retain only the newest revision, deleted IDs never return, revocation blocks server reads/writes while local logging works, and rotating the same device token recovers pending changes. Verify real midnight/timezone behavior separately. These gates stay open until actual host/Poco results are recorded.
+
+## Drawing images and vision
+
+The drawing routes require migration `003_drawings.sql` (applied by the existing migration command) and the updated Pillow dependency. Image bytes live in PostgreSQL with owner-scoped metadata/feedback; include them in normal database backup planning. Configure `DRAWING_VISION_URL`, `DRAWING_VISION_MODEL` and, only if needed, `DRAWING_VISION_API_KEY` in the private server environment. The URL is a complete compatible chat-completions endpoint and the selected model must accept images. No model/cloud fallback is selected automatically. Missing or failed vision analysis preserves the uploaded image. See [drawing deployment and acceptance](../docs/JAPANESE_DRAWING.md). This is separate from the deferred M3 voice protocol update.
+
+## Pantry
+
+Deploy migration `004_pantry.sql` with the updated release. Pantry transactions are owner-scoped PostgreSQL rows and belong in backups. Receipt transcription reuses the explicitly configured drawing vision runtime; images are not retained by CHIPS on the server. The existing assistant route receives owner inventory context, but the M3 voice protocol/service update remains deferred. See [PANTRY.md](../docs/PANTRY.md).
