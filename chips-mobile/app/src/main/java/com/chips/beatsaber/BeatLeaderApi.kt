@@ -151,7 +151,7 @@ internal object BeatSaberParser {
         for ((key, field) in mapOf("stars" to "stars", "pass_rating" to "passRating", "acc_rating" to "accRating", "tech_rating" to "techRating")) {
             point.nullable(key, if (modified) null else diff.number(field))
         }
-        point.nullable("duration", diff.number("duration")).nullable("bpm", song.number("bpm")).nullable("nps", diff.number("nps"))
+        point.nullable("duration", diff.number("duration")).nullable("bpm", song.number("bpm")?.takeIf { it > 0 }).nullable("nps", diff.number("nps"))
         for ((key, field) in mapOf("bad_cuts" to "badCuts", "missed_notes" to "missedNotes", "bomb_cuts" to "bombCuts",
             "walls_hit" to "wallsHit", "pauses" to "pauses", "max_combo" to "maxCombo", "left_cut" to "accLeft", "right_cut" to "accRight")) {
             point.nullable(key, row.number(field))
@@ -171,7 +171,7 @@ internal object BeatSaberParser {
             ?: throw IOException("That map difficulty is unavailable on BeatSaver.")
         val metadata = body.optJSONObject("metadata") ?: JSONObject()
         val out = JSONObject().put("map_id", body.getString("id").take(40)).put("hash", hash.lowercase())
-            .put("mode", mode).put("difficulty", difficulty).nullable("bpm", metadata.number("bpm"))
+            .put("mode", mode).put("difficulty", difficulty).nullable("bpm", metadata.number("bpm")?.takeIf { it > 0 })
             .nullable("duration", metadata.number("duration")).put("tags", body.optJSONArray("tags") ?: JSONArray())
         for (key in listOf("njs", "nps", "notes", "bombs", "obstacles")) out.nullable(key, diff.number(key))
         return out

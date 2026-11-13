@@ -1,6 +1,11 @@
 package com.chips.beatsaber
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.dp
@@ -25,7 +30,7 @@ class BeatSaberTest {
     private fun point() = JSONObject().put("key", "board91").put("leaderboard_id", "board91")
         .put("song_name", "Test song").put("hash", "a".repeat(40)).put("mode", "Standard")
         .put("difficulty", "ExpertPlus").put("accuracy", 93.0).put("timestamp", 1794500000L)
-        .put("stars", 8.0).put("pp", 250.0).put("score_id", JSONObject.NULL)
+        .put("stars", 8.0).put("pass_rating", 7.5).put("acc_rating", 8.5).put("pp", 250.0).put("score_id", JSONObject.NULL)
         .put("modifiers", "").put("tech_rating", JSONObject.NULL)
 
     private fun snapshot() = JSONObject().put("version", 1).put("player_id", "player1")
@@ -38,7 +43,7 @@ class BeatSaberTest {
             point().put("key", "end").put("stars", 12).put("accuracy", 95))
         val data = BeatSnapshot.decode(snapshot().put("graph", JSONArray(scores))).graph
         var selected: String? = null
-        compose.setContent { ChipsTheme { Column { ScoreScatter(data, "stars", "accuracy", null) { selected = it.key } } } }
+        compose.setContent { ChipsTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Column(Modifier.padding(20.dp)) { ScoreScatter(data, "stars", "accuracy", null) { selected = it.key } } } } }
         compose.onNodeWithText("X · Stars").assertIsDisplayed()
         compose.onNodeWithText("Y · Accuracy %").assertIsDisplayed()
         compose.onNodeWithTag("beat-scatter").assertContentDescriptionEquals(
@@ -47,6 +52,41 @@ class BeatSaberTest {
         // The top/right endpoint is inset by half its measured tick label, within the hit radius.
         compose.onNodeWithTag("beat-scatter").performTouchInput { click(androidx.compose.ui.geometry.Offset(width - 16.dp.toPx(), 12.dp.toPx())) }
         compose.runOnIdle { assertEquals("end", selected) }
+    }
+
+    @Test fun chartZoomButtonsPinchPanAndResetKeepAxesInSync() {
+        val points = listOf(point().put("stars", 8).put("accuracy", 92),
+            point().put("key", "end").put("stars", 12).put("accuracy", 96))
+        val data = BeatSnapshot.decode(snapshot().put("graph", JSONArray(points))).graph
+        compose.setContent { ChipsTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Column(Modifier.padding(20.dp)) { ScoreScatter(data, "stars", "accuracy", null) {} } } } }
+        compose.onNodeWithTag("beat-zoom-in").performClick()
+        compose.onNodeWithTag("beat-zoom-status").assertTextEquals("${fmt(2.0, 1)}× · 0 of 2 points in view")
+        compose.onNodeWithTag("beat-scatter").assert(hasContentDescription("X axis: Stars. Ticks: ${fmt(9.0, 2)}, ${fmt(10.0, 2)}, ${fmt(11.0, 2)}", substring = true))
+        compose.onNodeWithTag("beat-pan-3").performClick()
+        compose.onNodeWithTag("beat-scatter").assert(hasContentDescription("X axis: Stars. Ticks: ${fmt(9.5, 2)}, ${fmt(10.5, 2)}, ${fmt(11.5, 2)}", substring = true))
+        compose.onNodeWithTag("beat-zoom-reset").performClick()
+        compose.onNodeWithTag("beat-zoom-status").assertTextEquals("${fmt(1.0, 1)}× · 2 of 2 points in view")
+        compose.onNodeWithTag("beat-scatter").performTouchInput {
+            down(0, center.copy(x = center.x - 20.dp.toPx()))
+            down(1, center.copy(x = center.x + 20.dp.toPx()))
+            moveTo(0, center.copy(x = center.x - 60.dp.toPx()))
+            moveTo(1, center.copy(x = center.x + 60.dp.toPx()))
+            up(0); up(1)
+        }
+        compose.onNodeWithTag("beat-zoom-status").assert(hasText("${fmt(1.0, 1)}× · 2 of 2 points in view").not())
+        compose.onNodeWithTag("beat-zoom-reset").performClick()
+        compose.onNodeWithTag("beat-zoom-out").assertIsNotEnabled()
+    }
+
+    @Test fun bpmSortReusesSavedSongDataAndKeepsMissingValuesLast() {
+        val recent = point().put("bpm", 180)
+        val imported = BeatSnapshot.decode(snapshot().put("scores", JSONArray().put(recent)))
+        assertEquals(180.0, imported.graph.single().metric("bpm")!!, 0.0)
+        val slow = imported.graph.single().copy(key = "slow", fields = point().put("bpm", 90))
+        val unknown = imported.graph.single().copy(key = "unknown", fields = point().put("bpm", JSONObject.NULL))
+        val points = listOf(unknown, imported.graph.single(), slow)
+        assertEquals(listOf("slow", "board91", "unknown"), sortBeatScores(points, "bpm", true).map { it.key })
+        assertEquals(listOf("board91", "slow", "unknown"), sortBeatScores(points, "bpm", false).map { it.key })
     }
 
     @Test fun cacheSurvivesReopenIsolatesEnrollmentAndDeletesImportsOnly() {
@@ -87,6 +127,10 @@ class BeatSaberTest {
         }
         compose.onNodeWithTag("beat-saber-screen").performScrollToNode(hasTestTag("beat-score-board91"))
         compose.onNodeWithTag("beat-score-board91").performClick()
+        compose.onNodeWithTag("beat-detail-stars").performScrollTo().assertTextEquals("Stars · ${fmt(8.0)} ★")
+        compose.onNodeWithTag("beat-detail-pass").performScrollTo().assertTextEquals("Pass rating · ${fmt(7.5)}")
+        compose.onNodeWithTag("beat-detail-acc").performScrollTo().assertTextEquals("Acc rating · ${fmt(8.5)}")
+        compose.onNodeWithTag("beat-detail-tech").performScrollTo().assertTextEquals("Tech rating · —")
         compose.onNodeWithText("Map temporarily unavailable").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Open BeatLeader").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Retry map details").performScrollTo().assertIsDisplayed()

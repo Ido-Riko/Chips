@@ -36,7 +36,7 @@ class BeatSaberLocalTest {
                 if (offline) throw IOException("No internet")
                 return snapshot()
             }
-            override suspend fun map(hash: String, mode: String, difficulty: String) = JSONObject()
+            override suspend fun map(hash: String, mode: String, difficulty: String) = JSONObject().put("bpm", 180)
         }
         var store = ViewModelStore()
         lateinit var vm: BeatSaberViewModel
@@ -50,21 +50,29 @@ class BeatSaberLocalTest {
             instrumentation.runOnMainSync { vm.connect("player1") }
             assertEquals(1, finished().snapshot!!.graph.size)
             assertEquals(1, calls)
+            instrumentation.runOnMainSync { vm.map(vm.state.value.snapshot!!.graph.single()) }
+            val enriched = withTimeout(5000) { vm.state.first { it.mapKey != null && !it.mapBusy } }
+            assertEquals(180.0, enriched.snapshot!!.graph.single().metric("bpm")!!, 0.0)
             instrumentation.runOnMainSync { store.clear() }
             store = ViewModelStore(); offline = true; create()
             instrumentation.runOnMainSync { vm.load() }
             assertEquals(1, finished().snapshot!!.graph.size)
+            assertEquals(180.0, vm.state.value.snapshot!!.graph.single().metric("bpm")!!, 0.0)
             assertEquals(1, calls) // Reopen uses SQLite, not the network or CHIPS backend.
             instrumentation.runOnMainSync { vm.refresh() }
             val failed = finished()
             assertEquals("No internet", failed.error)
             assertEquals(1, failed.snapshot!!.graph.size)
             assertEquals(2, calls)
+            offline = false
+            instrumentation.runOnMainSync { vm.refresh() }
+            assertEquals(180.0, finished().snapshot!!.graph.single().metric("bpm")!!, 0.0)
+            assertEquals(3, calls) // Refresh keeps learned BPM when upstream omits it.
             instrumentation.runOnMainSync { vm.remove() }
             assertNull(finished().snapshot)
             instrumentation.runOnMainSync { vm.load() }
             assertEquals("", finished().playerId)
-            assertEquals(2, calls) // Removing imports also works offline.
+            assertEquals(3, calls) // Removing imports also works offline.
         } finally {
             instrumentation.runOnMainSync { store.clear() }
             context.deleteDatabase(name)
@@ -86,7 +94,7 @@ class BeatSaberLocalTest {
                     val page = request.url.queryParameter("page")!!.toInt()
                     val score = JSONObject().put("id", page).put("leaderboardId", "board91").put("accuracy", 0.93)
                         .put("timepost", 1794500000).put("accLeft", 107).put("accRight", 109).put("modifiers", "FS")
-                        .put("leaderboard", JSONObject().put("song", JSONObject().put("name", "Song").put("hash", "a".repeat(40)))
+                        .put("leaderboard", JSONObject().put("song", JSONObject().put("name", "Song").put("hash", "a".repeat(40)).put("bpm", 180))
                             .put("difficulty", JSONObject().put("modeName", "Standard").put("difficultyName", "ExpertPlus").put("stars", 8)))
                     JSONObject().put("metadata", JSONObject().put("total", 500)).put("data", JSONArray().put(score).put(score))
                 }
@@ -96,6 +104,7 @@ class BeatSaberLocalTest {
                 .body(body.toString().toResponseBody("application/json".toMediaType())).build()
         }.build()
         val imported = BeatSnapshot.decode(BeatLeaderApi(client = client).snapshot("player1"))
+        assertEquals(180.0, imported.graph.single().metric("bpm")!!, 0.0)
         assertEquals(1, imported.graph.size)
         assertEquals(3, imported.scores.size)
         assertNull(imported.scores.first().metric("stars"))

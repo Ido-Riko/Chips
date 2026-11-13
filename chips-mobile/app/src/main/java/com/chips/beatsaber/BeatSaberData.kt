@@ -48,7 +48,15 @@ data class BeatSnapshot(val data: JSONObject, val graph: List<BeatScore>, val sc
             data.getJSONObject("profile")
             require(data.getLong("fetched_at") > 0)
             data.getString("player_id")
-            return BeatSnapshot(data, points("graph"), points("scores"))
+            val scores = points("scores")
+            // Song BPM is hash-specific and shared across difficulties. Reuse the import,
+            // including older saved snapshots, without a request per ranked graph point.
+            val bpms = scores.filter { it.metric("bpm") != null }.associate { it.hash to it.metric("bpm")!! }
+            val graph = points("graph").map { p ->
+                if (p.metric("bpm") != null || bpms[p.hash] == null) p
+                else p.copy(fields = JSONObject(p.fields.toString()).put("bpm", bpms[p.hash]))
+            }
+            return BeatSnapshot(data, graph, scores)
         }
     }
 }
@@ -146,6 +154,16 @@ class BeatSaberViewModel(
         val previous = mutableState.value.snapshot
         if (previous != null && System.currentTimeMillis() / 1000 - previous.fetchedAt in 0..59) return
         val snapshot = source.snapshot(id)
+        val knownBpms = (previous?.graph.orEmpty() + previous?.scores.orEmpty())
+            .mapNotNull { p -> p.metric("bpm")?.let { p.hash to it } }.toMap()
+        for (name in listOf("graph", "scores")) {
+            val rows = snapshot.getJSONArray(name)
+            for (i in 0 until rows.length()) {
+                val row = rows.getJSONObject(i)
+                val known = knownBpms[row.optString("hash")]
+                if (row.number("bpm") == null && known != null) row.put("bpm", known)
+            }
+        }
         BeatSnapshot.decode(snapshot)
         applyState(JSONObject().put("player_id", id).put("snapshot", snapshot))
     }
@@ -167,14 +185,33 @@ class BeatSaberViewModel(
                 require(Regex("[a-fA-F0-9]{40}").matches(score.hash)) { "This score has no BeatSaver map hash." }
                 val entry = "${score.hash}/${score.mode}/${score.difficulty}"
                 val old = withContext(Dispatchers.IO) { cache.read(LOCAL_BEAT_CACHE, entry) }
-                if (old != null) { mutableState.update { it.copy(map = old) }; return@launch }
+                if (old != null) { rememberMapBpm(score.hash, old); mutableState.update { it.copy(map = old) }; return@launch }
                 val body = source.map(score.hash, score.mode, score.difficulty)
                 withContext(Dispatchers.IO) { cache.write(LOCAL_BEAT_CACHE, body, entry) }
+                rememberMapBpm(score.hash, body)
                 mutableState.update { it.copy(map = body) }
             } catch (e: CancellationException) { throw e }
             catch (e: Exception) { mutableState.update { it.copy(mapError = e.message ?: "Map enrichment failed. Score retained.") } }
             finally { if (currentCoroutineContext().isActive && mutableState.value.mapKey == score.key) mutableState.update { it.copy(mapBusy = false) } }
         }
+    }
+    private suspend fun rememberMapBpm(hash: String, map: JSONObject) {
+        val bpm = map.number("bpm")?.takeIf { it > 0 } ?: return
+        val current = mutableState.value
+        val snapshot = current.snapshot ?: return
+        val data = JSONObject(snapshot.data.toString())
+        var changed = false
+        for (name in listOf("graph", "scores")) {
+            val rows = data.getJSONArray(name)
+            for (i in 0 until rows.length()) {
+                val row = rows.getJSONObject(i)
+                if (row.optString("hash").equals(hash, true) && row.number("bpm") == null) { row.put("bpm", bpm); changed = true }
+            }
+        }
+        if (!changed) return
+        val updated = BeatSnapshot.decode(data)
+        withContext(Dispatchers.IO) { cache.write(LOCAL_BEAT_CACHE, JSONObject().put("player_id", current.playerId).put("snapshot", data)) }
+        mutableState.update { it.copy(snapshot = updated) }
     }
     override fun onCleared() { task?.cancel(); mapTask?.cancel(); cache.close() }
 }

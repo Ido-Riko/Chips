@@ -1,5 +1,14 @@
 # Android implementation progress
 
+## Beat Saber ratings, mobile zoom and BPM sort — 13 November 2026
+
+Song details now display stars and pass/acc/tech ratings, including explicit unavailable values and the reason base ratings are withheld for modified scores. The chart supports pinch zoom up to 16×, two-finger pan, zoom/pan buttons and Reset view. One-finger page scrolling is retained; axes track the viewport and off-screen points cannot be selected. View state follows plotted coordinates, so fetching BPM metadata does not reset a stars/accuracy zoom.
+
+BPM/date/stars/accuracy/PP sorting runs locally in either direction with missing values last. Verified the official BeatLeader schema: recent-score song data already contains BPM. Saved snapshots reuse BPM by map hash across the ranked portfolio without extra requests; on-demand BeatSaver details add BPM to matching saved entries, surviving reopen and refresh. BPM means the song metadata value, without speed-modifier adjustment. No bulk enrichment is triggered by sorting.
+
+Debug/unsigned-release builds, lint (zero errors, 29 existing warnings), all 28 JVM tests and all 40 API 37 emulator tests passed. Coverage includes pinch gestures, zoom/pan/reset, numeric axes, edge selection, rating details during map failure, missing-value sorting and BPM persistence through reopen/refresh. Inspected the rendered dark-theme chart. The first emulator launch crashed during graphics startup; a restart succeeded. Poco was disconnected from ADB, so this APK is built locally but has not been installed on the phone. See [explorer controls evidence](evidence/m4-beat-saber-explorer-controls.json).
+
+
 ## Beat Saber navigation and chart readability — 13 November 2026
 
 Tapping Today now closes the Beat Saber explorer, including when Today is already selected and when returning from another tab. Imported scores remain saved. The scatter plot now draws numbered ticks against both grid axes, with metric names beside the plot, readable date ticks and a padded scale for single-value data. Point selection uses the same plot margins as the grid and labels. Regression coverage checks the Today reset, displayed metric names, tick values and selection at the chart edge. Debug/unsigned-release builds, lint, all 26 JVM tests and all 38 emulator tests passed; the navigation/chart test classes also passed a focused rerun. Installed the updated debug APK in place on the Poco without clearing app data.

@@ -3,6 +3,12 @@ package com.chips.beatsaber
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -62,6 +68,8 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
     var search by rememberSaveable { mutableStateOf("") }
     var x by rememberSaveable { mutableStateOf("stars") }
     var y by rememberSaveable { mutableStateOf("accuracy") }
+    var sortBy by rememberSaveable { mutableStateOf("timestamp") }
+    var ascending by rememberSaveable { mutableStateOf(false) }
     var selectedKey by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmRemove by remember { mutableStateOf(false) }
     val snapshot = state.snapshot
@@ -117,6 +125,16 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
                     }
                     Text(if (graphMode) "${source.size} ranked graph points" else "${source.size} of ${snapshot.data.optInt("total_scores")} retained scores")
                     OutlinedTextField(search, { search = it }, label = { Text("Find song, difficulty or modifiers") }, modifier = Modifier.fillMaxWidth())
+                    Text("Sort songs", style = MaterialTheme.typography.labelLarge)
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("timestamp", "bpm", "stars", "accuracy", "pp").forEach { key ->
+                            FilterChip(sortBy == key, { sortBy = key }, label = { Text(metrics[key]!!) }, modifier = Modifier.testTag("beat-sort-$key"))
+                        }
+                    }
+                    TextButton(onClick = { ascending = !ascending }, modifier = Modifier.testTag("beat-sort-direction")) {
+                        Text(if (ascending) "Ascending ↑" else "Descending ↓")
+                    }
+                    if (sortBy == "bpm") Text("Song BPM from saved imports and opened maps. ${points.count { it.metric("bpm") != null }} of ${points.size} known; unknown BPM is listed last. Sorting makes no API calls.", style = MaterialTheme.typography.bodySmall)
                     AxisPicker("X", x) { x = it }
                     AxisPicker("Y", y) { y = it }
                     ScoreScatter(points, x, y, selectedKey) { score -> selectedKey = score.key; onMap(score) }
@@ -127,7 +145,7 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
                 ScoreDetails(selected, state, onMap)
             }
             if (points.isEmpty()) item { Text("No scores match this view.") }
-            items(points.sortedByDescending { it.timestamp }, key = { it.key }) { score ->
+            items(sortBeatScores(points, sortBy, ascending), key = { it.key }) { score ->
                 OutlinedCard(onClick = {
                     selectedKey = score.key; onMap(score)
                     scope.launch { listState.animateScrollToItem(4) }
@@ -136,6 +154,7 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
                         Text(score.song, style = MaterialTheme.typography.titleMedium)
                         Text("${fmt(score.accuracy)}% · ${fmt(score.metric("stars"))}★ · ${fmt(score.metric("pp"))} PP")
                         Text("${score.difficulty} · ${score.mode}${if (score.modifiers.isNotEmpty()) " · ${score.modifiers}" else ""}", style = MaterialTheme.typography.bodyMedium)
+                        Text("${fmt(score.metric("bpm"), 1)} BPM")
                         Text(date(score.timestamp), style = MaterialTheme.typography.labelMedium)
                         if (score.key == selectedKey) Text("Selected · details above", color = ChipsMint)
                     }
@@ -157,7 +176,14 @@ private fun AxisPicker(label: String, selected: String, onSelect: (String) -> Un
     }
 }
 
-private fun BeatScore.axis(key: String): Double? = if (key == "timestamp") timestamp.toDouble() else metric(key)
+internal fun BeatScore.axis(key: String): Double? = if (key == "timestamp") timestamp.toDouble() else metric(key)
+
+internal fun sortBeatScores(points: List<BeatScore>, metric: String, ascending: Boolean): List<BeatScore> =
+    points.sortedWith(compareBy<BeatScore> { it.axis(metric) == null }
+        .thenComparator { a, b ->
+            val first = a.axis(metric); val second = b.axis(metric)
+            if (first == null || second == null) 0 else if (ascending) first.compareTo(second) else second.compareTo(first)
+        }.thenBy { it.key })
 
 @Composable
 internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selected: String?, onSelect: (BeatScore) -> Unit) {
@@ -169,8 +195,14 @@ internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selecte
         val padding = if (key == "timestamp") 3600.0 else maxOf(kotlin.math.abs(low) * 0.05, 0.5)
         return if (low == high) low - padding to high + padding else low to high
     }
-    val (minX, maxX) = bounds(plotted.map { it.second }, x)
-    val (minY, maxY) = bounds(plotted.map { it.third }, y)
+    val (fullMinX, fullMaxX) = bounds(plotted.map { it.second }, x)
+    val (fullMinY, fullMaxY) = bounds(plotted.map { it.third }, y)
+    var viewport by remember(plotted.map { Triple(it.first.key, it.second, it.third) }, x, y) { mutableStateOf(ChartViewport()) }
+    val minX = fullMinX + viewport.left * (fullMaxX - fullMinX)
+    val maxX = minX + (fullMaxX - fullMinX) / viewport.zoom
+    val minY = fullMinY + viewport.bottom * (fullMaxY - fullMinY)
+    val maxY = minY + (fullMaxY - fullMinY) / viewport.zoom
+    val visible = plotted.filter { it.second in minX..maxX && it.third in minY..maxY }
     fun tick(value: Double, key: String, span: Double): String {
         if (key == "timestamp") return Instant.ofEpochSecond(value.toLong()).atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern(if (span < 86400) "d MMM\nHH:mm" else "d MMM\nyyyy"))
@@ -190,20 +222,53 @@ internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selecte
     val right = maxOf(gap, xLabels.last().size.width / 2f)
     val top = maxOf(gap, yLabels.maxOf { it.size.height } / 2f)
     val bottom = gap + xLabels.maxOf { it.size.height }
+    val insets by rememberUpdatedState(listOf(left, right, top, bottom))
     fun position(a: Double, b: Double, width: Float, height: Float) = Offset(
         left + ((a - minX) / (maxX - minX)).toFloat() * (width - left - right),
         height - bottom - ((b - minY) / (maxY - minY)).toFloat() * (height - top - bottom))
     val grid = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
     val axis = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        OutlinedButton(onClick = { viewport = viewport.transform(0.5f) }, enabled = viewport.zoom > 1f, modifier = Modifier.testTag("beat-zoom-out").semantics { contentDescription = "Zoom out" }) { Text("−") }
+        TextButton(onClick = { viewport = ChartViewport() }, modifier = Modifier.testTag("beat-zoom-reset")) { Text("Reset view") }
+        OutlinedButton(onClick = { viewport = viewport.transform(2f) }, enabled = viewport.zoom < 16f, modifier = Modifier.testTag("beat-zoom-in").semantics { contentDescription = "Zoom in" }) { Text("+") }
+    }
+    Text("${fmt(viewport.zoom.toDouble(), 1)}× · ${visible.size} of ${plotted.size} points in view", modifier = Modifier.testTag("beat-zoom-status"), style = MaterialTheme.typography.labelMedium)
+    Text("Pinch to zoom; drag with two fingers to pan. One finger scrolls the page. Use + / − and the arrows as an alternative.", style = MaterialTheme.typography.bodySmall)
+    if (viewport.zoom > 1f) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+        listOf(Triple("←", -0.25f, 0f), Triple("↑", 0f, 0.25f), Triple("↓", 0f, -0.25f), Triple("→", 0.25f, 0f)).forEachIndexed { i, (label, dx, dy) ->
+            TextButton(onClick = { viewport = viewport.transform(1f, panX = -dx, panY = -dy) }, modifier = Modifier.testTag("beat-pan-$i")
+                .semantics { contentDescription = listOf("Pan left", "Pan up", "Pan down", "Pan right")[i] }) { Text(label) }
+        }
+    }
     Text("Y · ${metrics[y]}", style = MaterialTheme.typography.labelLarge)
     Canvas(Modifier.fillMaxWidth().height(260.dp).testTag("beat-scatter")
         .semantics {
             contentDescription = "${plotted.size} scores. X axis: ${metrics[x]}. Ticks: ${xTicks.joinToString { tick(it, x, maxX - minX) }}. " +
                 "Y axis: ${metrics[y]}. Ticks: ${yTicks.joinToString { tick(it, y, maxY - minY) }}. Score details are also available in the list."
         }
-        .pointerInput(plotted, x, y, left, right, top, bottom, onSelect) {
+        .pointerInput(plotted, x, y) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                do {
+                    val event = awaitPointerEvent()
+                    if (event.changes.count { it.pressed && it.previousPressed } >= 2) {
+                        val (left, right, top, bottom) = insets
+                        val focus = event.calculateCentroid(useCurrent = false)
+                        val pan = event.calculatePan()
+                        val width = (size.width - left - right).coerceAtLeast(1f)
+                        val height = (size.height - top - bottom).coerceAtLeast(1f)
+                        viewport = viewport.transform(event.calculateZoom(), (focus.x - left) / width,
+                            1f - (focus.y - top) / height, pan.x / width, -pan.y / height)
+                        event.changes.forEach { it.consume() }
+                    }
+                } while (event.changes.any { it.pressed })
+            }
+        }
+        .pointerInput(plotted, x, y, left, right, top, bottom, viewport, onSelect) {
             detectTapGestures { tap ->
-                val nearest = plotted.minByOrNull { (_, a, b) -> val p = position(a, b, size.width.toFloat(), size.height.toFloat()); hypot(p.x - tap.x, p.y - tap.y) }
+                if (tap.x !in left..(size.width - right) || tap.y !in top..(size.height - bottom)) return@detectTapGestures
+                val nearest = visible.minByOrNull { (_, a, b) -> val p = position(a, b, size.width.toFloat(), size.height.toFloat()); hypot(p.x - tap.x, p.y - tap.y) }
                 nearest?.let { (score, a, b) ->
                     val p = position(a, b, size.width.toFloat(), size.height.toFloat())
                     if (hypot(p.x - tap.x, p.y - tap.y) <= 32.dp.toPx()) onSelect(score)
@@ -223,7 +288,9 @@ internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selecte
         }
         drawLine(axis, Offset(left, top), Offset(left, size.height - bottom))
         drawLine(axis, Offset(left, size.height - bottom), Offset(size.width - right, size.height - bottom))
-        plotted.forEach { (score, a, b) -> drawCircle(if (score.key == selected) ChipsMint else ChipsAccent.copy(alpha = 0.75f), if (score.key == selected) 7.dp.toPx() else 3.dp.toPx(), position(a, b, size.width, size.height)) }
+        clipRect(left, top, size.width - right, size.height - bottom) {
+            visible.forEach { (score, a, b) -> drawCircle(if (score.key == selected) ChipsMint else ChipsAccent.copy(alpha = 0.75f), if (score.key == selected) 7.dp.toPx() else 3.dp.toPx(), position(a, b, size.width, size.height)) }
+        }
     }
     Text("X · ${metrics[x]}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
 }
@@ -237,6 +304,14 @@ private fun ScoreDetails(score: BeatScore, state: BeatSaberState, onMap: (BeatSc
         Text("${fmt(score.accuracy)}% · ${fmt(score.metric("pp"))} PP", style = MaterialTheme.typography.titleLarge)
         Text("${score.difficulty} · ${score.mode} · ${date(score.timestamp)}")
         Text("Modifiers: ${score.modifiers.ifEmpty { "None" }}")
+        Text("Stars · ${fmt(score.metric("stars"))} ★", modifier = Modifier.testTag("beat-detail-stars"))
+        Text("Pass rating · ${fmt(score.metric("pass_rating"))}", modifier = Modifier.testTag("beat-detail-pass"))
+        Text("Acc rating · ${fmt(score.metric("acc_rating"))}", modifier = Modifier.testTag("beat-detail-acc"))
+        Text("Tech rating · ${fmt(score.metric("tech_rating"))}", modifier = Modifier.testTag("beat-detail-tech"))
+        if (listOf("stars", "pass_rating", "acc_rating", "tech_rating").any { score.metric(it) == null }) {
+            Text("— means unavailable in this import${if (score.modifiers.isNotEmpty()) "; unadjusted ratings are omitted for modified scores" else ""}.", style = MaterialTheme.typography.bodySmall)
+        }
+        Text("Song BPM · ${fmt(score.metric("bpm"), 1)}")
         if (score.scoreId != null) {
             Text("Bad cuts ${fmt(score.metric("bad_cuts"), 0)} · Misses ${fmt(score.metric("missed_notes"), 0)} · Bombs ${fmt(score.metric("bomb_cuts"), 0)} · Walls ${fmt(score.metric("walls_hit"), 0)}")
             Text("${if (score.fields.optBoolean("full_combo")) "Full combo" else "Max combo ${fmt(score.metric("max_combo"), 0)}"} · Pauses ${fmt(score.metric("pauses"), 0)}")
