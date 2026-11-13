@@ -1,5 +1,12 @@
 # Android implementation progress
 
+## Beat Saber visual simplification — 13 November 2026
+
+The explorer now opens directly to the chart and compact song list. Axis names are tappable menus without X/Y prefixes. Removed visible point counts, zoom status, persistent gesture instructions and stacked metric/sort chips. Help is available on demand; zoom/pan/reset remain functional. Profile setup/import coverage/history sit behind Profile after connection, sorting uses a dropdown, and selecting a point/song opens a fully expanded, scrollable detail sheet. The Quick Log bar is hidden only inside the explorer. All ratings remain accessible in song details.
+
+Inspected the actual dark-theme emulator rendering. Debug/unsigned-release builds, all 28 JVM tests, all 41 API 37 emulator tests and lint (zero errors, 29 existing warnings) passed. Regression coverage verifies the quiet default view, metric switching even when data is unavailable, song detail/map-error links, and preserved pinch/pan/reset behavior. Installed the updated debug APK on the connected Poco in place, preserving saved data; no automated phone input or instrumentation was used.
+
+
 ## Beat Saber ratings, mobile zoom and BPM sort — 13 November 2026
 
 Song details now display stars and pass/acc/tech ratings, including explicit unavailable values and the reason base ratings are withheld for modified scores. The chart supports pinch zoom up to 16×, two-finger pan, zoom/pan buttons and Reset view. One-finger page scrolling is retained; axes track the viewport and off-screen points cannot be selected. View state follows plotted coordinates, so fetching BPM metadata does not reset a stars/accuracy zoom.

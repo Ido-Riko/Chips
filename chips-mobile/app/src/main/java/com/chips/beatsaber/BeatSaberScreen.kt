@@ -9,11 +9,9 @@ import androidx.compose.foundation.gestures.calculateCentroid
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,7 +36,10 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.hypot
-import kotlinx.coroutines.launch
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.stateDescription
 
 internal fun fmt(value: Double?, digits: Int = 2) = value?.let { String.format(Locale.getDefault(), "%.${digits}f", it) } ?: "—"
 internal fun date(seconds: Long): String = Instant.ofEpochSecond(seconds).atZone(ZoneId.systemDefault())
@@ -57,6 +58,7 @@ fun BeatSaberSummary(state: BeatSaberState, onOpen: () -> Unit) {
     OutlinedButton(onClick = onOpen, modifier = Modifier.testTag("open-beat-saber")) { Text("Explore scores") }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (String) -> Unit,
                     onRefresh: () -> Unit, onReload: () -> Unit, onRemove: () -> Unit,
@@ -71,108 +73,119 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
     var sortBy by rememberSaveable { mutableStateOf("timestamp") }
     var ascending by rememberSaveable { mutableStateOf(false) }
     var selectedKey by rememberSaveable { mutableStateOf<String?>(null) }
+    var showProfile by rememberSaveable { mutableStateOf(false) }
+    var sortMenu by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
     val snapshot = state.snapshot
     val source = if (graphMode) snapshot?.graph.orEmpty() else snapshot?.scores.orEmpty()
     val points = source.filter { search.isBlank() || "${it.song} ${it.difficulty} ${it.mode} ${it.modifiers}".contains(search, true) }
     val selected = points.firstOrNull { it.key == selectedKey }
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    LazyColumn(Modifier.fillMaxSize().testTag("beat-saber-screen"), state = listState, contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    LazyColumn(Modifier.fillMaxSize().testTag("beat-saber-screen"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
-            TextButton(onClick = onBack) { Text("Back to Today") }
-            Text("Beat Saber", style = MaterialTheme.typography.headlineLarge)
-            Text("Your scores, in context.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = onBack, contentPadding = PaddingValues(0.dp)) { Text("← Today") }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Beat Saber", style = MaterialTheme.typography.headlineLarge)
+                    snapshot?.let { Text(it.profile.optString("name", "Player"), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+                TextButton(onClick = { showProfile = !showProfile }, modifier = Modifier.testTag("beat-profile")) { Text("Profile") }
+                if (snapshot != null) TextButton(onClick = onRefresh, enabled = !state.busy) { Text("Refresh") }
+            }
+            if (state.busy) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 12.dp))
+            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("beat-error")) }
         }
-        item {
-            DashboardCard("BeatLeader connection") {
+        if (snapshot == null || showProfile) item {
+            DashboardCard("BeatLeader profile") {
                 OutlinedTextField(player, { player = it }, label = { Text("Player ID") }, singleLine = true,
                     enabled = !state.busy, modifier = Modifier.fillMaxWidth().testTag("beat-player-id"))
                 Button(onClick = { selectedKey = null; onConnect(player) }, enabled = !state.busy && player.isNotBlank()) { Text("Save and import") }
-                Text("Use the ID from your BeatLeader profile. Imported scores are saved on this phone; importing and refreshing need internet.", style = MaterialTheme.typography.bodyMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(onClick = onRefresh, enabled = !state.busy && state.playerId.isNotEmpty()) { Text("Refresh") }
-                    TextButton(onClick = onReload, enabled = !state.busy) { Text("Reload saved") }
+                if (snapshot == null) Text("Enter the ID from your BeatLeader profile to get started.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                snapshot?.let {
+                    Text("${fmt(it.profile.number("pp"))} PP · Global #${fmt(it.profile.number("rank"), 0)}")
+                    Text("Updated ${date(it.fetchedAt)}", style = MaterialTheme.typography.bodySmall)
+                    Text(it.data.getString("coverage"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val history = it.data.optJSONArray("history")
+                    if (history != null && history.length() > 1) {
+                        val before = history.getJSONObject(0).number("pp")
+                        val after = history.getJSONObject(history.length() - 1).number("pp")
+                        if (before != null && after != null) Text("PP change · ${fmt(after - before)}", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
-                if (state.playerId.isNotEmpty()) TextButton(onClick = { confirmRemove = true }, enabled = !state.busy) { Text("Remove local imports") }
-                if (state.busy) { LinearProgressIndicator(Modifier.fillMaxWidth()); Text("Loading scores…") }
-                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("beat-error")) }
+                Row {
+                    TextButton(onClick = onReload, enabled = !state.busy) { Text("Reload saved") }
+                    if (state.playerId.isNotEmpty()) TextButton(onClick = { confirmRemove = true }, enabled = !state.busy) { Text("Remove imports") }
+                }
             }
         }
         if (snapshot != null) {
             item {
-                DashboardCard(snapshot.profile.optString("name", "Player")) {
-                    Text("${fmt(snapshot.profile.number("pp"))} PP", style = MaterialTheme.typography.headlineMedium)
-                    Text("Global #${fmt(snapshot.profile.number("rank"), 0)} · ${snapshot.profile.optString("country")} #${fmt(snapshot.profile.number("country_rank"), 0)}")
-                    Text("Updated ${date(snapshot.fetchedAt)} · cached on this phone", style = MaterialTheme.typography.labelMedium)
-                    Text(snapshot.data.getString("coverage"), style = MaterialTheme.typography.bodyMedium)
-                    val history = snapshot.data.optJSONArray("history")
-                    if (history != null && history.length() > 1) {
-                        val first = history.getJSONObject(0)
-                        val last = history.getJSONObject(history.length() - 1)
-                        val before = first.number("pp")
-                        val after = last.number("pp")
-                        if (before != null && after != null) Text("${history.length()} daily snapshots · PP change ${fmt(after - before)}")
-                        Text("${date(first.getLong("timestamp"))} → ${date(last.getLong("timestamp"))}", style = MaterialTheme.typography.labelMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(graphMode, { graphMode = true; selectedKey = null }, label = { Text("Ranked") })
+                    FilterChip(!graphMode, { graphMode = false; selectedKey = null }, label = { Text("Recent") })
+                }
+                Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainer) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        ScoreScatter(points, x, y, selectedKey, onXChange = { x = it }, onYChange = { y = it }) { score -> selectedKey = score.key; onMap(score) }
                     }
                 }
             }
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        FilterChip(graphMode, { graphMode = true; selectedKey = null }, label = { Text("Ranked portfolio") })
-                        FilterChip(!graphMode, { graphMode = false; selectedKey = null }, label = { Text("Recent scores") })
-                    }
-                    Text(if (graphMode) "${source.size} ranked graph points" else "${source.size} of ${snapshot.data.optInt("total_scores")} retained scores")
-                    OutlinedTextField(search, { search = it }, label = { Text("Find song, difficulty or modifiers") }, modifier = Modifier.fillMaxWidth())
-                    Text("Sort songs", style = MaterialTheme.typography.labelLarge)
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf("timestamp", "bpm", "stars", "accuracy", "pp").forEach { key ->
-                            FilterChip(sortBy == key, { sortBy = key }, label = { Text(metrics[key]!!) }, modifier = Modifier.testTag("beat-sort-$key"))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Songs", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                    Box {
+                        TextButton(onClick = { sortMenu = true }, modifier = Modifier.testTag("beat-sort-menu")) {
+                            Text("${metrics[sortBy]} ${if (ascending) "↑" else "↓"}")
+                        }
+                        DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                            listOf("timestamp", "bpm", "stars", "accuracy", "pp").forEach { key ->
+                                DropdownMenuItem(text = { Text(metrics[key]!!) }, onClick = { sortBy = key; sortMenu = false }, modifier = Modifier.testTag("beat-sort-$key"))
+                            }
+                            HorizontalDivider()
+                            DropdownMenuItem(text = { Text(if (ascending) "Descending ↓" else "Ascending ↑") },
+                                onClick = { ascending = !ascending; sortMenu = false }, modifier = Modifier.testTag("beat-sort-direction"))
                         }
                     }
-                    TextButton(onClick = { ascending = !ascending }, modifier = Modifier.testTag("beat-sort-direction")) {
-                        Text(if (ascending) "Ascending ↑" else "Descending ↓")
-                    }
-                    if (sortBy == "bpm") Text("Song BPM from saved imports and opened maps. ${points.count { it.metric("bpm") != null }} of ${points.size} known; unknown BPM is listed last. Sorting makes no API calls.", style = MaterialTheme.typography.bodySmall)
-                    AxisPicker("X", x) { x = it }
-                    AxisPicker("Y", y) { y = it }
-                    ScoreScatter(points, x, y, selectedKey) { score -> selectedKey = score.key; onMap(score) }
-                    Text("Tap a point or choose a score below. Missing metrics are omitted from this chart; the scores remain in the list.", style = MaterialTheme.typography.bodyMedium)
                 }
+                OutlinedTextField(search, { search = it }, label = { Text("Find a song") }, singleLine = true,
+                    shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth())
             }
-            if (selected != null) item {
-                ScoreDetails(selected, state, onMap)
-            }
-            if (points.isEmpty()) item { Text("No scores match this view.") }
+            if (points.isEmpty()) item { Text("No songs match your search.") }
             items(sortBeatScores(points, sortBy, ascending), key = { it.key }) { score ->
-                OutlinedCard(onClick = {
-                    selectedKey = score.key; onMap(score)
-                    scope.launch { listState.animateScrollToItem(4) }
-                }, modifier = Modifier.fillMaxWidth().testTag("beat-score-${score.key}")) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Surface(onClick = { selectedKey = score.key; onMap(score) }, shape = RoundedCornerShape(18.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().testTag("beat-score-${score.key}")) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(score.song, style = MaterialTheme.typography.titleMedium)
-                        Text("${fmt(score.accuracy)}% · ${fmt(score.metric("stars"))}★ · ${fmt(score.metric("pp"))} PP")
-                        Text("${score.difficulty} · ${score.mode}${if (score.modifiers.isNotEmpty()) " · ${score.modifiers}" else ""}", style = MaterialTheme.typography.bodyMedium)
-                        Text("${fmt(score.metric("bpm"), 1)} BPM")
-                        Text(date(score.timestamp), style = MaterialTheme.typography.labelMedium)
-                        if (score.key == selectedKey) Text("Selected · details above", color = ChipsMint)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("${fmt(score.accuracy)}%", color = ChipsMint, style = MaterialTheme.typography.titleMedium)
+                            Text("${fmt(score.metric("stars"))} ★ · ${fmt(score.metric("pp"), 0)} PP", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Text(if (sortBy == "bpm") "${fmt(score.metric("bpm"), 1)} BPM · ${score.difficulty}"
+                            else score.difficulty + if (score.modifiers.isNotEmpty()) " · ${score.modifiers}" else "",
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
-        } else if (!state.busy) item { Text("Connect your profile to import real scores. Saved scores stay available offline.") }
+        }
+    }
+    if (selected != null) ModalBottomSheet(onDismissRequest = { selectedKey = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 32.dp)) {
+            ScoreDetails(selected, state, onMap)
+        }
     }
     if (confirmRemove) AlertDialog(onDismissRequest = { confirmRemove = false }, title = { Text("Remove local Beat Saber imports?") },
-        text = { Text("Removes this phone's selected profile, imported scores and map cache. Your upstream scores and activity logs remain available.") },
+        text = { Text("Removes saved scores and map details from this phone. Your BeatLeader scores remain available.") },
         confirmButton = { TextButton(onClick = { confirmRemove = false; selectedKey = null; onRemove() }) { Text("Remove") } },
         dismissButton = { TextButton(onClick = { confirmRemove = false }) { Text("Cancel") } })
 }
 
 @Composable
-private fun AxisPicker(label: String, selected: String, onSelect: (String) -> Unit) {
-    Text("$label axis · ${metrics[selected]}", style = MaterialTheme.typography.labelLarge)
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        metrics.forEach { (key, name) -> FilterChip(selected == key, { onSelect(key) }, label = { Text(name) }) }
+private fun MetricMenu(selected: String, tag: String, onSelect: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { expanded = true }, modifier = Modifier.testTag(tag)) { Text("${metrics[selected]} ▾", style = MaterialTheme.typography.labelLarge) }
+        DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
+            metrics.forEach { (key, name) -> DropdownMenuItem(text = { Text(name) }, onClick = { onSelect(key); expanded = false }) }
+        }
     }
 }
 
@@ -186,9 +199,16 @@ internal fun sortBeatScores(points: List<BeatScore>, metric: String, ascending: 
         }.thenBy { it.key })
 
 @Composable
-internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selected: String?, onSelect: (BeatScore) -> Unit) {
+internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selected: String?, onXChange: (String) -> Unit = {}, onYChange: (String) -> Unit = {}, onSelect: (BeatScore) -> Unit) {
     val plotted = remember(points, x, y) { points.mapNotNull { p -> p.axis(x)?.let { a -> p.axis(y)?.let { b -> Triple(p, a, b) } } } }
-    if (plotted.isEmpty()) { Text("No ${metrics[x]} / ${metrics[y]} measurements in this view."); return }
+    if (plotted.isEmpty()) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            MetricMenu(y, "beat-axis-y", onYChange)
+            MetricMenu(x, "beat-axis-x", onXChange)
+        }
+        Text("No measurements for this combination.", modifier = Modifier.padding(vertical = 32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
     // Give a single value a real scale, with the point in the middle of the axis.
     fun bounds(values: List<Double>, key: String): Pair<Double, Double> {
         val low = values.min(); val high = values.max()
@@ -228,23 +248,23 @@ internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selecte
         height - bottom - ((b - minY) / (maxY - minY)).toFloat() * (height - top - bottom))
     val grid = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f)
     val axis = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        OutlinedButton(onClick = { viewport = viewport.transform(0.5f) }, enabled = viewport.zoom > 1f, modifier = Modifier.testTag("beat-zoom-out").semantics { contentDescription = "Zoom out" }) { Text("−") }
-        TextButton(onClick = { viewport = ChartViewport() }, modifier = Modifier.testTag("beat-zoom-reset")) { Text("Reset view") }
-        OutlinedButton(onClick = { viewport = viewport.transform(2f) }, enabled = viewport.zoom < 16f, modifier = Modifier.testTag("beat-zoom-in").semantics { contentDescription = "Zoom in" }) { Text("+") }
+    var showHelp by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.weight(1f)) { MetricMenu(y, "beat-axis-y", onYChange) }
+        TextButton(onClick = { viewport = viewport.transform(0.5f) }, enabled = viewport.zoom > 1f, modifier = Modifier.testTag("beat-zoom-out").semantics { contentDescription = "Zoom out" }) { Text("−") }
+        TextButton(onClick = { viewport = viewport.transform(2f) }, enabled = viewport.zoom < 16f, modifier = Modifier.testTag("beat-zoom-in").semantics { contentDescription = "Zoom in" }) { Text("+") }
     }
-    Text("${fmt(viewport.zoom.toDouble(), 1)}× · ${visible.size} of ${plotted.size} points in view", modifier = Modifier.testTag("beat-zoom-status"), style = MaterialTheme.typography.labelMedium)
-    Text("Pinch to zoom; drag with two fingers to pan. One finger scrolls the page. Use + / − and the arrows as an alternative.", style = MaterialTheme.typography.bodySmall)
-    if (viewport.zoom > 1f) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+    if (viewport.zoom > 1f) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         listOf(Triple("←", -0.25f, 0f), Triple("↑", 0f, 0.25f), Triple("↓", 0f, -0.25f), Triple("→", 0.25f, 0f)).forEachIndexed { i, (label, dx, dy) ->
-            TextButton(onClick = { viewport = viewport.transform(1f, panX = -dx, panY = -dy) }, modifier = Modifier.testTag("beat-pan-$i")
+            TextButton(onClick = { viewport = viewport.transform(1f, panX = -dx, panY = -dy) }, modifier = Modifier.weight(1f).testTag("beat-pan-$i")
                 .semantics { contentDescription = listOf("Pan left", "Pan up", "Pan down", "Pan right")[i] }) { Text(label) }
         }
+        TextButton(onClick = { viewport = ChartViewport() }, modifier = Modifier.testTag("beat-zoom-reset")) { Text("Reset") }
     }
-    Text("Y · ${metrics[y]}", style = MaterialTheme.typography.labelLarge)
     Canvas(Modifier.fillMaxWidth().height(260.dp).testTag("beat-scatter")
         .semantics {
-            contentDescription = "${plotted.size} scores. X axis: ${metrics[x]}. Ticks: ${xTicks.joinToString { tick(it, x, maxX - minX) }}. " +
+            stateDescription = "Zoom ${fmt(viewport.zoom.toDouble(), 1)}×"
+            contentDescription = "X axis: ${metrics[x]}. Ticks: ${xTicks.joinToString { tick(it, x, maxX - minX) }}. " +
                 "Y axis: ${metrics[y]}. Ticks: ${yTicks.joinToString { tick(it, y, maxY - minY) }}. Score details are also available in the list."
         }
         .pointerInput(plotted, x, y) {
@@ -292,7 +312,14 @@ internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selecte
             visible.forEach { (score, a, b) -> drawCircle(if (score.key == selected) ChipsMint else ChipsAccent.copy(alpha = 0.75f), if (score.key == selected) 7.dp.toPx() else 3.dp.toPx(), position(a, b, size.width, size.height)) }
         }
     }
-    Text("X · ${metrics[x]}", style = MaterialTheme.typography.labelLarge, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Spacer(Modifier.width(48.dp))
+        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { MetricMenu(x, "beat-axis-x", onXChange) }
+        TextButton(onClick = { showHelp = true }, modifier = Modifier.width(48.dp).semantics { contentDescription = "Chart help" }) { Text("?") }
+    }
+    if (showHelp) AlertDialog(onDismissRequest = { showHelp = false }, title = { Text("Explore your scores") },
+        text = { Text("Tap an axis name to change it. Pinch to zoom and drag with two fingers to pan, or use the buttons. Tap a point for song details.\n\nSongs with missing measurements stay in the list. Unknown BPM sorts last.") },
+        confirmButton = { TextButton(onClick = { showHelp = false }) { Text("Got it") } })
 }
 
 @Composable

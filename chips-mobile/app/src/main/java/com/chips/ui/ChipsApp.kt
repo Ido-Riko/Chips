@@ -84,7 +84,7 @@ fun ChipsApp(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             Column {
-                if (destination == Destination.DASHBOARD) QuickLogBar(state.demoMode) { onActivity(it, false) }
+                if (destination == Destination.DASHBOARD && !showBeatSaber) QuickLogBar(state.demoMode) { onActivity(it, false) }
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column {
                         HorizontalDivider(color = Color.White.copy(alpha = 0.06f))

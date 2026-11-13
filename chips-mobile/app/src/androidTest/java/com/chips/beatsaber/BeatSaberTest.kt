@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Modifier
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
@@ -44,10 +45,10 @@ class BeatSaberTest {
         val data = BeatSnapshot.decode(snapshot().put("graph", JSONArray(scores))).graph
         var selected: String? = null
         compose.setContent { ChipsTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Column(Modifier.padding(20.dp)) { ScoreScatter(data, "stars", "accuracy", null) { selected = it.key } } } } }
-        compose.onNodeWithText("X · Stars").assertIsDisplayed()
-        compose.onNodeWithText("Y · Accuracy %").assertIsDisplayed()
+        compose.onNodeWithTag("beat-axis-x").assertIsDisplayed()
+        compose.onNodeWithTag("beat-axis-y").assertIsDisplayed()
         compose.onNodeWithTag("beat-scatter").assertContentDescriptionEquals(
-            "3 scores. X axis: Stars. Ticks: ${fmt(8.0, 1)}, ${fmt(10.0, 1)}, ${fmt(12.0, 1)}. " +
+            "X axis: Stars. Ticks: ${fmt(8.0, 1)}, ${fmt(10.0, 1)}, ${fmt(12.0, 1)}. " +
                 "Y axis: Accuracy %. Ticks: ${listOf(93.0, 93.5, 94.0, 94.5, 95.0).joinToString { fmt(it, 2) }}. Score details are also available in the list.")
         // The top/right endpoint is inset by half its measured tick label, within the hit radius.
         compose.onNodeWithTag("beat-scatter").performTouchInput { click(androidx.compose.ui.geometry.Offset(width - 16.dp.toPx(), 12.dp.toPx())) }
@@ -60,12 +61,12 @@ class BeatSaberTest {
         val data = BeatSnapshot.decode(snapshot().put("graph", JSONArray(points))).graph
         compose.setContent { ChipsTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Column(Modifier.padding(20.dp)) { ScoreScatter(data, "stars", "accuracy", null) {} } } } }
         compose.onNodeWithTag("beat-zoom-in").performClick()
-        compose.onNodeWithTag("beat-zoom-status").assertTextEquals("${fmt(2.0, 1)}× · 0 of 2 points in view")
+        compose.onNodeWithTag("beat-scatter").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Zoom ${fmt(2.0, 1)}×"))
         compose.onNodeWithTag("beat-scatter").assert(hasContentDescription("X axis: Stars. Ticks: ${fmt(9.0, 2)}, ${fmt(10.0, 2)}, ${fmt(11.0, 2)}", substring = true))
         compose.onNodeWithTag("beat-pan-3").performClick()
         compose.onNodeWithTag("beat-scatter").assert(hasContentDescription("X axis: Stars. Ticks: ${fmt(9.5, 2)}, ${fmt(10.5, 2)}, ${fmt(11.5, 2)}", substring = true))
         compose.onNodeWithTag("beat-zoom-reset").performClick()
-        compose.onNodeWithTag("beat-zoom-status").assertTextEquals("${fmt(1.0, 1)}× · 2 of 2 points in view")
+        compose.onNodeWithTag("beat-scatter").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Zoom ${fmt(1.0, 1)}×"))
         compose.onNodeWithTag("beat-scatter").performTouchInput {
             down(0, center.copy(x = center.x - 20.dp.toPx()))
             down(1, center.copy(x = center.x + 20.dp.toPx()))
@@ -73,9 +74,24 @@ class BeatSaberTest {
             moveTo(1, center.copy(x = center.x + 60.dp.toPx()))
             up(0); up(1)
         }
-        compose.onNodeWithTag("beat-zoom-status").assert(hasText("${fmt(1.0, 1)}× · 2 of 2 points in view").not())
+        compose.onNodeWithTag("beat-scatter").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Zoom ${fmt(1.0, 1)}×").not())
         compose.onNodeWithTag("beat-zoom-reset").performClick()
         compose.onNodeWithTag("beat-zoom-out").assertIsNotEnabled()
+    }
+
+    @Test fun explorerKeepsSetupAndDiagnosticsOutOfTheMainView() {
+        compose.setContent { ChipsTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            BeatSaberScreen(BeatSaberState(playerId = "player1", snapshot = BeatSnapshot.decode(snapshot())), {}, {}, {}, {}, {}, {})
+        } } }
+        compose.onNodeWithTag("beat-player-id").assertDoesNotExist()
+        compose.onNodeWithText("Retained scores, not every attempt.").assertDoesNotExist()
+        compose.onNodeWithText("X · Stars").assertDoesNotExist()
+        compose.onNodeWithTag("beat-zoom-status").assertDoesNotExist()
+        compose.onNodeWithTag("beat-axis-x").performClick()
+        compose.onNodeWithText("BPM", useUnmergedTree = true).performClick()
+        compose.onNodeWithTag("beat-axis-x").assert(hasText("BPM ▾"))
+        compose.onNodeWithTag("beat-profile").performClick()
+        compose.onNodeWithTag("beat-player-id").assertExists()
     }
 
     @Test fun bpmSortReusesSavedSongDataAndKeepsMissingValuesLast() {

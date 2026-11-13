@@ -27,7 +27,7 @@ Local logging needs no network or enrollment. Sync requires an operator-enrolled
 
 ## Beat Saber
 
-Normal-mode Today → Beat Saber → Explore scores opens the real-data explorer. Enter a BeatLeader player ID; the phone calls public BeatLeader/BeatSaver APIs directly. No CHIPS server, enrollment or Tailscale is needed. Imports/map details need internet; saved-score browsing, reopening and local removal work offline. Compare chart metrics with pinch zoom, two-finger pan, zoom/pan buttons and Reset view. Sort saved songs by BPM/date/stars/accuracy/PP, and open ratings plus exact-version map details. BPM sorting reuses imported/cached metadata without per-song API calls; unknown BPM stays last. See [the API/storage contract](../docs/BEAT_SABER.md). M4 follows the owner's local-first rule; server use is optional for sync or compute that actually needs it.
+Normal-mode Today → Beat Saber → Explore scores opens the real-data explorer. Enter a BeatLeader player ID; the phone calls public BeatLeader/BeatSaver APIs directly. No CHIPS server, enrollment or Tailscale is needed. Imports/map details need internet; saved-score browsing, reopening and local removal work offline. The explorer puts the chart first: tap metric names to change axes, pinch to zoom, or use zoom/pan buttons and Reset. Profile/import details and chart help stay tucked away; song details open in a sheet. Sort saved songs by BPM/date/stars/accuracy/PP, and open ratings plus exact-version map details. BPM sorting reuses imported/cached metadata without per-song API calls; unknown BPM stays last. See [the API/storage contract](../docs/BEAT_SABER.md). M4 follows the owner's local-first rule; server use is optional for sync or compute that actually needs it.
 
 ## Voice service
 
