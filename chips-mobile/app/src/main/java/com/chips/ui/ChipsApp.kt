@@ -14,6 +14,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.chips.data.*
 import com.chips.beatsaber.*
+import com.chips.practice.*
 import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -55,6 +56,9 @@ fun ChipsApp(
     val context = LocalContext.current
     val beatSaber: BeatSaberViewModel = viewModel(factory = viewModelFactory { initializer { BeatSaberViewModel(context.applicationContext as android.app.Application) } })
     val beatState by beatSaber.state.collectAsStateWithLifecycle()
+    val practice: PracticeViewModel = viewModel(factory = viewModelFactory { initializer { PracticeViewModel(context.applicationContext as android.app.Application) } })
+    val practiceState by practice.state.collectAsStateWithLifecycle()
+    var practicePage by rememberSaveable { mutableStateOf("") }
     var showBeatSaber by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(destination) { if (destination == Destination.DASHBOARD) beatSaber.load() }
     LaunchedEffect(Unit) { ActivitySyncWorker.schedule(context) }
@@ -84,7 +88,7 @@ fun ChipsApp(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             Column {
-                if (destination == Destination.DASHBOARD && !showBeatSaber) QuickLogBar(state.demoMode) { onActivity(it, false) }
+                if (destination == Destination.DASHBOARD && !showBeatSaber && practicePage.isEmpty()) QuickLogBar(state.demoMode) { onActivity(it, false) }
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column {
                         HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
@@ -96,7 +100,7 @@ fun ChipsApp(
                                     Modifier.weight(1f).testTag("nav-${target.name}")
                                         .clip(RoundedCornerShape(14.dp))
                                         .selectable(selected = selected, role = Role.Tab, onClick = {
-                                            if (target == Destination.DASHBOARD) showBeatSaber = false
+                                            if (target == Destination.DASHBOARD) { showBeatSaber = false; practicePage = "" }
                                             destination = target
                                         })
                                         .padding(vertical = 8.dp),
@@ -115,12 +119,19 @@ fun ChipsApp(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                Destination.DASHBOARD -> if (showBeatSaber) BeatSaberScreen(beatState,
+                Destination.DASHBOARD -> if (practicePage == "japanese") JapaneseScreen(practiceState,
+                    onBack = { practicePage = "" }, onRate = practice::rate, onReset = practice::reset, onRefresh = practice::reload)
+                else if (practicePage == "drawing") DrawingScreen(practiceState, onBack = { practicePage = "" },
+                    onImport = practice::importDrawing, onSend = practice::send, onNotes = practice::notes, onDelete = practice::remove, onRefresh = practice::reload)
+                else if (showBeatSaber) BeatSaberScreen(beatState,
                     onBack = { showBeatSaber = false }, onConnect = beatSaber::connect,
                     onRefresh = beatSaber::refresh, onReload = beatSaber::load,
                     onRemove = beatSaber::remove, onMap = beatSaber::map
                 ) else DashboardScreen(state, { onActivity(it, true) }, beatState,
-                    onBeatSaber = { showBeatSaber = true; beatSaber.load() }) {
+                    onBeatSaber = { showBeatSaber = true; beatSaber.load() },
+                    onJapanese = { practicePage = "japanese"; practice.refresh() }, onDrawing = { practicePage = "drawing"; practice.refresh() },
+                    japaneseDue = practiceState.due.size, drawingCount = practiceState.drawings.size,
+                    drawingSummary = practiceState.drawings.firstOrNull { it.feedback.isNotEmpty() }?.feedback?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(120).orEmpty()) {
                     if (micPermissionGranted) showVoice = true else destination = Destination.SETTINGS
                 }
                 Destination.HISTORY -> {

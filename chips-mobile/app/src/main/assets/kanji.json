@@ -1,0 +1,510 @@
+[
+  {
+    "kanji": "一",
+    "meanings": [
+      "one",
+      "one radical (no.1)"
+    ],
+    "kun_readings": [
+      "ひと-",
+      "ひと.つ"
+    ],
+    "on_readings": [
+      "イチ",
+      "イツ"
+    ],
+    "stroke_count": 1
+  },
+  {
+    "kanji": "二",
+    "meanings": [
+      "two",
+      "two radical (no. 7)"
+    ],
+    "kun_readings": [
+      "ふた",
+      "ふた.つ",
+      "ふたたび"
+    ],
+    "on_readings": [
+      "ニ",
+      "ジ"
+    ],
+    "stroke_count": 2
+  },
+  {
+    "kanji": "三",
+    "meanings": [
+      "three"
+    ],
+    "kun_readings": [
+      "み",
+      "み.つ",
+      "みっ.つ"
+    ],
+    "on_readings": [
+      "サン",
+      "ゾウ"
+    ],
+    "stroke_count": 3
+  },
+  {
+    "kanji": "四",
+    "meanings": [
+      "four"
+    ],
+    "kun_readings": [
+      "よ",
+      "よ.つ",
+      "よっ.つ",
+      "よん"
+    ],
+    "on_readings": [
+      "シ"
+    ],
+    "stroke_count": 5
+  },
+  {
+    "kanji": "五",
+    "meanings": [
+      "five"
+    ],
+    "kun_readings": [
+      "いつ",
+      "いつ.つ"
+    ],
+    "on_readings": [
+      "ゴ"
+    ],
+    "stroke_count": 4
+  },
+  {
+    "kanji": "六",
+    "meanings": [
+      "six"
+    ],
+    "kun_readings": [
+      "む",
+      "む.つ",
+      "むっ.つ",
+      "むい"
+    ],
+    "on_readings": [
+      "ロク",
+      "リク"
+    ],
+    "stroke_count": 4
+  },
+  {
+    "kanji": "七",
+    "meanings": [
+      "seven"
+    ],
+    "kun_readings": [
+      "なな",
+      "なな.つ",
+      "なの"
+    ],
+    "on_readings": [
+      "シチ"
+    ],
+    "stroke_count": 2
+  },
+  {
+    "kanji": "八",
+    "meanings": [
+      "eight",
+      "eight radical (no. 12)"
+    ],
+    "kun_readings": [
+      "や",
+      "や.つ",
+      "やっ.つ",
+      "よう"
+    ],
+    "on_readings": [
+      "ハチ",
+      "ハツ"
+    ],
+    "stroke_count": 2
+  },
+  {
+    "kanji": "九",
+    "meanings": [
+      "nine"
+    ],
+    "kun_readings": [
+      "ここの",
+      "ここの.つ"
+    ],
+    "on_readings": [
+      "キュウ",
+      "ク"
+    ],
+    "stroke_count": 2
+  },
+  {
+    "kanji": "十",
+    "meanings": [
+      "ten"
+    ],
+    "kun_readings": [
+      "とお",
+      "と",
+      "そ"
+    ],
+    "on_readings": [
+      "ジュウ",
+      "ジッ",
+      "ジュッ"
+    ],
+    "stroke_count": 2
+  },
+  {
+    "kanji": "日",
+    "meanings": [
+      "day",
+      "sun",
+      "Japan",
+      "counter for days"
+    ],
+    "kun_readings": [
+      "ひ",
+      "-び",
+      "-か"
+    ],
+    "on_readings": [
+      "ニチ",
+      "ジツ"
+    ],
+    "stroke_count": 4
+  },
+  {
+    "kanji": "月",
+    "meanings": [
+      "month",
+      "moon"
+    ],
+    "kun_readings": [
+      "つき"
+    ],
+    "on_readings": [
+      "ゲツ",
+      "ガツ"
+    ],
+    "stroke_count": 4
+  },
+  {
+    "kanji": "火",
+    "meanings": [
+      "fire"
+    ],
+    "kun_readings": [
+      "ひ",
+      "-び",
+      "ほ-"
+    ],
+    "on_readings": [
+      "カ"
+    ],
+    "stroke_count": 4
+  },
+  {
+    "kanji": "水",
+    "meanings": [
+      "water"
+    ],
+    "kun_readings": [
+      "みず",
+      "みず-"
+    ],
+    "on_readings": [
+      "スイ"
+    ],
+    "stroke_count": 4
+  },
+  {
+    "kanji": "木",
+    "meanings": [
+      "tree",
+      "wood"
+    ],
+    "kun_readings": [
+      "き",
+      "こ-"
+    ],
+    "on_readings": [
+      "ボク",
+      "モク"
+    ],
+    "stroke_count": 4
+  },
+  {
+    "kanji": "金",
+    "meanings": [
+      "gold"
+    ],
+    "kun_readings": [
+      "かね",
+      "かな-",
+      "-がね"
+    ],
+    "on_readings": [
+      "キン",
+      "コン",
+      "ゴン"
+    ],
+    "stroke_count": 8
+  },
+  {
+    "kanji": "土",
+    "meanings": [
+      "soil",
+      "earth",
+      "ground",
+      "Turkey"
+    ],
+    "kun_readings": [
+      "つち"
+    ],
+    "on_readings": [
+      "ド",
+      "ト"
+    ],
+    "stroke_count": 3
+  },
+  {
+    "kanji": "山",
+    "meanings": [
+      "mountain"
+    ],
+    "kun_readings": [
+      "やま"
+    ],
+    "on_readings": [
+      "サン",
+      "セン"
+    ],
+    "stroke_count": 3
+  },
+  {
+    "kanji": "川",
+    "meanings": [
+      "stream",
+      "river",
+      "river or three-stroke river radical (no. 47)"
+    ],
+    "kun_readings": [
+      "かわ"
+    ],
+    "on_readings": [
+      "セン"
+    ],
+    "stroke_count": 3
+  },
+  {
+    "kanji": "田",
+    "meanings": [
+      "rice field",
+      "rice paddy"
+    ],
+    "kun_readings": [
+      "た"
+    ],
+    "on_readings": [
+      "デン"
+    ],
+    "stroke_count": 5
+  },
+  {
+    "kanji": "人",
+    "meanings": [
+      "person"
+    ],
+    "kun_readings": [
+      "ひと",
+      "-り",
+      "-と"
+    ],
+    "on_readings": [
+      "ジン",
+      "ニン"
+    ],
+    "stroke_count": 2
+  },
+  {
+    "kanji": "子",
+    "meanings": [
+      "child",
+      "sign of the rat",
+      "11PM-1AM",
+      "first sign of Chinese zodiac"
+    ],
+    "kun_readings": [
+      "こ",
+      "-こ",
+      "ね"
+    ],
+    "on_readings": [
+      "シ",
+      "ス",
+      "ツ"
+    ],
+    "stroke_count": 3
+  },
+  {
+    "kanji": "女",
+    "meanings": [
+      "woman",
+      "female"
+    ],
+    "kun_readings": [
+      "おんな",
+      "め"
+    ],
+    "on_readings": [
+      "ジョ",
+      "ニョ",
+      "ニョウ"
+    ],
+    "stroke_count": 3
+  },
+  {
+    "kanji": "学",
+    "meanings": [
+      "study",
+      "learning",
+      "science"
+    ],
+    "kun_readings": [
+      "まな.ぶ"
+    ],
+    "on_readings": [
+      "ガク"
+    ],
+    "stroke_count": 8
+  },
+  {
+    "kanji": "生",
+    "meanings": [
+      "life",
+      "genuine",
+      "birth"
+    ],
+    "kun_readings": [
+      "い.きる",
+      "い.かす",
+      "い.ける",
+      "う.まれる",
+      "うま.れる",
+      "う.まれ",
+      "うまれ",
+      "う.む",
+      "お.う",
+      "は.える",
+      "は.やす",
+      "き",
+      "なま",
+      "なま-",
+      "な.る",
+      "な.す",
+      "む.す",
+      "-う"
+    ],
+    "on_readings": [
+      "セイ",
+      "ショウ"
+    ],
+    "stroke_count": 5
+  },
+  {
+    "kanji": "先",
+    "meanings": [
+      "before",
+      "ahead",
+      "previous",
+      "future",
+      "precedence"
+    ],
+    "kun_readings": [
+      "さき",
+      "ま.ず"
+    ],
+    "on_readings": [
+      "セン"
+    ],
+    "stroke_count": 6
+  },
+  {
+    "kanji": "本",
+    "meanings": [
+      "book",
+      "present",
+      "main",
+      "origin",
+      "true",
+      "real",
+      "counter for long cylindrical things"
+    ],
+    "kun_readings": [
+      "もと"
+    ],
+    "on_readings": [
+      "ホン"
+    ],
+    "stroke_count": 5
+  },
+  {
+    "kanji": "大",
+    "meanings": [
+      "large",
+      "big"
+    ],
+    "kun_readings": [
+      "おお-",
+      "おお.きい",
+      "-おお.いに"
+    ],
+    "on_readings": [
+      "ダイ",
+      "タイ"
+    ],
+    "stroke_count": 3
+  },
+  {
+    "kanji": "小",
+    "meanings": [
+      "little",
+      "small"
+    ],
+    "kun_readings": [
+      "ちい.さい",
+      "こ-",
+      "お-",
+      "さ-"
+    ],
+    "on_readings": [
+      "ショウ"
+    ],
+    "stroke_count": 3
+  },
+  {
+    "kanji": "中",
+    "meanings": [
+      "in",
+      "inside",
+      "middle",
+      "mean",
+      "center"
+    ],
+    "kun_readings": [
+      "なか",
+      "うち",
+      "あた.る"
+    ],
+    "on_readings": [
+      "チュウ"
+    ],
+    "stroke_count": 4
+  }
+]

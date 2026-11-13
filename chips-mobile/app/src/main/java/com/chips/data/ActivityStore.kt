@@ -12,7 +12,7 @@ import java.time.ZoneId
 import java.util.UUID
 
 /** Native SQLite keeps the durable outbox and visible records in the same atomic row. */
-class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHelper(context, name, null, 1) {
+class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHelper(context, name, null, 2) {
     private val mutableRecords = MutableStateFlow<List<ActivityRecord>>(emptyList())
     val records = mutableRecords.asStateFlow()
 
@@ -24,12 +24,14 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
             sync_status TEXT NOT NULL, error TEXT NOT NULL)""")
         db.execSQL("CREATE INDEX activity_day ON activities(local_day, deleted)")
         db.execSQL("CREATE TABLE sync_identity (slot INTEGER PRIMARY KEY CHECK(slot=1), identity TEXT NOT NULL)")
+        com.chips.practice.PracticeTables.create(db)
         // Successful M3 conversations only; transient audio is never stored here.
         db.execSQL("""CREATE TABLE voice_history (id TEXT PRIMARY KEY, occurred_at INTEGER NOT NULL,
             transcript TEXT NOT NULL, answer TEXT NOT NULL, sync_status TEXT NOT NULL)""")
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        error("No migration from $oldVersion to $newVersion; refusing to discard saved data")
+        if (oldVersion == 1 && newVersion == 2) com.chips.practice.PracticeTables.create(db)
+        else error("No migration from $oldVersion to $newVersion; refusing to discard saved data")
     }
 
     @Synchronized fun load(): List<ActivityRecord> {

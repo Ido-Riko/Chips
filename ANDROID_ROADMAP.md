@@ -115,6 +115,8 @@ Android client update, 12 November 2026: recording/controller/transport recovery
 
 ### M4 — Dashboard cards backed by personal data
 
+Japanese and drawing implementation update (13 November): [offline kanji practice and a drawing sketchbook/server analysis path](docs/JAPANESE_DRAWING.md) are added. Real drawing-server deployment, configured model feedback and phone acceptance remain open; M4 remains in progress.
+
 **User result:** every enabled card has a real source, useful actions and visible freshness; unsupported sources show an honest unavailable state.
 
 The updated [M4 integration plan](docs/M4_PLAN.md), saved 13 November 2026, records owner-confirmed sources, code-reuse permission and acceptance details. Japanese design is delegated to the coding agent. Contributing live-HR code upstream to Gadgetbridge is optional later work, not an M4 dependency.

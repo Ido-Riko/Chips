@@ -1,0 +1,9 @@
+KANJIDIC2 selected data
+Copyright (C) the Electronic Dictionary Research and Development Group (EDRDG).
+30 beginner kanji entries retrieved via https://kanjiapi.dev/ on 2026-11-13.
+This selection retains kanji, English meanings, kun/on readings and stroke counts.
+Source data is licensed under Creative Commons Attribution-ShareAlike 4.0.
+This selected dataset is distributed under the same licence. Application code is separate.
+Project: https://www.edrdg.org/wiki/KANJIDIC_Project.html
+EDRDG licence and attribution conditions: https://www.edrdg.org/edrdg/licence.html
+CC BY-SA 4.0: https://creativecommons.org/licenses/by-sa/4.0/

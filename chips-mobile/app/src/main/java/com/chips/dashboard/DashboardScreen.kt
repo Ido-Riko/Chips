@@ -42,7 +42,8 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) -> Unit,
                     beatSaber: com.chips.beatsaber.BeatSaberState = com.chips.beatsaber.BeatSaberState(),
-                    onBeatSaber: () -> Unit = {}, onVoice: () -> Unit) {
+                    onBeatSaber: () -> Unit = {}, onJapanese: () -> Unit = {}, onDrawing: () -> Unit = {},
+                    japaneseDue: Int = 0, drawingCount: Int = 0, drawingSummary: String = "", onVoice: () -> Unit) {
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -121,7 +122,8 @@ fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) ->
                         } else {
                             IconTile(ChipsSymbol.JAPANESE, ChipsMint)
                             Text("A little, often.", style = MaterialTheme.typography.titleLarge)
-                            Text("No reviews yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (japaneseDue > 0) "$japaneseDue ready to study" else "Ready when you are", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            OutlinedButton(onClick = onJapanese, modifier = Modifier.testTag("open-japanese")) { Text("Study") }
                         }
                     }
                 }
@@ -144,9 +146,10 @@ fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) ->
                 HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
                 DetailRow(
                     ChipsSymbol.DRAWING, ChipsAccent, "Drawing",
-                    if (state.demoMode) DemoData.drawingFeedback else "Make a little room to create.",
-                    if (state.demoMode) "Example feedback · no drawing uploaded" else "No drawings yet"
+                    if (state.demoMode) DemoData.drawingFeedback else drawingSummary.ifEmpty { "Make a little room to create." },
+                    if (state.demoMode) "Example feedback · no drawing uploaded" else if (drawingCount == 0) "Your sketchbook starts here" else "$drawingCount saved drawings"
                 )
+                if (!state.demoMode) OutlinedButton(onClick = onDrawing, modifier = Modifier.testTag("open-drawing")) { Text("Open sketchbook") }
             }
         }
     }

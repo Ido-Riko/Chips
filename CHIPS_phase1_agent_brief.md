@@ -183,3 +183,7 @@ M5 then validates normal updates, populated-database migration, backup/restore/e
 | Assume the named LAN backend, database and Redis are running | Revalidate the actual deployment, configuration and authorization before using or changing it |
 
 Do not add new platform targets, public registration, billing, wake-word listening or autonomous phone actions to this delivery without a separate scope decision. The immediate objective remains a trustworthy personal Android app.
+
+## Japanese/drawing increment — 13 November 2026
+
+Owner requested Japanese and drawing next, with drawings kept on the server for AI. See `docs/JAPANESE_DRAWING.md`, `com/chips/practice/` and drawing backend routes/service/model plus migration 003. Japanese has an attributed offline 30-kanji deck and persisted calendar review queue; drawing has a local image/thumbnail/notes gallery and durable server upload/analysis/deletion. Both link stable activity completions. PostgreSQL retains drawing bytes and successful feedback; configured vision is independent of M3. `chips-server` is offline: do not claim deployed storage, actual AI feedback or physical-phone acceptance. Update the server and explicitly select a vision-capable runtime before real analysis acceptance. M4's sleep/HR/pantry work and M3 service remain open.

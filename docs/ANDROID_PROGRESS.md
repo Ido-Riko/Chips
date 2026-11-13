@@ -1,5 +1,16 @@
 # Android implementation progress
 
+## Japanese reviews and drawing sketchbook — 13 November 2026
+
+Added offline Japanese practice (30 attributed KANJIDIC2/kanjiapi entries, reveal/self-rated recall, three-new-card daily limit and a persistent due queue) plus drawing import/history/thumbnails/local notes. Both write stable, nonduplicating completion activities. SQLite schema 2 adds only practice tables; migration tests preserve existing activity and voice rows. The existing Undo test now waits for the correct Drawing snackbar and cleans all its test records, avoiding a timing race with the previous snackbar.
+
+Drawing images/creation date/goal are uploaded under stable IDs using the enrolled service; PostgreSQL migration 003 retains JPEG bytes and successful feedback/model. Explicitly configured compatible vision analysis asks for concrete feedback/next practice, without selecting a cloud fallback. Upload/analysis failure retains images; retry and remote-deletion queues persist. Identity binding and conditional updates prevent a late result from clearing a deletion or restoring a drawing. The separate M3 voice service remains deferred.
+
+Debug/unsigned-release builds, 29 JVM tests, all 48 API 37 emulator tests and lint (zero errors, 35 warnings: 29 existing plus six framework/KTX suggestions) passed. Backend Python 3.12: 30 passed including disposable PostgreSQL migration/repeated migration, existing-data preservation, image BYTEA roundtrip and deletion; four PowerShell-only checks skipped locally. Auth/owner isolation, idempotent uploads/analysis cache and provider failure were tested with a mocked vision transport. Built a backend release archive. Installed the APK on the Poco in place, preserving data; automated input/testing was restricted to the emulator. An emulator graphics crash produced an incomplete report and was not counted as success; the final run contains all 48 test cases.
+
+The owner merged PR #5 during implementation, so this increment is on `codex/m4-japanese-drawing` from merged master. Read-only Tailscale inspection confirms `chips-server` offline. No production deployment or real vision-model inference was performed; do not claim that drawings are already stored on the real server. See [feature contract/setup](JAPANESE_DRAWING.md) and [validation evidence](evidence/m4-japanese-drawing.json). Actual phone interactions, real upload/analysis, provider quality and offline remote cleanup still require acceptance.
+
+
 ## Point selection previews and temporary song ordering — 13 November 2026
 
 The first graph-point tap now highlights it, shows its song name/stars/difficulty, and places the song first in the list without opening a sheet, scrolling or fetching map details. A second tap on the same point, a preview tap or a song-card tap opens full details. Another point replaces the temporary first song; changing search, sort/direction, axes, ranked/recent view, profile or imported snapshot clears the temporary selection. The original sorted order is derived afresh, without changing saved scores. Dismissing full details retains the current graph selection.

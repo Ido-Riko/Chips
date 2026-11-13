@@ -2,13 +2,15 @@
 
 **CHIPS** is a personal Android dashboard and Digital Assistant in development. The app opens to Today, with History and Settings navigation. Assistant enrollment is optional for browsing; voice can also be opened in the app. Voice and private replies require an unlocked device; emulator system/secure-lock checks passed, while physical Poco acceptance remains open.
 
-Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity logging, History and streaks now use local SQLite, with an authenticated background sync path. The M3 Android voice client is implemented and locally verified, including saved conversations. Full M3 remains open for a compatible service, real inference and physical Poco acceptance; other live dashboard integrations remain planned work.
+Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity logging, History and streaks now use local SQLite, with an authenticated background sync path. The M3 Android voice client is implemented and locally verified, including saved conversations. Full M3 remains open for a compatible service, real inference and physical Poco acceptance; Japanese study and the drawing sketchbook are implemented locally; drawing server deployment/real AI analysis and the remaining M4 integrations are still open.
 
 ## Repository Structure
 
 The [M4 integration plan](docs/M4_PLAN.md) records the agreed Beat Saber, Smart Band sleep/live-HR, barcode/receipt pantry, Japanese and drawing integrations, including references to reusable projects. Keep project plans, agent notes and READMEs version-controlled; credentials and generated caches remain local.
 
 The first [Beat Saber integration](docs/BEAT_SABER.md) reads public BeatLeader/BeatSaver data directly on Android, with score exploration, exact-version map enrichment and offline caching/removal. No CHIPS server, enrollment or Tailscale is required. M4 follows the owner's local-first rule: retain useful features without a server; reserve server/PC use for optional sync or processing that needs it.
+
+[Japanese and drawing](docs/JAPANESE_DRAWING.md) add offline kanji reviews and a local sketchbook with queued server analysis. Drawing images are retained in PostgreSQL; real feedback requires the updated server and an explicitly configured vision model.
 
 This is a mono-repo containing both the mobile client and the Python backend services.
 

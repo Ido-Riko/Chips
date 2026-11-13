@@ -9,6 +9,20 @@ class AppNavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
+    fun practiceScreensOpenFromDashboardAndTodayClosesThem() {
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-japanese"))
+        compose.onNodeWithTag("open-japanese").performClick()
+        compose.onNodeWithTag("japanese-screen").assertIsDisplayed()
+        compose.onNodeWithText("Quick log").assertDoesNotExist()
+        compose.onNodeWithTag("nav-DASHBOARD").performClick()
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-drawing"))
+        compose.onNodeWithTag("open-drawing").performClick()
+        compose.onNodeWithTag("drawing-screen").assertIsDisplayed()
+        compose.onNodeWithTag("nav-DASHBOARD").performClick()
+        compose.onNodeWithText("Your day, at a glance").assertIsDisplayed()
+    }
+
+    @Test
     fun todayTabClosesScoreExplorerEvenWhenAlreadySelected() {
         compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-beat-saber"))
         compose.onNodeWithTag("open-beat-saber").performClick()

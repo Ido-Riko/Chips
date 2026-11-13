@@ -11,6 +11,7 @@ REQUIRED_FILES = (
     "app/main.py",
     "migrations/001_activity_sync.sql",
     "migrations/002_beat_saber.sql",
+    "migrations/003_drawings.sql",
     "requirements.txt",
     "chips-api.openrc",
     "deploy/Caddyfile.example",

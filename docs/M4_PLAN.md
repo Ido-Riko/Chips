@@ -101,6 +101,10 @@ Owner confirmed barcode scanning of products and scanning shopping receipts as t
 
 Acceptance: real product barcode and receipt imports, unknown codes, OCR errors, quantity corrections, offline drafts, duplicate detection, repeated synchronization, consumption, low-stock behavior and deletion. The same purchase entered by barcode and receipt must be reviewable without silently double-counting stock.
 
+## Japanese/drawing implementation checkpoint — 13 November 2026
+
+The owner requested Japanese next and drawing with server-retained images for AI analysis. The first Android/backend increment is implemented in [JAPANESE_DRAWING.md](JAPANESE_DRAWING.md): offline attributed 30-kanji reviews, daily completion deduplication, local sketchbook/notes/thumbnails, durable server upload/cleanup and configured vision feedback. PostgreSQL retains image bytes. The server is offline, so deployment, a real vision model and physical-device interaction acceptance remain pending. Other M4 integrations and the separate M3 voice service are not completed by this increment.
+
 ## Japanese — delegated implementation
 
 Owner explicitly delegates this integration's design and implementation choices to the coding agent; no external study-service integration is required by the current plan.

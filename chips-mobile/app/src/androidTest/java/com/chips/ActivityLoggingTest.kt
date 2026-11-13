@@ -57,9 +57,12 @@ class ActivityLoggingTest {
             compose.onNodeWithTag("nav-DASHBOARD").performClick()
             val count = store.load().count { !it.deleted }
             compose.onNodeWithTag("quick-log-DRAWING").performClick()
-            compose.onNodeWithText("Undo").performClick()
+            compose.waitUntil(5000) {
+                compose.onAllNodesWithText("Drawing saved on this phone", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText("Undo", useUnmergedTree = true).performClick()
             compose.waitUntil(5000) { store.load().count { !it.deleted } == count }
             assertEquals(count, store.load().count { !it.deleted })
-        } finally { created?.let { store.delete(it) } }
+        } finally { store.load().filter { !it.deleted && it.id !in before }.forEach { store.delete(it.id) } }
     }
 }

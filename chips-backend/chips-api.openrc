@@ -23,7 +23,7 @@ start_pre() {
         eerror "Install backend dependencies in ${directory}/.venv before starting chips-api."
         return 1
     fi
-    if [ ! -r "${directory}/migrations/001_activity_sync.sql" ] || [ ! -r "${directory}/migrations/002_beat_saber.sql" ]; then
+    if [ ! -r "${directory}/migrations/001_activity_sync.sql" ] || [ ! -r "${directory}/migrations/002_beat_saber.sql" ] || [ ! -r "${directory}/migrations/003_drawings.sql" ]; then
         eerror "Backend migration files are missing. Extract the complete release archive."
         return 1
     fi
