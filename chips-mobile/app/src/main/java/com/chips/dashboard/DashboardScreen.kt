@@ -40,7 +40,9 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 @Composable
-fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) -> Unit, onVoice: () -> Unit) {
+fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) -> Unit,
+                    beatSaber: com.chips.beatsaber.BeatSaberState = com.chips.beatsaber.BeatSaberState(),
+                    onBeatSaber: () -> Unit = {}, onVoice: () -> Unit) {
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -102,12 +104,12 @@ fun DashboardScreen(state: DashboardUiState, onToggleActivity: (ActivityType) ->
                 first = {
                     DashboardCard("Beat Saber") {
                         IconTile(ChipsSymbol.SABER, ChipsAccent)
-                        Text(if (state.demoMode) "93.4%" else "—", style = MaterialTheme.typography.headlineMedium)
-                        Text(if (state.demoMode) "Latest accuracy" else "No score source", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         if (state.demoMode) {
+                            Text("93.4%", style = MaterialTheme.typography.headlineMedium)
+                            Text("Latest accuracy", style = MaterialTheme.typography.bodyMedium)
                             TrendLine(DemoData.accuracy, ChipsAccent, "Preview session accuracy: 87, 89, 85, 91, 88, 93 percent")
                             Text("Focus: ${DemoData.beatSaberFocus}", style = MaterialTheme.typography.bodyMedium)
-                        }
+                        } else com.chips.beatsaber.BeatSaberSummary(beatSaber, onBeatSaber)
                     }
                 },
                 second = {

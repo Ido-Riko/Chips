@@ -1,0 +1,35 @@
+{
+  "date": "2026-11-13",
+  "scope": "Android Beat Saber ratings, mobile zoom/pan and local song sorting",
+  "source_sha256": {
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/BeatSaberScreen.kt": "01a15878044d135bc0751b591e68e70704847698aa07093a7cbf5d1e7e7666bb",
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/ChartViewport.kt": "8eaf36a15baedace36a39bc4adbc30d74edff0d9ec2674330147d252f9f655da",
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/BeatSaberData.kt": "eee3b49a446093f0deedf86e40ddb3f92db93f71585a7d93308e16e0f21b80f5",
+    "chips-mobile/app/src/main/java/com/chips/beatsaber/BeatLeaderApi.kt": "2672b63f36bf092226513471d94487cc43c19b36de5ad2b4c10a998dc7013b9a"
+  },
+  "validation": {
+    "debug_build": "passed",
+    "unsigned_release_build": "passed",
+    "jvm_tests": {
+      "passed": 28,
+      "failed": 0
+    },
+    "api_37_emulator_tests": {
+      "passed": 40,
+      "failed": 0
+    },
+    "lint": {
+      "errors": 0,
+      "existing_warnings": 29
+    },
+    "visual_inspection": "Dark-theme chart with numeric ticks, named axes and touch-sized controls inspected on emulator"
+  },
+  "api_review": "https://api.beatleader.com/swagger/blapi/swagger.json",
+  "network_behavior": "Sorting/zooming are local; BPM from imports is reused by map hash; existing on-demand map lookup can persist missing BPM. No bulk map lookup.",
+  "phone_install": "Not performed: Poco not connected to ADB",
+  "acceptance_limits": [
+    "Real phone pinch/scroll acceptance remains pending",
+    "Unknown BPM is shown and sorted last",
+    "Modified recent-score ratings remain withheld when adjusted ratings are unavailable"
+  ]
+}

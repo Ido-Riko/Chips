@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+  <title>Chips blue eye avatar</title>
+  <rect width="512" height="512" fill="#191932"/>
+  <circle cx="256" cy="256" r="160" fill="#64B4FF"/>
+  <circle cx="256" cy="256" r="80" fill="#FFFFFF"/>
+  <circle cx="256" cy="256" r="48" fill="#191932"/>
+  <circle cx="256" cy="256" r="32" fill="#64B4FF"/>
+</svg>

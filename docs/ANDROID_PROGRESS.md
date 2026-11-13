@@ -1,5 +1,51 @@
 # Android implementation progress
 
+## Point selection previews and temporary song ordering — 13 November 2026
+
+The first graph-point tap now highlights it, shows its song name/stars/difficulty, and places the song first in the list without opening a sheet, scrolling or fetching map details. A second tap on the same point, a preview tap or a song-card tap opens full details. Another point replaces the temporary first song; changing search, sort/direction, axes, ranked/recent view, profile or imported snapshot clears the temporary selection. The original sorted order is derived afresh, without changing saved scores. Dismissing full details retains the current graph selection.
+
+Debug and unsigned-release builds, lint and all nine focused Beat Saber emulator tests passed. The new interaction regression verifies the initial preview, first-place list position, absence of an initial detail/API request, clearing on sort change and explicit opening of details. Installed the updated debug APK on the connected Poco in place, retaining data. The preceding layout checkpoint retains the full 41-test emulator and 28-test JVM evidence; these suites were not rerun for this focused UI change.
+
+
+## Beat Saber visual simplification — 13 November 2026
+
+The explorer now opens directly to the chart and compact song list. Axis names are tappable menus without X/Y prefixes. Removed visible point counts, zoom status, persistent gesture instructions and stacked metric/sort chips. Help is available on demand; zoom/pan/reset remain functional. Profile setup/import coverage/history sit behind Profile after connection, sorting uses a dropdown, and selecting a point/song opens a fully expanded, scrollable detail sheet. The Quick Log bar is hidden only inside the explorer. All ratings remain accessible in song details.
+
+Inspected the actual dark-theme emulator rendering. Debug/unsigned-release builds, all 28 JVM tests, all 41 API 37 emulator tests and lint (zero errors, 29 existing warnings) passed. Regression coverage verifies the quiet default view, metric switching even when data is unavailable, song detail/map-error links, and preserved pinch/pan/reset behavior. Installed the updated debug APK on the connected Poco in place, preserving saved data; no automated phone input or instrumentation was used.
+
+
+## Beat Saber ratings, mobile zoom and BPM sort — 13 November 2026
+
+Song details now display stars and pass/acc/tech ratings, including explicit unavailable values and the reason base ratings are withheld for modified scores. The chart supports pinch zoom up to 16×, two-finger pan, zoom/pan buttons and Reset view. One-finger page scrolling is retained; axes track the viewport and off-screen points cannot be selected. View state follows plotted coordinates, so fetching BPM metadata does not reset a stars/accuracy zoom.
+
+BPM/date/stars/accuracy/PP sorting runs locally in either direction with missing values last. Verified the official BeatLeader schema: recent-score song data already contains BPM. Saved snapshots reuse BPM by map hash across the ranked portfolio without extra requests; on-demand BeatSaver details add BPM to matching saved entries, surviving reopen and refresh. BPM means the song metadata value, without speed-modifier adjustment. No bulk enrichment is triggered by sorting.
+
+Debug/unsigned-release builds, lint (zero errors, 29 existing warnings), all 28 JVM tests and all 40 API 37 emulator tests passed. Coverage includes pinch gestures, zoom/pan/reset, numeric axes, edge selection, rating details during map failure, missing-value sorting and BPM persistence through reopen/refresh. Inspected the rendered dark-theme chart. The first emulator launch crashed during graphics startup; a restart succeeded. Poco was disconnected from ADB, so this APK is built locally but has not been installed on the phone. See [explorer controls evidence](evidence/m4-beat-saber-explorer-controls.json).
+
+
+## Beat Saber navigation and chart readability — 13 November 2026
+
+Tapping Today now closes the Beat Saber explorer, including when Today is already selected and when returning from another tab. Imported scores remain saved. The scatter plot now draws numbered ticks against both grid axes, with metric names beside the plot, readable date ticks and a padded scale for single-value data. Point selection uses the same plot margins as the grid and labels. Regression coverage checks the Today reset, displayed metric names, tick values and selection at the chart edge. Debug/unsigned-release builds, lint, all 26 JVM tests and all 38 emulator tests passed; the navigation/chart test classes also passed a focused rerun. Installed the updated debug APK in place on the Poco without clearing app data.
+
+
+## M4 local-first correction — 13 November 2026
+
+After the phone could not reach the private CHIPS endpoint, read-only diagnosis found no active phone VPN, both phone/server offline in Tailscale and timed-out backend health. The owner explicitly declined requiring that server and confirmed **local-first across M4**, with optional server/PC use for sync or processing that actually needs it. This supersedes the backend-first Android dependency described in the earlier entry below.
+
+Android now calls public BeatLeader/BeatSaver APIs directly, without an enrollment token, service settings or VPN. Opens/reloads use local SQLite only; selection, import, cache, map details and removal no longer depend on the backend. Existing selected-enrollment snapshots can migrate once; removal preserves an empty marker to prevent old imports reappearing. Source requests are bounded/cancellable, busy responses retry once, and failure diagnostics name the public source without claiming saved data exists. All M4 plans/README/agent guidance now record the local-first rule; HR correlation and ordinary pantry/study/report state are to run on-device, while configured drawing/AI processing may still use the PC.
+
+Debug/unsigned-release builds, lint (zero errors, existing 29 warnings), 26 JVM tests and 36 API 37 emulator tests passed. Added coverage proves direct public parsing/pagination without credentials, exact-version matching, offline reopen/removal and retention after refresh failure. A separate one-off emulator test fetched the owner's real public profile/map directly and displayed the chart; it passed and is excluded from the deterministic CI suite. Updated the connected Poco in place successfully, preserving app data. The phone showed system/always-on-display UI, so interactive phone acceptance remains pending. See [local-first evidence](evidence/m4-beat-saber-local-first.json).
+
+## M4 Beat Saber import/explorer — 13 November 2026
+
+The owner selected Beat Saber as the first M4 integration and requested checking online APIs beyond the prototype. Implemented authenticated owner-scoped BeatLeader selection/import/removal, atomic persisted snapshots, ranked accuracy portfolio, up to 300 recent retained scores, 30-day profile history and exact-version BeatSaver enrichment. Android adds a searchable explorer, selectable chart axes, source links, mistake/combo/hand-cut/improvement details and a separate enrollment-isolated SQLite cache. M2 activity and M3 conversation schemas remain unchanged; no automatic activity logging or full-attempt coverage is claimed.
+
+Reviewed official live schemas and server source, and exercised the implemented adapter against the prototype player's real data: 337 graph points, 300 recent scores of 529 retained, 30 history entries. Real BeatSaver map enrichment passed. Also inspected the replay-statistics endpoint for later hand-level coaching; it is documented, not consumed by the current UI. See [contract/API findings](BEAT_SABER.md) and [local evidence](evidence/m4-beat-saber-local.json).
+
+Final local Android validation passed debug and unsigned release assembly, all 24 JVM tests, all 33 API 37 emulator tests and lint (zero errors, existing 29 warnings). Four new instrumentation tests cover cache reopen/namespace/removal, malformed snapshots/missing metrics, selection during map-enrichment failure and loopback HTTP framing. Emulator used host graphics after software-rendering launches crashed. All installs/tests targeted the emulator; the attached Poco was left untouched.
+
+Backend Python 3.12 validation: 25 tests passed; four PowerShell-dependent tests skipped because PowerShell was unavailable in that temporary environment. Includes eight new Beat Saber tests, existing activity/voice routes, additive/repeatable PostgreSQL migrations preserving existing voice data and synchronization concurrency, and deployment packaging/startup guards. Built an isolated release archive successfully. No actual server deployment, M3 service update or physical-phone acceptance was performed. M4 remains open.
+
 ## M3 Android client implemented and locally accepted — 12 November 2026
 
 Completed the Android client work and final local acceptance against the version-1 service contract. Debug and unsigned release APKs built; lint reports zero errors and 29 warnings. All 24 JVM tests and 29 API 37 emulator instrumentation tests passed with zero failures/errors/skips. The final command included `assembleDebug assembleRelease testDebugUnitTest lintDebug connectedDebugAndroidTest --offline`. No server implementation, deployment or provider request was performed.

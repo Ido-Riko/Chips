@@ -6,6 +6,10 @@ Use **M1–M5** in new chats, issues and implementation work. This historical fi
 
 ## Read this before continuing
 
+- Owner decision on 13 November: **local-first across M4**. Do public imports and ordinary persistence/reports on Android; keep useful features working without the CHIPS server. Server/PC use is optional for sync/backup or inference/processing that actually needs it. Beat Saber now calls BeatLeader/BeatSaver directly; its Android acceptance does not depend on backend deployment.
+
+- On 13 November the owner chose Beat Saber first for M4. Its [import/explorer contract](docs/BEAT_SABER.md) and latest progress entry describe direct Android imports, online API findings and physical acceptance. Backend deployment is not required for this feature. The earlier proposed Japanese-first ordering is superseded. M3 server work remains separate.
+
 - The owner-confirmed [M4 integration plan](docs/M4_PLAN.md) records data sources, code-reuse authorization, barcode/receipt pantry input and delegated Japanese implementation. Keep plans, agent notes and READMEs tracked in Git. Gadgetbridge upstream contributions are optional later work.
 
 - Android is the current product focus. The first release is a personal app for the owner on a Poco X6 Pro.

@@ -34,7 +34,7 @@ python3.12 -m venv .venv
 
 For an existing installation preserve `.env`. For a first installation copy `.env.example` to `.env`, enter the actual database/Redis settings, and set `chmod 600 .env`. Never replace an existing `.env` with the example. Keep `ALLOW_INSECURE_LOCAL=false`. Provider keys stay here on the backend; activity logging does not require an AI provider.
 
-Run the explicit, additive migration as the same service user:
+Run the explicit, additive migration as the same service user. The command applies numbered SQL files in order, including `002_beat_saber.sql` for owner-scoped score snapshots and public map metadata. Preserve both migrations in the release:
 
 ```sh
 .venv/bin/python -m app.scripts.migrate

@@ -4,6 +4,8 @@ Updated 13 November 2026. This is the saved M4 integration plan: owner-confirmed
 
 ## Agreed scope and delivery
 
+**Owner decision, 13 November 2026: local-first across M4.** The app must keep useful features working without the CHIPS server. Persist personal state and compute ordinary reports on Android; read public APIs directly. Internet is needed for new external data, not for reopening saved data. A server/PC is optional for sync/backup or processing that actually needs it, including configured vision/LLM inference and protected provider credentials. An unavailable server must not block unrelated features. The earlier backend-first proposals below are superseded by this rule.
+
 | Domain | Agreed direction |
 | --- | --- |
 | Beat Saber | BeatLeader + BeatSaver, using the owner's `beat_leader_maps` prototype as the API/interaction reference |
@@ -13,7 +15,7 @@ Updated 13 November 2026. This is the saved M4 integration plan: owner-confirmed
 | Japanese | Owner delegates design/implementation choices to the coding agent; daily kanji and a small persistent review system |
 | Drawing | Image upload, retained thumbnail and feedback, next drill/focus and drawing history |
 
-Retain the roadmap's proposed delivery order: existing activity records → Japanese → drawing → Beat Saber → sleep/HR and the combined report → meals/pantry. Prove external data paths early so unavailable APIs or hardware behavior are discovered before UI completion. Each integration needs local persistence/cache, visible freshness and recovery, deletion behavior and actual on-device acceptance. Link domain completions to M2 activity records without duplicating imported and manually logged sessions.
+The owner selected **Beat Saber first** on 13 November, overriding the earlier proposed Japanese → drawing → Beat Saber order. The direct import/explorer implementation and online API review are recorded in [BEAT_SABER.md](BEAT_SABER.md); on-device acceptance remains, while backend deployment is not required. Other integrations retain their scope; subsequent order follows owner priorities. Each integration needs local persistence/cache, visible freshness and recovery, deletion behavior and on-device acceptance. Link domain completions to M2 records without duplicating imported/manual sessions.
 
 ## Beat Saber — owner-provided reference
 
@@ -30,7 +32,7 @@ The owner identified the private repository [Ido-Riko/beat_leader_maps](https://
 
 ### Proposed CHIPS integration
 
-1. Store the selected BeatLeader player ID as configuration. Have backend adapters fetch BeatLeader data and enrich maps through BeatSaver; persist normalized records in PostgreSQL and return them through authenticated CHIPS endpoints. Android retains an offline SQLite cache.
+1. Store the selected BeatLeader player ID locally. Android calls public BeatLeader and BeatSaver APIs directly, validates/normalizes responses and persists imports in SQLite. No CHIPS server, enrollment or Tailscale is required. Existing backend import routes are independent optional infrastructure; automatic score synchronization is not implemented by the direct client.
 2. Preserve source identity and timestamps. Join map enrichment by exact hash, characteristic/mode and difficulty. Match the returned version to the requested hash rather than assuming `versions[0]` is correct. Cache map metadata and fetch missing enrichment with bounded concurrency and retries.
 3. Start with the prototype's accuracy-versus-stars chart, point details, source links and selectable metrics. Keep a compact summary on the dashboard and the detailed explorer behind it. Missing enrichment must leave the original score visible.
 4. Verify current upstream contracts, availability, pagination, limits and identity semantics before implementation. The paths above are observed prototype usage, not a current API compatibility guarantee.
@@ -70,15 +72,15 @@ The owner explicitly authorized copying/adapting code from [Ido-Riko/MiBand-Conv
 
 This provides a concrete live-HR transport and supersedes the earlier open-ended transport search above: use the band's Share HR mode and adapt its BLE HR reader into CHIPS. `BleConnectionManager.kt` subscribes to service `0x180D` / measurement characteristic `0x2A37` and emits `onHeartRateReceived(hr)`. `HrForegroundService.kt` orchestrates the reader, notification, optional BLE peripheral rebroadcast and OSC output; the manifest declares a `connectedDevice` foreground service. Preserve the optional BLE rebroadcast and OSC capabilities as part of replacement planning, rather than silently dropping the converter's other functions.
 
-New CHIPS work: timestamp and persist valid received samples, group capture into explicit sessions, retain connection gaps, provide stop/reconnect controls, and sync stored samples through the owned backend for score correlation. Treat the converter's disconnect sentinel (`-1`) as connection state, never a measurement. Review/adapt the existing parser and service lifecycle against CHIPS's supported Android versions and permission flow. Repository code and README are implementation references, not evidence that the port or Gadgetbridge coexistence has passed on the Poco. The README explicitly says HR is not logged/stored; persistence and reporting must be added.
+New CHIPS work: timestamp and persist valid received samples, group capture into explicit sessions, retain connection gaps, provide stop/reconnect controls, and correlate stored scores/HR on Android. Optional backend synchronization must not gate capture or reports. Treat the converter's disconnect sentinel (`-1`) as connection state, never a measurement. Validate the parser/lifecycle, sample cadence and Gadgetbridge coexistence on the Poco. The reference app does not log HR; persistence/reporting must be added.
 
 Important adaptation: the existing BLE reader suppresses unchanged HR values and throttles callbacks. For reporting, retain timestamped valid received samples before presentation/output filtering, so stable HR does not appear as a disconnect gap and coverage/averages are not biased toward changing values. Track reception time separately from any actual sensor timestamp; the observed HR payload does not establish a sensor timestamp.
 
 Proposed paths:
 
 - Sleep/history: `Smart Band 10 → Gadgetbridge → Health Connect → CHIPS`.
-- Live workout HR: `Smart Band 10 Share HR → CHIPS BLE foreground service → local sample storage → backend report`, with optional BLE/OSC outputs retained from the converter.
-- Scores/maps: `BeatLeader + BeatSaver → CHIPS backend → report`.
+- Live workout HR: `Smart Band 10 Share HR → CHIPS BLE foreground service → local sample storage → on-phone report`, retaining optional BLE/OSC outputs.
+- Scores/maps: `BeatLeader + BeatSaver → Android import/cache → on-phone report`.
 
 Acceptance before retiring the standalone converter: capture with screen off, verify timestamps and restart/reconnect behavior, test actual coexistence with Gadgetbridge, and verify whichever BLE/OSC outputs the owner uses. Preserve source provenance for adapted code. No app uninstall or implementation is performed by this planning update.
 
@@ -93,7 +95,7 @@ Owner confirmed barcode scanning of products and scanning shopping receipts as t
 1. Barcode path: camera scanner → barcode/product lookup adapter → product preview → quantity/unit confirmation → durable pantry addition. Store the barcode and cache resolved product metadata. Product lookup provider and regional coverage must be checked during implementation; no external provider has been selected. Unknown codes support manual naming and become reusable local matches. A barcode identifies a product, not how many units were purchased or current stock.
 2. Receipt path: camera/photo import → OCR → candidate line items → review/correction → one confirmed pantry transaction. Parse item descriptions, quantities and units where present; keep prices/discounts separate from quantities. Receipt abbreviations need editable product matching; do not assume receipts include barcodes. Verify relevant receipt languages and actual shop formats during acceptance.
 3. Persist scan drafts and uncertain matches for recovery. Repeated camera frames must not repeatedly add the same item. Flag likely duplicate receipt imports; allow an intentional repeat purchase. Retrying a confirmed transaction must not add its quantities twice.
-4. Save additions/consumption/corrections as inventory movements with stable IDs, timestamps and provenance. Sync through authenticated owned backend routes, preserving offline edits and deletion. Keep packaged size separate from item count; record expiry only when supplied, not inferred from the barcode.
+4. Save additions/consumption/corrections locally as inventory movements with stable IDs, timestamps and provenance. Any future authenticated sync is optional. Keep packaged size separate from item count; record expiry only when supplied, not inferred from the barcode. Local pantry editing, stock calculations and recipe matching must work without a server.
 5. Pantry supports manual edits, consumption and low-stock thresholds. Recipes/suggestions use actual available quantities and preferences and show missing ingredients. Confirm ingredient consumption before decrementing stock. OCR/product matches and optional generated recipes remain editable.
 6. Prefer on-device scanning/OCR where practical; select and verify the runtime during implementation. Any configured backend image processing follows the existing provider approach. Define receipt-image retention/deletion and avoid retaining unrelated receipt details when parsed pantry entries suffice.
 
@@ -103,12 +105,12 @@ Acceptance: real product barcode and receipt imports, unknown codes, OCR errors,
 
 Owner explicitly delegates this integration's design and implementation choices to the coding agent; no external study-service integration is required by the current plan.
 
-Proposed first version: a local kanji/content repository with readings, meanings and examples; daily item selection; a persisted due-review queue; answer reveal and self-rated recall; a small documented spaced-review schedule. Choose and verify a redistributable licensed content source before bundling it, preserve attribution, and avoid inventing dictionary entries with an LLM. Keep study/review state in SQLite, with owned backend sync for progress. A completed practice session links to Japanese activity without counting repeated sync as another session. The dashboard shows the daily item and due count; a practice screen handles reviews. Verify review scheduling, local-day changes, offline study, restart, progress sync and deletion. No recurring content/source decision needs to block implementation unless a material scope choice arises.
+Proposed first version: licensed local kanji/content, readings/meanings/examples, daily selection, persisted due-review queue, answer reveal, self-rated recall and a small documented review schedule. Preserve source attribution and avoid invented dictionary entries. Store progress in SQLite; study/reviews/scheduling must work offline without enrollment. Sync is optional. Completed practice links to Japanese activity without duplicate completions. Verify local-day scheduling, restart, offline progress and deletion. The coding agent selects implementation details unless a material scope choice arises.
 
 ## Drawing — upload, feedback and next practice
 
 Retain the recorded idea: pick/upload a drawing, retain its thumbnail and feedback, show the latest drill/focus, and browse previous work. No specific external drawing API/model was previously recorded.
 
-Proposed path: Android photo picker → durable local image/draft → authenticated media upload → configured backend vision analysis → stored structured feedback and suggested next drill → dashboard/history. Include the owner's exercise or goal as context when supplied. Choose and verify a vision-capable provider/runtime during implementation; manual notes remain useful when analysis is unavailable and are labeled separately from generated feedback. Keep upload and analysis states distinct, retry safely without duplicating media or completed analysis, and preserve the image when analysis fails. Deleting a drawing removes owned media, thumbnails and associated feedback, including pending work. A completed drawing session links to M2 activity records independently of whether AI analysis succeeds.
+Proposed path: Android photo picker → durable local image/thumbnail and notes/history. Configured vision analysis is an additional step that may use the PC/backend for compute or protected provider credentials; queue/retry it separately and retain results locally. Images, manual notes, past feedback and activity logging must remain usable without that service. Include an exercise/goal as context when supplied. Validate a vision-capable runtime/provider during implementation; distinguish manual from generated feedback. Keep upload/analysis states distinct, avoid duplicate work, and preserve media on analysis failure. Deletion removes local media/feedback and queues any necessary remote cleanup. A drawing session links to M2 activity regardless of analysis success.
 
-Acceptance: actual image selection/upload and analysis (or clearly labeled manual feedback), thumbnail/history persistence, offline recovery, failed analysis/retry, next-drill display and complete media deletion.
+Acceptance: local image selection, notes/manual feedback, thumbnail/history persistence and deletion work without a server. Separately prove configured analysis/upload, retained generated feedback/next drills, failed-analysis retry and remote cleanup when that service is used.

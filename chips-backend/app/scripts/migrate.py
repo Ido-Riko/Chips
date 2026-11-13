@@ -7,10 +7,11 @@ from app.database import engine
 
 async def main():
     async with engine.begin() as conn:
-        sql = (Path(__file__).resolve().parents[2] / "migrations/001_activity_sync.sql").read_text()
-        for statement in sql.split(";"):
-            if statement.strip():
-                await conn.execute(text(statement))
+        migrations = Path(__file__).resolve().parents[2] / "migrations"
+        for path in sorted(migrations.glob("[0-9][0-9][0-9]_*.sql")):
+            for statement in path.read_text().split(";"):
+                if statement.strip():
+                    await conn.execute(text(statement))
     await engine.dispose()
 
 

@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.chips.data.*
+import com.chips.beatsaber.*
 import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -52,6 +53,10 @@ fun ChipsApp(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val beatSaber: BeatSaberViewModel = viewModel(factory = viewModelFactory { initializer { BeatSaberViewModel(context.applicationContext as android.app.Application) } })
+    val beatState by beatSaber.state.collectAsStateWithLifecycle()
+    var showBeatSaber by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(destination) { if (destination == Destination.DASHBOARD) beatSaber.load() }
     LaunchedEffect(Unit) { ActivitySyncWorker.schedule(context) }
     val onActivity: (ActivityType, Boolean) -> Unit = { type, toggle ->
         if (state.demoMode) {
@@ -79,7 +84,7 @@ fun ChipsApp(
         snackbarHost = { SnackbarHost(snackbar) },
         bottomBar = {
             Column {
-                if (destination == Destination.DASHBOARD) QuickLogBar(state.demoMode) { onActivity(it, false) }
+                if (destination == Destination.DASHBOARD && !showBeatSaber) QuickLogBar(state.demoMode) { onActivity(it, false) }
                 Surface(color = MaterialTheme.colorScheme.background) {
                     Column {
                         HorizontalDivider(color = Color.White.copy(alpha = 0.06f))
@@ -90,7 +95,10 @@ fun ChipsApp(
                                 Column(
                                     Modifier.weight(1f).testTag("nav-${target.name}")
                                         .clip(RoundedCornerShape(14.dp))
-                                        .selectable(selected = selected, role = Role.Tab, onClick = { destination = target })
+                                        .selectable(selected = selected, role = Role.Tab, onClick = {
+                                            if (target == Destination.DASHBOARD) showBeatSaber = false
+                                            destination = target
+                                        })
                                         .padding(vertical = 8.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -107,7 +115,12 @@ fun ChipsApp(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                Destination.DASHBOARD -> DashboardScreen(state, { onActivity(it, true) }) {
+                Destination.DASHBOARD -> if (showBeatSaber) BeatSaberScreen(beatState,
+                    onBack = { showBeatSaber = false }, onConnect = beatSaber::connect,
+                    onRefresh = beatSaber::refresh, onReload = beatSaber::load,
+                    onRemove = beatSaber::remove, onMap = beatSaber::map
+                ) else DashboardScreen(state, { onActivity(it, true) }, beatState,
+                    onBeatSaber = { showBeatSaber = true; beatSaber.load() }) {
                     if (micPermissionGranted) showVoice = true else destination = Destination.SETTINGS
                 }
                 Destination.HISTORY -> {
