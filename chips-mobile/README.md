@@ -84,3 +84,7 @@ Today → Open pantry supports local groceries, barcode lookup/scanning, receipt
 ## Connected activity shortcuts
 
 The single Activities card and streak rings open Japanese practice, drawing history or Beat Saber. Real reviews/imports update the same saved activities and streaks; opening a feature never toggles completion. Workout offers an explicit manual log, and Beat Saber has Log completed session with Undo. Ask CHIPS and Android’s digital assistant expose the same shortcuts plus Pantry without microphone permission or a server. The system assistant hands off to the requested screen, including when the app is already open; lockscreen access follows the Assistant security switch (default on).
+
+## Sleep history and per-play HR
+
+Today → Sleep history / import and History → Sleep read Gadgetbridge exports through Health Connect, retaining local session/stage history. Heart rate → saved capture → Beat Saber + HR report combines imported scores with captured readings, coverage and timing adjustment. See [setup, semantics and remaining device checks](../docs/SLEEP_AND_BEAT_HR.md).

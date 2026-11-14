@@ -38,6 +38,12 @@ data class HrDevice(val address: String, val name: String)
 
 @Composable
 fun HrScreen(onBack: () -> Unit, focusSession: String? = null, onOpenActivity: (String) -> Unit = {}) {
+    var reportSession by remember { mutableStateOf<HrSession?>(null) }
+    reportSession?.let { session ->
+        androidx.activity.compose.BackHandler { reportSession = null }
+        BeatHrReportScreen(session) { reportSession = null }
+        return
+    }
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val state by HrCaptureService.state.collectAsStateWithLifecycle()
@@ -194,6 +200,7 @@ fun HrScreen(onBack: () -> Unit, focusSession: String? = null, onOpenActivity: (
             Text(if(session.average == null) "No HR samples received" else "Average %.1f bpm · peak %d bpm".format(session.average, session.peak))
             Text("Statistics describe received samples. Disconnects and missing samples are not zero HR.")
             if(session.ended != null) {
+                TextButton(onClick = { reportSession = session }) { Text("Beat Saber + HR report") }
                 Text(when(session.syncStatus) { "SYNCED" -> "HR saved on this phone and server"; "WAITING_RECOVERY" -> "Interrupted · waiting for recovery or your save choice"; else -> "HR saved on this phone · waiting for server sync" })
                 if(session.syncError.isNotBlank()) Text(session.syncError, color = MaterialTheme.colorScheme.error)
                 val linked = activities.firstOrNull { it.hrSessionId == session.id }

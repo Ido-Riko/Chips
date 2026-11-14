@@ -148,6 +148,11 @@ fun ChipsApp(
             when (destination) {
                 Destination.DASHBOARD -> if (practicePage == "heart_rate") com.chips.heartrate.HrScreen(onBack = { practicePage = "" }, focusSession = focusedHr,
                     onOpenActivity = { focusedActivity = it; destination = Destination.HISTORY })
+                else if (practicePage == "sleep") Column {
+                    androidx.activity.compose.BackHandler { practicePage = "" }
+                    TextButton(onClick = { practicePage = "" }) { Text("← Today") }
+                    com.chips.sleep.SleepScreen()
+                }
                 else if (practicePage == "pantry") PantryScreen(pantryState, pantry, onBack = { practicePage = "" })
                 else if (practicePage == "japanese") JapaneseScreen(practiceState,
                     onBack = { practicePage = "" }, onRate = practice::rate, onReset = practice::reset, onRefresh = practice::reload)
@@ -161,6 +166,7 @@ fun ChipsApp(
                     onBeatSaber = { openFeature(FeatureRoute.BEAT_SABER) },
                     onPantry = { openFeature(FeatureRoute.PANTRY) }, pantryCount = pantryState.items.size,
                     onHeartRate = { openFeature(FeatureRoute.HEART_RATE) },
+                    onSleep = { practicePage = "sleep" },
                     onJapanese = { openFeature(FeatureRoute.JAPANESE) }, onDrawing = { openFeature(FeatureRoute.DRAWING) },
                     japaneseDue = practiceState.due.size, drawingCount = practiceState.drawings.size,
                     drawingSummary = practiceState.drawings.firstOrNull { it.feedback.isNotEmpty() }?.feedback?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(120).orEmpty()) {
@@ -168,13 +174,15 @@ fun ChipsApp(
                 }
                 Destination.HISTORY -> {
                     var conversations by rememberSaveable { mutableStateOf(false) }
+                    var sleepHistory by rememberSaveable { mutableStateOf(false) }
                     Column {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            FilterChip(selected = !conversations, onClick = { conversations = false }, label = { Text("Activities") })
-                            FilterChip(selected = conversations, onClick = { conversations = true }, label = { Text("Conversations") })
+                            FilterChip(selected = !conversations && !sleepHistory, onClick = { conversations = false; sleepHistory = false }, label = { Text("Activities") })
+                            FilterChip(selected = conversations && !sleepHistory, onClick = { conversations = true; sleepHistory = false }, label = { Text("Conversations") })
+                            FilterChip(selected = sleepHistory, onClick = { sleepHistory = true }, label = { Text("Sleep") })
                         }
                         Box(Modifier.weight(1f)) {
-                            if (conversations) VoiceHistoryScreen() else ActivityHistoryScreen(state, dashboard, focusedActivity,
+                            if (sleepHistory) com.chips.sleep.SleepScreen() else if (conversations) VoiceHistoryScreen() else ActivityHistoryScreen(state, dashboard, focusedActivity,
                                 onOpenHeartRate = { focusedHr = it; practicePage = "heart_rate"; destination = Destination.DASHBOARD })
                         }
                     }
