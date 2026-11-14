@@ -10,7 +10,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.chips.MainActivity
 import com.chips.data.ActivityStore
 import org.junit.Assert.*
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -20,7 +19,7 @@ class HrStopPromptTest {
     private val context get()=instrumentation.targetContext
 
     @Test fun notificationStopSavesHrThenOffersDurableLinkedBeatSaberChoice() {
-        assumeTrue(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk"))
+        assumeEmulator()
         for(permission in HrCaptureService.permissions().toList()+android.Manifest.permission.POST_NOTIFICATIONS)
             instrumentation.uiAutomation.grantRuntimePermission(context.packageName,permission)
         var emit:((Int,Long,Long)->Unit)?=null

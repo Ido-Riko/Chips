@@ -47,7 +47,8 @@ class BeatSaberTest {
         val state = mutableStateOf(BeatSaberState(playerId = "player1", snapshot = BeatSnapshot.decode(snapshot())))
         compose.setContent { ChipsTheme { BeatSaberScreen(state.value, {}, {}, {}, {}, {}, {}) } }
         awaitChart()
-        compose.onNodeWithTag("beat-score-board91").performScrollTo().performClick()
+        compose.onNodeWithTag("beat-saber-screen").performScrollToNode(hasTestTag("beat-score-board91"))
+        compose.onNodeWithTag("beat-score-board91").performClick()
         compose.onNodeWithTag("beat-detail-sheet").assertExists()
         val original = compose.onNodeWithTag("beat-detail-sheet").fetchSemanticsNode().id
         compose.runOnIdle {
