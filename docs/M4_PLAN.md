@@ -47,6 +47,8 @@ Load the owner's real data, compare representative points with the reference/sou
 
 ## Sleep and heart rate — Xiaomi Smart Band 10 / Gadgetbridge
 
+Implementation checkpoint, 13 November: [Android live HR capture](HEART_RATE.md) now includes explicit local sessions and unfiltered received samples, reconnect controls, a persistent foreground notification with Stop, and optional BLE relay/OSC outputs using the directly ported MiBand-Converter connection/state/peripheral/advertising/OSC classes. Real Smart Band/Poco/Gadgetbridge/Quest acceptance remains open. Health Connect sleep/history import and the combined Beat Saber report are still unimplemented. The planning references below describe the source and acceptance requirements.
+
 Owner confirmed on 13 November 2026: their wearable is the **Xiaomi Smart Band 10**, and **Gadgetbridge** is the intended companion/data source. The owner also requested combining live heart-rate data with the day's Beat Saber scores into a report.
 
 ### Verified documentation and proposed transport
@@ -124,3 +126,7 @@ Retain the recorded idea: pick/upload a drawing, retain its thumbnail and feedba
 Proposed path: Android photo picker → durable local image/thumbnail and notes/history. Configured vision analysis is an additional step that may use the PC/backend for compute or protected provider credentials; queue/retry it separately and retain results locally. Images, manual notes, past feedback and activity logging must remain usable without that service. Include an exercise/goal as context when supplied. Validate a vision-capable runtime/provider during implementation; distinguish manual from generated feedback. Keep upload/analysis states distinct, avoid duplicate work, and preserve media on analysis failure. Deletion removes local media/feedback and queues any necessary remote cleanup. A drawing session links to M2 activity regardless of analysis success.
 
 Acceptance: local image selection, notes/manual feedback, thumbnail/history persistence and deletion work without a server. Separately prove configured analysis/upload, retained generated feedback/next drills, failed-analysis retry and remote cleanup when that service is used.
+
+## Linked HR and Beat Saber saves — 13 November 2026
+
+Explicit HR Stop offers a durable choice to also log a linked Beat Saber session. Both records save locally; stable IDs prevent duplicate confirmation/retry completions. Existing enrolled sync uploads finalized compressed HR archives before publishing the linked activity. Backend migration 005 adds owner-scoped archive/chunk storage and activity links; production rollout remains separate. This associates a capture window with an explicit completion; matching individual BeatLeader scores or inferring active play remains future work. See [HR contract](HEART_RATE.md).

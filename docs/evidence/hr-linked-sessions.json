@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-13",
+  "source_sha256": {
+    "chips-mobile/app/src/main/java/com/chips/heartrate/HrStore.kt": "9fb531607c0d087de21e50d2d09d5f892453f0ef56a9d50f909a3b0469c81d23",
+    "chips-mobile/app/src/main/java/com/chips/heartrate/HrStopPrompt.kt": "ac05080d68a66a31cb279db4dd94960d62a3fc591dbd7cd09f6e3004c9cb7c23",
+    "chips-mobile/app/src/main/java/com/chips/heartrate/HrStopActivity.kt": "ac7c8fdf2e00db1cae1e34280a06a88d7104de311bfb7accdd7275a438a13b1c",
+    "chips-mobile/app/src/main/java/com/chips/heartrate/HrSessionLinker.kt": "9f768140a340b24358a7a6797620cb932ae3d6dbf6f1a76093344cbf3fb7dbea",
+    "chips-mobile/app/src/main/java/com/chips/heartrate/HrSync.kt": "25620eb5734ee351d9a9b14609fdbe695c0df387649710564ddd42e91639f1d3",
+    "chips-mobile/app/src/main/java/com/chips/data/ActivityStore.kt": "8e9c47094dfb5315cd279e472b9d994d6cee40c31611c26752eb7984f293f10d",
+    "chips-backend/app/routers/heart_rate.py": "ef7196d6d272f88156b5b41c82db2a29f0ed1604066baaf3383089c9878007a9",
+    "chips-backend/app/routers/activities.py": "45210f5579eec3455ba0a9747a860c1094a7b96f88d7eb949c913690c1457e1a",
+    "chips-backend/migrations/005_heart_rate.sql": "a2e170cee681b60b53ce1bc92f1257d68bf69354409e3c1b4d5e7c2ae683be15"
+  },
+  "android": {
+    "debug": "passed",
+    "unsigned_release": "passed",
+    "jvm_tests": 34,
+    "emulator_tests": 85,
+    "failures": 0,
+    "lint_errors": 0,
+    "lint_warnings": 55,
+    "physical_install": "blocked: Poco disconnected from ADB; prior HR update remains installed",
+    "visual_check": "Actual stopped-HR Beat Saber prompt inspected on isolated emulator"
+  },
+  "process_death": {
+    "ordinary_process_death": "passed",
+    "same_session": true,
+    "foreground_restored": true,
+    "recovery_event": true,
+    "explicit_stop": "passed",
+    "restart_intent_cleared": true,
+    "save_prompt_survives_process_death": "passed",
+    "hr_only_creates_no_activity": true,
+    "decline_persisted": true
+  },
+  "backend": {
+    "passed": 50,
+    "skipped": 4,
+    "skipped_reason": "PowerShell not installed locally; existing PowerShell deployment checks remain for CI",
+    "postgres": "Disposable PostgreSQL 16: migrations repeated over existing data; concurrent HR chunk retries and upload/deletion races; no deleted HR chunks remain",
+    "release_archive": "Packaged successfully, including required migration 005",
+    "production_deployed": false
+  },
+  "limits": [
+    "New server routes and migration 005 are not deployed to production",
+    "No real Smart Band or Quest acceptance inferred from injected/emulator measurements",
+    "The Beat Saber save links the HR capture window; individual BeatLeader score matching remains future work",
+    "Optional HR sync uploads local archives; Android raw archive restoration is not included",
+    "Abrupt process loss may discard the last roughly two seconds of uncommitted samples"
+  ]
+}

@@ -16,7 +16,8 @@ data class ActivityRecord(
     val revision: Long = 1,
     val deleted: Boolean = false,
     val syncStatus: String = "PENDING",
-    val error: String = ""
+    val error: String = "",
+    val hrSessionId: String? = null
 )
 
 object ActivityRules {

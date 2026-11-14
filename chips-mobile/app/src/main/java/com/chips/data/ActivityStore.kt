@@ -12,7 +12,7 @@ import java.time.ZoneId
 import java.util.UUID
 
 /** Native SQLite keeps the durable outbox and visible records in the same atomic row. */
-class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHelper(context, name, null, 2) {
+class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHelper(context, name, null, 3) {
     private val mutableRecords = MutableStateFlow<List<ActivityRecord>>(emptyList())
     val records = mutableRecords.asStateFlow()
 
@@ -21,8 +21,9 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
             id TEXT PRIMARY KEY, type TEXT NOT NULL, occurred_at INTEGER NOT NULL,
             zone_id TEXT NOT NULL, local_day TEXT NOT NULL, note TEXT NOT NULL,
             revision INTEGER NOT NULL, deleted INTEGER NOT NULL,
-            sync_status TEXT NOT NULL, error TEXT NOT NULL)""")
+            sync_status TEXT NOT NULL, error TEXT NOT NULL, hr_session_id TEXT)""")
         db.execSQL("CREATE INDEX activity_day ON activities(local_day, deleted)")
+        db.execSQL("CREATE UNIQUE INDEX activity_hr_session ON activities(hr_session_id)")
         db.execSQL("CREATE TABLE sync_identity (slot INTEGER PRIMARY KEY CHECK(slot=1), identity TEXT NOT NULL)")
         com.chips.practice.PracticeTables.create(db)
         // Successful M3 conversations only; transient audio is never stored here.
@@ -30,8 +31,11 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
             transcript TEXT NOT NULL, answer TEXT NOT NULL, sync_status TEXT NOT NULL)""")
     }
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        if (oldVersion == 1 && newVersion == 2) com.chips.practice.PracticeTables.create(db)
-        else error("No migration from $oldVersion to $newVersion; refusing to discard saved data")
+        if (oldVersion < 2) com.chips.practice.PracticeTables.create(db)
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE activities ADD COLUMN hr_session_id TEXT")
+            db.execSQL("CREATE UNIQUE INDEX activity_hr_session ON activities(hr_session_id)")
+        }
     }
 
     @Synchronized fun load(): List<ActivityRecord> {
@@ -40,7 +44,8 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
             fun s(name: String) = c.getString(c.getColumnIndexOrThrow(name))
             while (c.moveToNext()) rows += ActivityRecord(
                 s("id"), ActivityType.valueOf(s("type")), s("occurred_at").toLong(), s("zone_id"), s("local_day"),
-                s("note"), s("revision").toLong(), s("deleted") == "1", s("sync_status"), s("error")
+                s("note"), s("revision").toLong(), s("deleted") == "1", s("sync_status"), s("error"),
+                c.getString(c.getColumnIndexOrThrow("hr_session_id"))
             )
         }
         mutableRecords.value = rows
@@ -84,6 +89,16 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
         put(record)
         return record
     }
+    /** The activity and its link are one durable row; retries cannot create another completion. */
+    @Synchronized fun logHeartRateSession(sessionId: String, started: Long, zoneId: String): ActivityRecord {
+        load().firstOrNull { it.hrSessionId == sessionId }?.let { return it }
+        val instant = Instant.ofEpochMilli(started)
+        val zone = ZoneId.of(zoneId)
+        val id = UUID.nameUUIDFromBytes("chips:hr-beat-saber:$sessionId".toByteArray(Charsets.UTF_8)).toString()
+        val record = ActivityRecord(id, ActivityType.BEAT_SABER, started, zone.id, ActivityRules.day(instant, zone), hrSessionId = sessionId)
+        put(record)
+        return record
+    }
     /** Rhythm toggles today's completion; Quick Log still creates individual sessions. */
     @Synchronized fun toggleToday(type: ActivityType, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()): ActivityRecord? {
         val day = ActivityRules.day(now, zone)
@@ -104,6 +119,7 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
         LocalDateValidation.validate(day)
         require(note.length <= 2000) { "Notes can contain up to 2000 characters" }
         val old = load().first { it.id == id && !it.deleted }
+        require(old.hrSessionId == null || type == ActivityType.BEAT_SABER) { "A linked HR session belongs to Beat Saber" }
         put(old.copy(type = type, note = note, localDay = day, revision = old.revision + 1, syncStatus = "PENDING", error = ""))
     }
     @Synchronized fun delete(id: String) {
@@ -125,10 +141,10 @@ class ActivityStore(context: Context, name: String = "chips.db") : SQLiteOpenHel
             put("zone_id", record.zoneId); put("local_day", record.localDay); put("note", record.note)
             put("revision", record.revision); put("deleted", if (record.deleted) 1 else 0)
             put("sync_status", record.syncStatus); put("error", record.error)
+            put("hr_session_id", record.hrSessionId)
         }
-        writableDatabase.insertWithOnConflict("activities", null, values, SQLiteDatabase.CONFLICT_REPLACE).also {
-            check(it != -1L) { "Could not save activity" }
-        }
+        val db = writableDatabase
+        if(db.update("activities", values, "id=?", arrayOf(record.id)) == 0) db.insertOrThrow("activities", null, values)
         load()
     }
     companion object {

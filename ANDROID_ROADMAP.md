@@ -115,6 +115,8 @@ Android client update, 12 November 2026: recording/controller/transport recovery
 
 ### M4 — Dashboard cards backed by personal data
 
+Live HR implementation update (13 November): [Directly ported MiBand-Converter capture, local session storage, persistent notification with Stop/Reconnect, and optional BLE/OSC outputs](docs/HEART_RATE.md) are implemented on Android. Real band/Poco/Gadgetbridge/Quest acceptance, sleep/history import and Beat Saber/HR correlation remain open.
+
 Japanese and drawing implementation update (13 November): [offline kanji practice and a drawing sketchbook/server analysis path](docs/JAPANESE_DRAWING.md) are added. Real drawing-server deployment, configured model feedback and phone acceptance remain open; M4 remains in progress.
 
 **User result:** every enabled card has a real source, useful actions and visible freshness; unsupported sources show an honest unavailable state.

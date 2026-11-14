@@ -1,0 +1,31 @@
+{
+  "source_repo": "https://github.com/Ido-Riko/MiBand-Converter",
+  "source_revision": "a472d64a6743454db0b63c902684be36426f2ff9",
+  "files": [
+    {
+      "file": "AdvertisingConfig.kt",
+      "source_sha256": "779ca6f3d654eb69ceea83b7d96525701899cb4bbcfc47099ed4db5186d4f7e2",
+      "ported_sha256": "dc6bb8604469e331fc6053238aaf9cdec10dab78e10214261ec366395f1d20fa"
+    },
+    {
+      "file": "BleConnectionManager.kt",
+      "source_sha256": "1a8adad9494280dbac0dba5b0384d56bfcc8141337ea4350746729e5b70681b0",
+      "ported_sha256": "18709015bb959bcfe84aaddc95366d5f26eaccdf14110d8f6411d9d474e10e0a"
+    },
+    {
+      "file": "ConnectionStateMachine.kt",
+      "source_sha256": "088e6d077c0fa23c773a08c9f4efe9f77d60e0b0567dd329de3214072ffb2627",
+      "ported_sha256": "1c93d6e1c8daf83f03fa66aa8274639d75db411110bcad5ffedc51512090b7f7"
+    },
+    {
+      "file": "OscSender.kt",
+      "source_sha256": "e678a0b05bc491b02e473e31ce48c9f45e342e7ba46cd9c47b0540173c4f9faf",
+      "ported_sha256": "c51f1517352961fb6242515a7e7aafc5316553e83bda7f827176bdc7a1acfac5"
+    },
+    {
+      "file": "PeripheralManager.kt",
+      "source_sha256": "dd0eeb225c376d53fc277b25584061d9a7a2217c6139de76f99273d4b53bfc9f",
+      "ported_sha256": "cae56d22da71fa45ed7f6dc1c188c17c2e5b221b6de657e389827350662077ba"
+    }
+  ]
+}

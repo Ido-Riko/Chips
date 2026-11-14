@@ -16,6 +16,8 @@ The first [Beat Saber integration](docs/BEAT_SABER.md) reads public BeatLeader/B
 
 The single Activities card, streak rings and digital assistant open the implemented activity features. The duplicate pinned Quick Log bar has been removed. Japanese reviews/drawing imports update real completions; Workout and Beat Saber retain explicit manual logging.
 
+[Live heart rate](docs/HEART_RATE.md) brings MiBand-Converter's Share HR capture, optional BLE relay and OSC output into Android. Capture stores timestamped sessions locally in lossless equal-value runs and runs with an ongoing notification containing Reconnect and Stop. Outputs can change during capture; ordinary process death restores active capture with an explicit gap. Stop offers an optional linked Beat Saber save; records commit locally first and sync HR before its linked activity. Server storage requires backend migration 005. Real Smart Band/Poco/Quest acceptance remains open; sleep import and Beat Saber correlation are separate work.
+
 This is a mono-repo containing both the mobile client and the Python backend services.
 
 - **`chips-mobile/`**: The Android project built with Kotlin and Jetpack Compose. Contains the `VoiceInteractionService` to register as the default device assistant.

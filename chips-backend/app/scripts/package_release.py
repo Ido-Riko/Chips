@@ -13,6 +13,7 @@ REQUIRED_FILES = (
     "migrations/002_beat_saber.sql",
     "migrations/003_drawings.sql",
     "migrations/004_pantry.sql",
+    "migrations/005_heart_rate.sql",
     "requirements.txt",
     "chips-api.openrc",
     "deploy/Caddyfile.example",

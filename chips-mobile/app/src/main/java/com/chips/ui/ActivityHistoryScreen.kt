@@ -15,7 +15,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @Composable
-fun ActivityHistoryScreen(state: DashboardUiState, model: DashboardViewModel) {
+fun ActivityHistoryScreen(state: DashboardUiState, model: DashboardViewModel, focusedId: String? = null,
+    onOpenHeartRate: (String) -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var editing by remember { mutableStateOf<ActivityRecord?>(null) }
@@ -42,12 +43,16 @@ fun ActivityHistoryScreen(state: DashboardUiState, model: DashboardViewModel) {
                 TextButton(onClick = { ActivitySyncWorker.schedule(context, retryNow = true) }) { Text("Retry sync") }
             }
         }
-        items(state.visibleRecords, key = { it.id }) { record ->
+        items(state.visibleRecords.sortedBy { if(it.id == focusedId) 0 else 1 }, key = { it.id }) { record ->
             DashboardCard(record.type.label, modifier = Modifier.testTag("record-${record.id}"), trailing = when (record.syncStatus) {
                 "SYNCED" -> "Synced"; "FAILED" -> "Sync failed"; else -> "Pending sync"
             }) {
                 Text("${record.localDay} · ${record.zoneId}")
                 if (record.note.isNotBlank()) Text(record.note)
+                record.hrSessionId?.let { id ->
+                    Text("Linked heart-rate capture")
+                    TextButton(onClick = { onOpenHeartRate(id) }, modifier = Modifier.testTag("activity-open-hr-${record.id}")) { Text("Open HR capture") }
+                }
                 if (record.error.isNotEmpty()) Text(record.error, color = MaterialTheme.colorScheme.error)
                 Row {
                     TextButton(onClick = { editing = record }) { Text("Edit") }
@@ -70,7 +75,7 @@ fun ActivityHistoryScreen(state: DashboardUiState, model: DashboardViewModel) {
         AlertDialog(onDismissRequest = { editing = null }, title = { Text("Edit session") }, text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ActivityType.entries.forEach { candidate ->
-                    Row { RadioButton(selected = type == candidate, onClick = { type = candidate }); Text(candidate.label, Modifier.padding(top = 12.dp)) }
+                    Row { RadioButton(selected = type == candidate, enabled = record.hrSessionId == null || candidate == ActivityType.BEAT_SABER, onClick = { type = candidate }); Text(candidate.label, Modifier.padding(top = 12.dp)) }
                 }
                 OutlinedTextField(value = day, onValueChange = { day = it }, label = { Text("Date (YYYY-MM-DD)") }, isError = invalid, singleLine = true)
                 OutlinedTextField(value = note, onValueChange = { if (it.length <= 2000) note = it }, label = { Text("Note") })

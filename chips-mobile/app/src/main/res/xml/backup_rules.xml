@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
     <exclude domain="sharedpref" path="sync_credentials.xml"/>
+    <exclude domain="sharedpref" path="hr_capture_recovery.xml"/>
     <exclude domain="database" path="androidx.work.workdb"/>
 </full-backup-content>

@@ -2,10 +2,12 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="sync_credentials.xml"/>
+        <exclude domain="sharedpref" path="hr_capture_recovery.xml"/>
         <exclude domain="database" path="androidx.work.workdb"/>
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="sync_credentials.xml"/>
+        <exclude domain="sharedpref" path="hr_capture_recovery.xml"/>
         <exclude domain="database" path="androidx.work.workdb"/>
     </device-transfer>
 </data-extraction-rules>

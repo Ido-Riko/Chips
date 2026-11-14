@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Boolean, Column, String, Text, ForeignKey
+from sqlalchemy import BigInteger, Boolean, Column, String, Text, ForeignKey, UniqueConstraint
 from app.database import Base
 
 
@@ -22,3 +22,5 @@ class Activity(Base):
     note = Column(Text, nullable=False)
     revision = Column(BigInteger, nullable=False)
     deleted = Column(Boolean, nullable=False)
+    hr_session_id = Column(String(36), nullable=True)
+    __table_args__ = (UniqueConstraint("owner_id", "hr_session_id", name="activities_hr_session"),)

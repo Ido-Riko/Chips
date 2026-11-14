@@ -9,6 +9,7 @@ from app.database import Base, get_db
 from app.auth import token_digest
 from app.models.activity import Device, Activity
 from app.routers.activities import router
+from app.routers.heart_rate import router as hr_router
 
 
 @pytest.fixture
@@ -30,6 +31,7 @@ def api(tmp_path):
     asyncio.run(setup())
     app = FastAPI()
     app.include_router(router)
+    app.include_router(hr_router)
     async def database():
         async with sessions() as db:
             yield db

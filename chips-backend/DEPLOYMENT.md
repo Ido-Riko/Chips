@@ -73,3 +73,11 @@ The drawing routes require migration `003_drawings.sql` (applied by the existing
 ## Pantry
 
 Deploy migration `004_pantry.sql` with the updated release. Pantry transactions are owner-scoped PostgreSQL rows and belong in backups. Receipt transcription reuses the explicitly configured drawing vision runtime; images are not retained by CHIPS on the server. The existing assistant route receives owner inventory context, but the M3 voice protocol/service update remains deferred. See [PANTRY.md](../docs/PANTRY.md).
+
+## Heart-rate archives and linked Beat Saber activities
+
+Deploy the updated backend and run the existing `python -m app.scripts.migrate` command before phone HR synchronization. Additive migration **005_heart_rate.sql** adds owner-scoped immutable HR manifests/chunks, terminal deletion markers and a unique nullable HR link on activities; earlier activity, pantry, drawing and voice rows remain intact. The release package and OpenRC gate require migration 005. See [HR behavior and sync contract](../docs/HEART_RATE.md).
+
+The phone saves locally first. Finalized HR archives upload in bounded run/event pages and are marked complete after count validation. A new linked activity is accepted only after its owner HR archive completes (or exists as an explicit deletion marker). Retrying identical chunks/activities is idempotent; conflicting content is rejected. Normal Stop offers the optional Beat Saber activity without waiting for the server. No running capture is streamed to this API. Include `heart_rate_archives`, `heart_rate_chunks` and activity links in PostgreSQL backups. HR deletion removes server readings/events while retaining a tombstone; activity deletion does not remove its capture.
+
+This change prepares the backend and migration; production rollout and physical phone/server acceptance must be recorded separately.

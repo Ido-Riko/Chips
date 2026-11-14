@@ -42,7 +42,7 @@ import java.util.Locale
 fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> Unit,
                     beatSaber: com.chips.beatsaber.BeatSaberState = com.chips.beatsaber.BeatSaberState(),
                     onBeatSaber: () -> Unit = {}, onJapanese: () -> Unit = {}, onDrawing: () -> Unit = {},
-                    onPantry: () -> Unit = {}, pantryCount: Int = 0, japaneseDue: Int = 0, drawingCount: Int = 0, drawingSummary: String = "", onVoice: () -> Unit) {
+                    onPantry: () -> Unit = {}, pantryCount: Int = 0, japaneseDue: Int = 0, drawingCount: Int = 0, drawingSummary: String = "", onHeartRate: () -> Unit = {}, onVoice: () -> Unit) {
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -85,7 +85,7 @@ fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> U
             }
         }
         if (state.storageError != null) item { Text(state.storageError, color = MaterialTheme.colorScheme.error) }
-        item { SleepCard(state.demoMode) }
+        item { SleepCard(state.demoMode, onHeartRate) }
         item {
             DashboardCard("Activities", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "${state.completed.size} / 4 today") {
                 if (state.demoMode) Text("Tap an activity to toggle its preview.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -156,7 +156,7 @@ fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> U
 }
 
 @Composable
-private fun SleepCard(demo: Boolean) {
+private fun SleepCard(demo: Boolean, onHeartRate: () -> Unit) {
     DashboardCard("Last night's rest", trailing = if (demo) "Preview" else "No sleep source") {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             Box(Modifier.size(88.dp).clearAndSetSemantics {
@@ -179,6 +179,7 @@ private fun SleepCard(demo: Boolean) {
                 }
                 Text(if (demo) "${DemoData.restingHeartRate} bpm · resting heart rate" else "Sleep and heart rate, in one place.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (demo) TrendLine(DemoData.heartRate, ChipsMint, "Preview heart rate: 55, 57, 60, 58, 56, 54, 58 beats per minute")
+                TextButton(onClick = onHeartRate, modifier = Modifier.testTag("open-heart-rate")) { Text("Heart rate") }
             }
         }
     }

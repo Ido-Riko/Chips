@@ -28,6 +28,10 @@ import kotlin.concurrent.thread
 class BeatSaberTest {
     @get:Rule val compose = createComposeRule()
 
+    private fun awaitChart() {
+        compose.waitUntil(5000) { compose.onAllNodesWithTag("beat-scatter").fetchSemanticsNodes().isNotEmpty() }
+    }
+
     private fun point() = JSONObject().put("key", "board91").put("leaderboard_id", "board91")
         .put("song_name", "Test song").put("hash", "a".repeat(40)).put("mode", "Standard")
         .put("difficulty", "ExpertPlus").put("accuracy", 93.0).put("timestamp", 1794500000L)
@@ -47,12 +51,32 @@ class BeatSaberTest {
         compose.setContent { ChipsTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Column(Modifier.padding(20.dp)) { ScoreScatter(data, "stars", "accuracy", null) { selected = it.key } } } } }
         compose.onNodeWithTag("beat-axis-x").assertIsDisplayed()
         compose.onNodeWithTag("beat-axis-y").assertIsDisplayed()
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").assertContentDescriptionEquals(
             "X axis: Stars. Ticks: ${fmt(8.0, 1)}, ${fmt(10.0, 1)}, ${fmt(12.0, 1)}. " +
                 "Y axis: Accuracy %. Ticks: ${listOf(93.0, 93.5, 94.0, 94.5, 95.0).joinToString { fmt(it, 2) }}. Score details are also available in the list.")
         // The top/right endpoint is inset by half its measured tick label, within the hit radius.
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").performTouchInput { click(androidx.compose.ui.geometry.Offset(width - 16.dp.toPx(), 12.dp.toPx())) }
+        compose.waitUntil(5000) { selected != null }
         compose.runOnIdle { assertEquals("end", selected) }
+    }
+
+    @Test fun fullPortfolioCanDrawZoomPanResetAndSelectAnExactScore() {
+        val data = (0 until 20000).map { i ->
+            BeatScore(i.toString(), "board$i", "Song $i", "hash$i", "Standard", "Expert", 90.0,
+                1700000000L + i, JSONObject().put("stars", i.toDouble()))
+        }
+        val selected = mutableStateOf<String?>(null)
+        compose.setContent { ChipsTheme { Column { ScoreScatter(data, "stars", "accuracy", selected.value) { selected.value = it.key } } } }
+        awaitChart()
+        compose.onNodeWithTag("beat-zoom-in").performClick()
+        compose.onNodeWithTag("beat-pan-3").performClick()
+        compose.onNodeWithTag("beat-zoom-reset").performClick()
+        compose.onNodeWithTag("beat-scatter").performTouchInput { click(center) }
+        compose.waitUntil(5000) { selected.value != null }
+        // All scores remain candidates; a middle hit must select a middle score, not an endpoint/sample.
+        assertTrue(selected.value!!.toInt() in 9000..11000)
     }
 
     @Test fun chartZoomButtonsPinchPanAndResetKeepAxesInSync() {
@@ -60,13 +84,19 @@ class BeatSaberTest {
             point().put("key", "end").put("stars", 12).put("accuracy", 96))
         val data = BeatSnapshot.decode(snapshot().put("graph", JSONArray(points))).graph
         compose.setContent { ChipsTheme { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { Column(Modifier.padding(20.dp)) { ScoreScatter(data, "stars", "accuracy", null) {} } } } }
+        awaitChart()
         compose.onNodeWithTag("beat-zoom-in").performClick()
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Zoom ${fmt(2.0, 1)}×"))
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").assert(hasContentDescription("X axis: Stars. Ticks: ${fmt(9.0, 2)}, ${fmt(10.0, 2)}, ${fmt(11.0, 2)}", substring = true))
         compose.onNodeWithTag("beat-pan-3").performClick()
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").assert(hasContentDescription("X axis: Stars. Ticks: ${fmt(9.5, 2)}, ${fmt(10.5, 2)}, ${fmt(11.5, 2)}", substring = true))
         compose.onNodeWithTag("beat-zoom-reset").performClick()
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Zoom ${fmt(1.0, 1)}×"))
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").performTouchInput {
             down(0, center.copy(x = center.x - 20.dp.toPx()))
             down(1, center.copy(x = center.x + 20.dp.toPx()))
@@ -74,6 +104,7 @@ class BeatSaberTest {
             moveTo(1, center.copy(x = center.x + 60.dp.toPx()))
             up(0); up(1)
         }
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Zoom ${fmt(1.0, 1)}×").not())
         compose.onNodeWithTag("beat-zoom-reset").performClick()
         compose.onNodeWithTag("beat-zoom-out").assertIsNotEnabled()
@@ -104,7 +135,9 @@ class BeatSaberTest {
         } } }
         // Both points share coordinates; the first imported point wins this overlap.
         compose.onNodeWithTag("beat-saber-screen").performScrollToNode(hasTestTag("beat-scatter"))
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").performTouchInput { click(center) }
+        compose.waitUntil(5000) { compose.onAllNodesWithTag("beat-point-preview").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("beat-point-preview").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("beat-point-preview").assert(hasText("Test song"))
         compose.onNodeWithTag("beat-point-preview").assert(hasText("${fmt(8.0)} ★ · ExpertPlus"))
@@ -118,7 +151,9 @@ class BeatSaberTest {
         compose.onNodeWithTag("beat-sort-stars").performClick()
         compose.onNodeWithTag("beat-point-preview").assertDoesNotExist()
         compose.onNodeWithTag("beat-saber-screen").performScrollToNode(hasTestTag("beat-scatter"))
+        awaitChart()
         compose.onNodeWithTag("beat-scatter").performTouchInput { click(center) }
+        compose.waitUntil(5000) { compose.onAllNodesWithTag("beat-point-preview").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("beat-point-preview").performScrollTo().performClick()
         compose.onNodeWithTag("beat-detail-stars").assertExists()
         compose.runOnIdle { assertEquals(1, requests) }
