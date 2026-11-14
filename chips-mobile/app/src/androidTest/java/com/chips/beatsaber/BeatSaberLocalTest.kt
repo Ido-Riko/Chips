@@ -79,6 +79,47 @@ class BeatSaberLocalTest {
         }
     }
 
+    @Test fun snapshotDecodingCannotBlockUiDispatch() = runBlocking {
+        val entered = java.util.concurrent.CountDownLatch(1)
+        val release = java.util.concurrent.CountDownLatch(1)
+        val body = object : JSONObject(snapshot().toString()) {
+            override fun getInt(name: String): Int {
+                if (name == "version") {
+                    assertNotSame(android.os.Looper.getMainLooper(), android.os.Looper.myLooper())
+                    entered.countDown()
+                    check(release.await(15, java.util.concurrent.TimeUnit.SECONDS))
+                }
+                return super.getInt(name)
+            }
+        }
+        val source = object : BeatSaberSource {
+            override suspend fun snapshot(playerId: String) = body
+            override suspend fun map(hash: String, mode: String, difficulty: String) = JSONObject()
+        }
+        val name = "beat-responsive-${UUID.randomUUID()}.db"
+        val store = ViewModelStore()
+        lateinit var vm: BeatSaberViewModel
+        try {
+            instrumentation.runOnMainSync {
+                vm = BeatSaberViewModel(context.applicationContext as Application, source, BeatSaberCache(context, name))
+                store.put("beat", vm)
+                vm.connect("player1")
+            }
+            assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+            val heartbeat = java.util.concurrent.CountDownLatch(1)
+            android.os.Handler(android.os.Looper.getMainLooper()).post { heartbeat.countDown() }
+            assertTrue("Snapshot decoding blocked UI dispatch", heartbeat.await(750, java.util.concurrent.TimeUnit.MILLISECONDS))
+            release.countDown()
+            val state = withTimeout(5000) { vm.state.first { !it.busy } }
+            assertNull(state.error)
+            assertEquals(1, state.snapshot!!.graph.size)
+        } finally {
+            release.countDown()
+            instrumentation.runOnMainSync { store.clear() }
+            context.deleteDatabase(name)
+        }
+    }
+
     @Test fun directAdapterPaginatesDeduplicatesAndNeverSendsCredentials() = runBlocking {
         val paths = mutableListOf<String>()
         val client = OkHttpClient.Builder().addInterceptor { chain ->

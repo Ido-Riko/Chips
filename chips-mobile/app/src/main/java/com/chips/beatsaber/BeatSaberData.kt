@@ -101,7 +101,9 @@ class BeatSaberViewModel(
     private var mapTask: Job? = null
 
     private suspend fun applyState(body: JSONObject, busy: Boolean = false) {
-        val snapshot = body.optJSONObject("snapshot")?.let { BeatSnapshot.decode(it) }
+        val snapshot = withContext(Dispatchers.Default) {
+            body.optJSONObject("snapshot")?.let { BeatSnapshot.decode(it) }
+        }
         withContext(Dispatchers.IO) { cache.write(LOCAL_BEAT_CACHE, body) }
         mutableState.value = BeatSaberState(body.optString("player_id").takeUnless { it == "null" } ?: "", snapshot, busy)
     }
@@ -120,6 +122,7 @@ class BeatSaberViewModel(
     /** Opening the app or explorer only reads local storage; no service is needed. */
     fun load() {
         if (task?.isActive == true) return
+        mapTask?.cancel()
         mutableState.value = BeatSaberState(busy = true)
         task = viewModelScope.launch {
             try {
@@ -154,17 +157,18 @@ class BeatSaberViewModel(
         val previous = mutableState.value.snapshot
         if (previous != null && System.currentTimeMillis() / 1000 - previous.fetchedAt in 0..59) return
         val snapshot = source.snapshot(id)
-        val knownBpms = (previous?.graph.orEmpty() + previous?.scores.orEmpty())
-            .mapNotNull { p -> p.metric("bpm")?.let { p.hash to it } }.toMap()
-        for (name in listOf("graph", "scores")) {
-            val rows = snapshot.getJSONArray(name)
-            for (i in 0 until rows.length()) {
-                val row = rows.getJSONObject(i)
-                val known = knownBpms[row.optString("hash")]
-                if (row.number("bpm") == null && known != null) row.put("bpm", known)
+        withContext(Dispatchers.Default) {
+            val knownBpms = (previous?.graph.orEmpty() + previous?.scores.orEmpty())
+                .mapNotNull { p -> p.metric("bpm")?.let { p.hash to it } }.toMap()
+            for (name in listOf("graph", "scores")) {
+                val rows = snapshot.getJSONArray(name)
+                for (i in 0 until rows.length()) {
+                    val row = rows.getJSONObject(i)
+                    val known = knownBpms[row.optString("hash")]
+                    if (row.number("bpm") == null && known != null) row.put("bpm", known)
+                }
             }
         }
-        BeatSnapshot.decode(snapshot)
         applyState(JSONObject().put("player_id", id).put("snapshot", snapshot))
     }
     fun refresh() = runAction {
@@ -199,18 +203,19 @@ class BeatSaberViewModel(
         val bpm = map.number("bpm")?.takeIf { it > 0 } ?: return
         val current = mutableState.value
         val snapshot = current.snapshot ?: return
-        val data = JSONObject(snapshot.data.toString())
-        var changed = false
-        for (name in listOf("graph", "scores")) {
-            val rows = data.getJSONArray(name)
-            for (i in 0 until rows.length()) {
-                val row = rows.getJSONObject(i)
-                if (row.optString("hash").equals(hash, true) && row.number("bpm") == null) { row.put("bpm", bpm); changed = true }
+        val updated = withContext(Dispatchers.Default) {
+            val data = JSONObject(snapshot.data.toString())
+            var changed = false
+            for (name in listOf("graph", "scores")) {
+                val rows = data.getJSONArray(name)
+                for (i in 0 until rows.length()) {
+                    val row = rows.getJSONObject(i)
+                    if (row.optString("hash").equals(hash, true) && row.number("bpm") == null) { row.put("bpm", bpm); changed = true }
+                }
             }
-        }
-        if (!changed) return
-        val updated = BeatSnapshot.decode(data)
-        withContext(Dispatchers.IO) { cache.write(LOCAL_BEAT_CACHE, JSONObject().put("player_id", current.playerId).put("snapshot", data)) }
+            if (!changed) null else BeatSnapshot.decode(data)
+        } ?: return
+        withContext(Dispatchers.IO) { cache.write(LOCAL_BEAT_CACHE, JSONObject().put("player_id", current.playerId).put("snapshot", updated.data)) }
         mutableState.update { it.copy(snapshot = updated) }
     }
     override fun onCleared() { task?.cancel(); mapTask?.cancel(); cache.close() }

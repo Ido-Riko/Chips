@@ -4,6 +4,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.json.JSONArray
@@ -65,56 +67,58 @@ internal class BeatLeaderApi(
         })
     }
     override suspend fun snapshot(playerId: String): JSONObject = withTimeout(120_000) {
-        require(Regex("[A-Za-z0-9_-]{1,25}").matches(playerId))
-        try {
-            val profile = get(leader, listOf("player", playerId)) as JSONObject
-            val canonical = profile.getString("id")
-            require(Regex("[A-Za-z0-9_-]{1,25}").matches(canonical))
-            val graph = get(leader, listOf("player", canonical, "accgraph"), mapOf("no_unranked_stars" to "true")) as JSONArray
-            val history = get(leader, listOf("player", canonical, "history"), mapOf("count" to "30")) as JSONArray
-            require(graph.length() <= 20000 && history.length() <= 1000)
-            val scores = linkedMapOf<String, JSONObject>()
-            var total = 0
-            for (page in 1..3) {
-                val body = get(leader, listOf("player", canonical, "scores"), mapOf("sortBy" to "date", "order" to "desc",
-                    "count" to "100", "page" to page.toString(), "includeIO" to "true", "leaderboardContext" to "general")) as JSONObject
-                total = body.getJSONObject("metadata").getInt("total")
-                require(total >= 0)
-                val data = body.optJSONArray("data") ?: JSONArray()
-                require(data.length() <= 100)
-                for (i in 0 until data.length()) {
-                    val point = BeatSaberParser.score(data.getJSONObject(i))
-                    scores[point.getString("key")] = point
+        withContext(Dispatchers.Default) {
+            require(Regex("[A-Za-z0-9_-]{1,25}").matches(playerId))
+            try {
+                val profile = get(leader, listOf("player", playerId)) as JSONObject
+                val canonical = profile.getString("id")
+                require(Regex("[A-Za-z0-9_-]{1,25}").matches(canonical))
+                val graph = get(leader, listOf("player", canonical, "accgraph"), mapOf("no_unranked_stars" to "true")) as JSONArray
+                val history = get(leader, listOf("player", canonical, "history"), mapOf("count" to "30")) as JSONArray
+                require(graph.length() <= 20000 && history.length() <= 1000)
+                val scores = linkedMapOf<String, JSONObject>()
+                var total = 0
+                for (page in 1..3) {
+                    val body = get(leader, listOf("player", canonical, "scores"), mapOf("sortBy" to "date", "order" to "desc",
+                        "count" to "100", "page" to page.toString(), "includeIO" to "true", "leaderboardContext" to "general")) as JSONObject
+                    total = body.getJSONObject("metadata").getInt("total")
+                    require(total >= 0)
+                    val data = body.optJSONArray("data") ?: JSONArray()
+                    require(data.length() <= 100)
+                    for (i in 0 until data.length()) {
+                        val point = BeatSaberParser.score(data.getJSONObject(i))
+                        scores[point.getString("key")] = point
+                    }
+                    if (data.length() == 0 || page * 100 >= total) break
                 }
-                if (data.length() == 0 || page * 100 >= total) break
-            }
-            val points = linkedMapOf<String, JSONObject>()
-            for (i in 0 until graph.length()) {
-                val point = BeatSaberParser.graph(graph.getJSONObject(i))
-                points[point.getString("key")] = point
-            }
-            val days = (0 until minOf(history.length(), 30)).map { i ->
-                val h = history.getJSONObject(i)
-                JSONObject().put("timestamp", BeatSaberParser.epoch(h, "timestamp"))
-                    .nullable("pp", h.number("pp")).nullable("rank", h.number("rank")).nullable("country_rank", h.number("countryRank"))
-            }
-            JSONObject().put("version", 1).put("fetched_at", System.currentTimeMillis() / 1000)
-                .put("player_id", canonical).put("profile", JSONObject().put("name", profile.optString("name").take(300))
-                    .nullable("pp", profile.number("pp")).nullable("rank", profile.number("rank"))
-                    .put("country", profile.optString("country").take(4)).nullable("country_rank", profile.number("countryRank")))
-                .put("graph", JSONArray(points.values.sortedBy { it.getLong("timestamp") }))
-                .put("scores", JSONArray(scores.values.sortedByDescending { it.getLong("timestamp") }))
-                .put("history", JSONArray(days.sortedBy { it.getLong("timestamp") })).put("total_scores", total)
-                .put("coverage", "Retained general-context scores; not every attempt. Latest 300 scores at most. Ranked graph is a separate portfolio.")
-                .also { BeatSnapshot.decode(it) }
-        } catch (e: CancellationException) { throw e }
-        catch (e: IOException) { throw e }
-        catch (e: Exception) { throw IOException("BeatLeader returned unexpected data. Your previous import is unchanged.", e) }
+                val points = linkedMapOf<String, JSONObject>()
+                for (i in 0 until graph.length()) {
+                    val point = BeatSaberParser.graph(graph.getJSONObject(i))
+                    points[point.getString("key")] = point
+                }
+                val days = (0 until minOf(history.length(), 30)).map { i ->
+                    val h = history.getJSONObject(i)
+                    JSONObject().put("timestamp", BeatSaberParser.epoch(h, "timestamp"))
+                        .nullable("pp", h.number("pp")).nullable("rank", h.number("rank")).nullable("country_rank", h.number("countryRank"))
+                }
+                JSONObject().put("version", 1).put("fetched_at", System.currentTimeMillis() / 1000)
+                    .put("player_id", canonical).put("profile", JSONObject().put("name", profile.optString("name").take(300))
+                        .nullable("pp", profile.number("pp")).nullable("rank", profile.number("rank"))
+                        .put("country", profile.optString("country").take(4)).nullable("country_rank", profile.number("countryRank")))
+                    .put("graph", JSONArray(points.values.sortedBy { it.getLong("timestamp") }))
+                    .put("scores", JSONArray(scores.values.sortedByDescending { it.getLong("timestamp") }))
+                    .put("history", JSONArray(days.sortedBy { it.getLong("timestamp") })).put("total_scores", total)
+                    .put("coverage", "Retained general-context scores; not every attempt. Latest 300 scores at most. Ranked graph is a separate portfolio.")
+                    .also { BeatSnapshot.decode(it) }
+            } catch (e: CancellationException) { throw e }
+            catch (e: IOException) { throw e }
+            catch (e: Exception) { throw IOException("BeatLeader returned unexpected data. Your previous import is unchanged.", e) }
+        }
     }
-    override suspend fun map(hash: String, mode: String, difficulty: String): JSONObject {
+    override suspend fun map(hash: String, mode: String, difficulty: String): JSONObject = withContext(Dispatchers.Default) {
         require(Regex("[a-fA-F0-9]{40}").matches(hash))
         val body = get(saver, listOf("maps", "hash", hash)) as? JSONObject ?: throw IOException("BeatSaver returned unexpected map data.")
-        return BeatSaberParser.map(body, hash, mode, difficulty)
+        BeatSaberParser.map(body, hash, mode, difficulty)
     }
 }
 

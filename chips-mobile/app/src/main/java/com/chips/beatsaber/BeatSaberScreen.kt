@@ -1,7 +1,9 @@
 package com.chips.beatsaber
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.PointMode
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -36,6 +38,11 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.hypot
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
@@ -79,11 +86,14 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
     var confirmRemove by remember { mutableStateOf(false) }
     val snapshot = state.snapshot
     val source = if (graphMode) snapshot?.graph.orEmpty() else snapshot?.scores.orEmpty()
-    val points = source.filter { search.isBlank() || "${it.song} ${it.difficulty} ${it.mode} ${it.modifiers}".contains(search, true) }
-    val selected = points.firstOrNull { it.key == selectedKey }
-    val detail = points.firstOrNull { it.key == detailKey }
-    val ordered = sortBeatScores(points, sortBy, ascending).let { sorted ->
-        if (selected == null) sorted else listOf(selected) + sorted.filterNot { it.key == selected.key }
+    val songs = rememberBeatPreparation(BeatInput(source), search, sortBy, ascending) {
+        prepareBeatSongs(source, search, sortBy, ascending)
+    }
+    val points = songs?.points.orEmpty()
+    val selected = songs?.byKey?.get(selectedKey)
+    val detail = songs?.byKey?.get(detailKey)
+    val ordered = remember(songs, selectedKey) {
+        promoteBeatScore(songs?.ordered.orEmpty(), songs?.orderedIndex?.get(selectedKey))
     }
     LazyColumn(Modifier.fillMaxSize().testTag("beat-saber-screen"), contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
@@ -169,7 +179,8 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
                 OutlinedTextField(search, { search = it }, label = { Text("Find a song") }, singleLine = true,
                     shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth())
             }
-            if (points.isEmpty()) item { Text("No songs match your search.") }
+            if (songs == null) item { Text("Preparing scores…", modifier = Modifier.testTag("beat-preparing")) }
+            if (songs != null && points.isEmpty()) item { Text("No songs match your search.") }
             items(ordered, key = { it.key }) { score ->
                 Surface(onClick = { if (selectedKey != score.key) selectedKey = null; detailKey = score.key; onMap(score) }, shape = RoundedCornerShape(18.dp),
                     color = if (selectedKey == score.key) ChipsMint.copy(alpha = 0.10f) else MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth().testTag("beat-score-${score.key}")) {
@@ -209,40 +220,26 @@ private fun MetricMenu(selected: String, tag: String, onSelect: (String) -> Unit
     }
 }
 
-internal fun BeatScore.axis(key: String): Double? = if (key == "timestamp") timestamp.toDouble() else metric(key)
-
-internal fun sortBeatScores(points: List<BeatScore>, metric: String, ascending: Boolean): List<BeatScore> =
-    points.sortedWith(compareBy<BeatScore> { it.axis(metric) == null }
-        .thenComparator { a, b ->
-            val first = a.axis(metric); val second = b.axis(metric)
-            if (first == null || second == null) 0 else if (ascending) first.compareTo(second) else second.compareTo(first)
-        }.thenBy { it.key })
-
 @Composable
 internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selected: String?, onXChange: (String) -> Unit = {}, onYChange: (String) -> Unit = {}, onSelect: (BeatScore) -> Unit) {
-    val plotted = remember(points, x, y) { points.mapNotNull { p -> p.axis(x)?.let { a -> p.axis(y)?.let { b -> Triple(p, a, b) } } } }
+    val prepared = rememberBeatPreparation(BeatInput(points), x, y) { prepareBeatScatter(points, x, y) }
+    val plotted = prepared?.plotted.orEmpty()
     if (plotted.isEmpty()) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             MetricMenu(y, "beat-axis-y", onYChange)
             MetricMenu(x, "beat-axis-x", onXChange)
         }
-        Text("No measurements for this combination.", modifier = Modifier.padding(vertical = 32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(if (prepared == null) "Preparing graph…" else "No measurements for this combination.", modifier = Modifier.padding(vertical = 32.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
-    // Give a single value a real scale, with the point in the middle of the axis.
-    fun bounds(values: List<Double>, key: String): Pair<Double, Double> {
-        val low = values.min(); val high = values.max()
-        val padding = if (key == "timestamp") 3600.0 else maxOf(kotlin.math.abs(low) * 0.05, 0.5)
-        return if (low == high) low - padding to high + padding else low to high
-    }
-    val (fullMinX, fullMaxX) = bounds(plotted.map { it.second }, x)
-    val (fullMinY, fullMaxY) = bounds(plotted.map { it.third }, y)
-    var viewport by remember(plotted.map { Triple(it.first.key, it.second, it.third) }, x, y) { mutableStateOf(ChartViewport()) }
+    val (fullMinX, fullMaxX) = prepared!!.xBounds
+    val (fullMinY, fullMaxY) = prepared.yBounds
+    var viewport by remember(prepared) { mutableStateOf(ChartViewport()) }
     val minX = fullMinX + viewport.left * (fullMaxX - fullMinX)
     val maxX = minX + (fullMaxX - fullMinX) / viewport.zoom
     val minY = fullMinY + viewport.bottom * (fullMaxY - fullMinY)
     val maxY = minY + (fullMaxY - fullMinY) / viewport.zoom
-    val visible = plotted.filter { it.second in minX..maxX && it.third in minY..maxY }
+    fun visible(a: Double, b: Double) = a in minX..maxX && b in minY..maxY
     fun tick(value: Double, key: String, span: Double): String {
         if (key == "timestamp") return Instant.ofEpochSecond(value.toLong()).atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofPattern(if (span < 86400) "d MMM\nHH:mm" else "d MMM\nyyyy"))
@@ -281,13 +278,13 @@ internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selecte
         }
         TextButton(onClick = { viewport = ChartViewport() }, modifier = Modifier.testTag("beat-zoom-reset")) { Text("Reset") }
     }
-    Canvas(Modifier.fillMaxWidth().height(260.dp).testTag("beat-scatter")
+    Spacer(Modifier.fillMaxWidth().height(260.dp).testTag("beat-scatter")
         .semantics {
             stateDescription = "Zoom ${fmt(viewport.zoom.toDouble(), 1)}×"
             contentDescription = "X axis: ${metrics[x]}. Ticks: ${xTicks.joinToString { tick(it, x, maxX - minX) }}. " +
                 "Y axis: ${metrics[y]}. Ticks: ${yTicks.joinToString { tick(it, y, maxY - minY) }}. Score details are also available in the list."
         }
-        .pointerInput(plotted, x, y) {
+        .pointerInput(BeatInput(plotted), x, y) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
                 do {
@@ -305,33 +302,57 @@ internal fun ScoreScatter(points: List<BeatScore>, x: String, y: String, selecte
                 } while (event.changes.any { it.pressed })
             }
         }
-        .pointerInput(plotted, x, y, left, right, top, bottom, viewport, onSelect) {
-            detectTapGestures { tap ->
-                if (tap.x !in left..(size.width - right) || tap.y !in top..(size.height - bottom)) return@detectTapGestures
-                val nearest = visible.minByOrNull { (_, a, b) -> val p = position(a, b, size.width.toFloat(), size.height.toFloat()); hypot(p.x - tap.x, p.y - tap.y) }
-                nearest?.let { (score, a, b) ->
-                    val p = position(a, b, size.width.toFloat(), size.height.toFloat())
-                    if (hypot(p.x - tap.x, p.y - tap.y) <= 32.dp.toPx()) onSelect(score)
+        .pointerInput(BeatInput(plotted), x, y, left, right, top, bottom, viewport, onSelect) {
+            coroutineScope {
+                var hitTest: Job? = null
+                detectTapGestures { tap ->
+                    if (tap.x !in left..(size.width - right) || tap.y !in top..(size.height - bottom)) return@detectTapGestures
+                    val width = size.width.toFloat(); val height = size.height.toFloat()
+                    val radius = 32.dp.toPx()
+                    hitTest?.cancel()
+                    hitTest = launch {
+                        val nearest = withContext(Dispatchers.Default) {
+                            plotted.asSequence().filter { (_, a, b) -> visible(a, b) }.minByOrNull { (_, a, b) ->
+                                val p = position(a, b, width, height); hypot(p.x - tap.x, p.y - tap.y)
+                            }
+                        }
+                        nearest?.let { (score, a, b) ->
+                            val p = position(a, b, width, height)
+                            if (hypot(p.x - tap.x, p.y - tap.y) <= radius) onSelect(score)
+                        }
+                    }
                 }
             }
-        }) {
-        yTicks.forEachIndexed { i, value ->
-            val p = position(minX, value, size.width, size.height)
-            drawLine(grid, p, Offset(size.width - right, p.y))
-            val label = yLabels[i]
-            drawText(label, topLeft = Offset(left - gap - label.size.width, p.y - label.size.height / 2f))
-        }
-        xTicks.forEachIndexed { i, value ->
-            val p = position(value, minY, size.width, size.height)
-            drawLine(grid, Offset(p.x, top), p)
-            drawText(xLabels[i], topLeft = Offset(p.x - xLabels[i].size.width / 2f, p.y + gap))
-        }
-        drawLine(axis, Offset(left, top), Offset(left, size.height - bottom))
-        drawLine(axis, Offset(left, size.height - bottom), Offset(size.width - right, size.height - bottom))
-        clipRect(left, top, size.width - right, size.height - bottom) {
-            visible.forEach { (score, a, b) -> drawCircle(if (score.key == selected) ChipsMint else ChipsAccent.copy(alpha = 0.75f), if (score.key == selected) 7.dp.toPx() else 3.dp.toPx(), position(a, b, size.width, size.height)) }
-        }
-    }
+        }.drawWithCache {
+            val dots = ArrayList<Offset>(plotted.size)
+            var selectedDot: Offset? = null
+            plotted.forEach { (score, a, b) ->
+                if (visible(a, b)) {
+                    val dot = position(a, b, size.width, size.height)
+                    if (score.key == selected) selectedDot = dot else dots.add(dot)
+                }
+            }
+            val dotColor = ChipsAccent.copy(alpha = 0.75f)
+            onDrawBehind {
+                yTicks.forEachIndexed { i, value ->
+                    val p = position(minX, value, size.width, size.height)
+                    drawLine(grid, p, Offset(size.width - right, p.y))
+                    val label = yLabels[i]
+                    drawText(label, topLeft = Offset(left - gap - label.size.width, p.y - label.size.height / 2f))
+                }
+                xTicks.forEachIndexed { i, value ->
+                    val p = position(value, minY, size.width, size.height)
+                    drawLine(grid, Offset(p.x, top), p)
+                    drawText(xLabels[i], topLeft = Offset(p.x - xLabels[i].size.width / 2f, p.y + gap))
+                }
+                drawLine(axis, Offset(left, top), Offset(left, size.height - bottom))
+                drawLine(axis, Offset(left, size.height - bottom), Offset(size.width - right, size.height - bottom))
+                clipRect(left, top, size.width - right, size.height - bottom) {
+                    drawPoints(dots, PointMode.Points, dotColor, strokeWidth = 6.dp.toPx(), cap = StrokeCap.Round)
+                    selectedDot?.let { drawCircle(ChipsMint, 7.dp.toPx(), it) }
+                }
+            }
+    })
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.width(48.dp))
         Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { MetricMenu(x, "beat-axis-x", onXChange) }
