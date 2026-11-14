@@ -2,14 +2,10 @@ package com.chips.heartrate
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothManager
-import android.bluetooth.le.*
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -39,37 +35,6 @@ import java.text.DateFormat
 import java.util.Date
 
 data class HrDevice(val address: String, val name: String)
-
-@SuppressLint("MissingPermission")
-private class HrDiscovery(context: Context, private val result: (HrDevice) -> Unit, private val status: (String) -> Unit) {
-    private val manager = context.getSystemService(BluetoothManager::class.java)
-    private var scanner: BluetoothLeScanner? = null
-    private val handler = Handler(Looper.getMainLooper())
-    private var active = false
-    private val callback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, scan: ScanResult) {
-            if(!active) return
-            val name = scan.scanRecord?.deviceName ?: scan.device.name.orEmpty()
-            if(scan.scanRecord?.serviceUuids?.any { it.uuid == HR_SERVICE } == true ||
-                name.contains("Xiaomi", true) || name.contains("Mi Band", true) || name.contains("Smart Band", true)) {
-                handler.post { if(active) result(HrDevice(scan.device.address, name.ifBlank { "Heart-rate device" })) }
-            }
-        }
-        override fun onScanFailed(errorCode: Int) { handler.post { close(); status("Scan failed ($errorCode). Try again.") } }
-    }
-    fun start() {
-        try {
-            scanner = manager?.adapter?.bluetoothLeScanner
-            check(scanner != null) { "Turn on Bluetooth to find your band." }
-            active = true
-            scanner!!.startScan(null, ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build(), callback)
-            status("Looking for HR devices…")
-            handler.postDelayed({ close(); status("Scan finished. Select your band, or enable Share HR and scan again.") }, 20_000)
-        } catch (_: SecurityException) { close(); status("Allow nearby devices to find your band.") }
-        catch (e: Exception) { close(); status(e.message ?: "Bluetooth scan unavailable") }
-    }
-    fun close() { active = false; handler.removeCallbacksAndMessages(null); runCatching { scanner?.stopScan(callback) } }
-}
 
 @Composable
 fun HrScreen(onBack: () -> Unit, focusSession: String? = null, onOpenActivity: (String) -> Unit = {}) {
@@ -111,7 +76,7 @@ fun HrScreen(onBack: () -> Unit, focusSession: String? = null, onOpenActivity: (
             }
         }
         owner.lifecycle.addObserver(observer)
-        onDispose { owner.lifecycle.removeObserver(observer); discovery.close() }
+        onDispose { owner.lifecycle.removeObserver(observer); discovery.dispose() }
     }
     LaunchedEffect(refresh, focusSession) {
         while(true) {
@@ -171,7 +136,7 @@ fun HrScreen(onBack: () -> Unit, focusSession: String? = null, onOpenActivity: (
                     TextButton(onClick = { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri())) }) { Text("Open app permissions") }
                 }
                 Text(if(selected.isBlank()) "Choose your band below." else "Selected: $deviceName · $selected")
-                OutlinedButton(enabled = permitted, onClick = { discovery.close(); devices = emptyList(); discovery.start() }) { Text("Find band") }
+                OutlinedButton(enabled = permitted, onClick = { devices = emptyList(); discovery.start() }) { Text("Find band") }
                 devices.forEach { device ->
                     TextButton(onClick = {
                         discovery.close(); selected = device.address; deviceName = device.name

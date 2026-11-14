@@ -1,13 +1,13 @@
 {
-  "date": "2026-11-13",
+  "date": "2026-11-14",
   "scope": "Android direct MiBand Converter port, durable linked Beat Saber stop/save flow, local-first HR archive and activity sync",
   "reference_revision": "a472d64a6743454db0b63c902684be36426f2ff9",
-  "poco_install": "Previous live-HR APK installed in place. Latest linked-save APK is built and verified but installation is blocked because the Poco is no longer connected to ADB.",
+  "poco_install": "Latest linked-save and Find band responsiveness update installed in place with adb install -r; data preserved, no automated phone interaction.",
   "validation": {
     "debug_build": "passed",
     "unsigned_release_build": "passed",
     "jvm_tests": 34,
-    "emulator_tests": 85,
+    "emulator_tests": 89,
     "failures": 0,
     "errors": 0,
     "skipped": 0,
@@ -43,7 +43,10 @@
       "Only sealed ended HR archives upload; ordinary process-death recovery retains its identity",
       "Immutable bounded chunk retries and checked acknowledgements preserve exact HR reception timing",
       "HR upload completes before its linked activity; lost activity acknowledgements retry one completion",
-      "Local deletion during upload stays queued; either saved record can be deleted independently"
+      "Local deletion during upload stays queued; either saved record can be deleted independently",
+      "Find band Bluetooth startup, shutdown and device-name lookup do not block the UI thread",
+      "Picker disposal cleans up a scan whose Android startup returns late",
+      "Stale scan callbacks cannot alter a newer scan; permission failure and timeout clean up off the UI thread"
     ],
     "rerun_note": "An existing assistant-settings intent test had one emulator window-focus failure; isolated rerun and subsequent complete 67- and final 68-test runs passed without changing that test.",
     "os_process_death_check": {
@@ -74,5 +77,11 @@
     "release_archive": "Packaged successfully, including required migration 005",
     "production_deployed": false
   },
-  "linked_save_evidence": "hr-linked-sessions.json"
+  "linked_save_evidence": "hr-linked-sessions.json",
+  "review_fix": {
+    "comment": "https://github.com/Ido-Riko/Chips/pull/7#issuecomment-6865523661",
+    "issue": "Find band freezes UI briefly",
+    "fix": "Serialize Bluetooth picker calls on a dedicated worker; generation-guard UI callbacks and queue cleanup before disposal",
+    "tests": "HrDiscoveryTest (4 instrumented cases)"
+  }
 }

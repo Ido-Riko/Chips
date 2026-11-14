@@ -1,5 +1,11 @@
 # Android implementation progress
 
+## Find band responsiveness review fix — 14 November 2026
+
+Addressed the [PR #7 report that Find band briefly freezes the UI](https://github.com/Ido-Riko/Chips/pull/7#issuecomment-6865523661). The picker previously called Bluetooth adapter/scanner access, scan start/stop and fallback device-name lookups on the UI thread. These calls now run serially on a dedicated worker; searching feedback appears immediately. Per-scan generations discard stale results/errors after Stop, timeout, screen exit or a new scan. Disposal queues cleanup before closing the worker, including when Android returns late from scan startup. The converter's live capture/reconnect classes are unchanged.
+
+Debug and unsigned-release builds, 34 JVM tests, all 89 API 37 emulator tests and lint passed (zero errors, 55 warnings). Four new tests deliberately block scan startup, scan shutdown and name resolution while verifying that the UI thread still runs, and cover stale callbacks, permission failure, timeout and disposal cleanup. Installed the final debug APK on the connected Poco in place, preserving data; no automated phone interaction was used. Actual radio behavior and the owner's perceived responsiveness remain physical-device acceptance.
+
 ## Linked HR and Beat Saber saves with local-first sync — 13 November 2026
 
 Explicit HR Stop now finishes local saving and radio cleanup, then offers Save Beat Saber session or HR only. Notification Stop opens the same durable flow through a non-exported activity. Closing/recreating the app before choosing preserves the prompt. Confirming commits one activity with its HR UUID link and a stable activity ID, retaining the capture start timezone/date. A restart between the activity commit and choice acknowledgement reconciles the existing link without duplicate completions; HR only creates no activity. HR cards and activity History open each other's save. Deleting either side retains the other; deleted linked activities never resurrect.
