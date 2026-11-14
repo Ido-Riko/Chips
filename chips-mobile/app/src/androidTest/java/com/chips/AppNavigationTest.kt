@@ -8,6 +8,44 @@ import org.junit.Test
 class AppNavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
+    private fun systemBack() {
+        compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+    }
+
+    @Test fun systemBackReturnsThroughTabsAndSurvivesRecreation() {
+        compose.onNodeWithTag("nav-HISTORY").performClick()
+        compose.onNodeWithTag("nav-SETTINGS").performClick()
+        compose.activityRule.scenario.recreate()
+        systemBack()
+        compose.onNodeWithText("Activities", substring = false).assertIsDisplayed()
+        compose.onNodeWithTag("nav-HISTORY").assertIsSelected()
+        systemBack()
+        compose.onNodeWithTag("dashboard").assertIsDisplayed()
+        org.junit.Assert.assertFalse(compose.activity.isFinishing)
+    }
+
+    @Test fun systemBackClosesHeartRateAndReturnsFromSettingsToFeature() {
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-heart-rate"))
+        compose.onNodeWithTag("open-heart-rate").performClick()
+        compose.onNodeWithTag("heart-rate-screen").assertIsDisplayed()
+        compose.onNodeWithTag("nav-SETTINGS").performClick()
+        systemBack()
+        compose.onNodeWithTag("heart-rate-screen").assertIsDisplayed()
+        systemBack()
+        compose.onNodeWithTag("dashboard").assertIsDisplayed()
+        org.junit.Assert.assertFalse(compose.activity.isFinishing)
+    }
+
+    @Test fun systemBackClosesSleepWithoutExiting() {
+        compose.onNodeWithTag("dashboard").performScrollToNode(hasText("Sleep history / import"))
+        compose.onNodeWithText("Sleep history / import").performClick()
+        compose.onNodeWithText("Connect / import sleep").assertExists()
+        systemBack()
+        compose.onNodeWithTag("dashboard").assertIsDisplayed()
+        org.junit.Assert.assertFalse(compose.activity.isFinishing)
+    }
+
     @Test
     fun practiceScreensOpenFromDashboardAndTodayClosesThem() {
         compose.onNodeWithTag("dashboard").performScrollToNode(hasTestTag("open-japanese"))

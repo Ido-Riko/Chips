@@ -44,6 +44,7 @@ fun HrScreen(onBack: () -> Unit, focusSession: String? = null, onOpenActivity: (
         BeatHrReportScreen(session) { reportSession = null }
         return
     }
+    androidx.activity.compose.BackHandler(onBack = onBack)
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
     val state by HrCaptureService.state.collectAsStateWithLifecycle()

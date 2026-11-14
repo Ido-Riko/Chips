@@ -37,3 +37,7 @@ Real band → Gadgetbridge export, Health Connect grant/revocation across suppor
 ## Local verification (14 November 2026)
 
 `:app:assembleDebug`, `:app:testDebugUnitTest`, `:app:lintDebug` and `:app:compileDebugAndroidTestKotlin` passed. All 42 JVM tests passed, including five new correlation cases. Lint has zero errors and 57 warnings. Instrumentation sources compile, but the connected phone rejected the test APK: Gradle's automatic permission-grant install was denied, and a plain install returned `INSTALL_FAILED_USER_RESTRICTED`. No device test success is claimed.
+
+Subsequent navigation fix: Back now restores previous screens/tabs and linked History/HR locations, with navigation history retained across recreation. Debug and test APK assembly, 42 JVM tests and lint pass. The three new navigation UI regressions compile; the isolated emulator crashed before execution.
+
+Validation correction: the earlier failed connected test run's cleanup uninstalled CHIPS and deleted local phone data. The later successful owner-approved app install was fresh. Device tests must use an explicitly targeted separate emulator; no physical-device test success or data-preserving install is claimed for this work.
