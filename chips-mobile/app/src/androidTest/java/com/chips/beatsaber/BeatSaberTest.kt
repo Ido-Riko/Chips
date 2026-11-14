@@ -43,6 +43,21 @@ class BeatSaberTest {
         .put("graph", JSONArray().put(point())).put("scores", JSONArray().put(point()))
         .put("history", JSONArray()).put("total_scores", 1).put("coverage", "Retained scores, not every attempt.")
 
+    @Test fun mapEnrichmentKeepsTheSameDetailsSheet() {
+        val state = mutableStateOf(BeatSaberState(playerId = "player1", snapshot = BeatSnapshot.decode(snapshot())))
+        compose.setContent { ChipsTheme { BeatSaberScreen(state.value, {}, {}, {}, {}, {}, {}) } }
+        awaitChart()
+        compose.onNodeWithTag("beat-saber-screen").performScrollToNode(hasTestTag("beat-score-board91"))
+        compose.onNodeWithTag("beat-score-board91").performClick()
+        compose.onNodeWithTag("beat-detail-sheet").assertExists()
+        val original = compose.onNodeWithTag("beat-detail-sheet").fetchSemanticsNode().id
+        compose.runOnIdle {
+            state.value = state.value.copy(snapshot = BeatSnapshot.decode(snapshot().put("graph", JSONArray().put(point().put("bpm", 145)))))
+        }
+        compose.waitUntil(5000) { compose.onAllNodesWithText("Song BPM · ${fmt(145.0, 1)}").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(original, compose.onNodeWithTag("beat-detail-sheet").fetchSemanticsNode().id)
+    }
+
     @Test fun chartShowsNamedNumberedAxesAndKeepsPointsSelectable() {
         val scores = listOf(point(), point().put("key", "middle").put("stars", 10).put("accuracy", 94),
             point().put("key", "end").put("stars", 12).put("accuracy", 95))

@@ -17,6 +17,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false"/>
 
+    <uses-permission android:name="android.permission.health.READ_SLEEP"/>
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY"/>
+    <queries><package android:name="com.google.android.apps.healthdata"/></queries>
+
     <application
         android:name=".ChipsApplication"
         android:usesCleartextTraffic="${allowCleartext}"
@@ -28,6 +32,16 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Chips">
+        <activity android:name=".sleep.HealthPrivacyActivity" android:exported="true">
+            <intent-filter><action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/></intent-filter>
+        </activity>
+        <activity-alias android:name="ViewHealthPermissionUsageActivity" android:exported="true"
+            android:targetActivity=".sleep.HealthPrivacyActivity" android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS"/>
+            </intent-filter>
+        </activity-alias>
         <meta-data android:name="com.google.mlkit.vision.DEPENDENCIES" android:value="barcode_ui"/>
         <service android:name=".heartrate.HrCaptureService" android:exported="false" android:foregroundServiceType="connectedDevice" android:stopWithTask="false"/>
         <activity android:name=".heartrate.HrStopActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar"/>

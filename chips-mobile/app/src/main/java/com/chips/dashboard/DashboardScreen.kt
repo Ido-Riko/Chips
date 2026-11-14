@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,7 +42,7 @@ import java.util.Locale
 fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> Unit,
                     beatSaber: com.chips.beatsaber.BeatSaberState = com.chips.beatsaber.BeatSaberState(),
                     onBeatSaber: () -> Unit = {}, onJapanese: () -> Unit = {}, onDrawing: () -> Unit = {},
-                    onPantry: () -> Unit = {}, pantryCount: Int = 0, japaneseDue: Int = 0, drawingCount: Int = 0, drawingSummary: String = "", onHeartRate: () -> Unit = {}, onVoice: () -> Unit) {
+                    onPantry: () -> Unit = {}, pantryCount: Int = 0, japaneseDue: Int = 0, drawingCount: Int = 0, drawingSummary: String = "", onHeartRate: () -> Unit = {}, onSleep: () -> Unit = {}, onVoice: () -> Unit) {
     LazyColumn(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -85,7 +85,7 @@ fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> U
             }
         }
         if (state.storageError != null) item { Text(state.storageError, color = MaterialTheme.colorScheme.error) }
-        item { SleepCard(state.demoMode, onHeartRate) }
+        item { SleepCard(state.demoMode, onHeartRate, onSleep) }
         item {
             DashboardCard("Activities", trailing = if (state.demoMode) "${state.previewCompleted.size} / 4 · preview" else "${state.completed.size} / 4 today") {
                 if (state.demoMode) Text("Tap an activity to toggle its preview.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -156,7 +156,23 @@ fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> U
 }
 
 @Composable
-private fun SleepCard(demo: Boolean, onHeartRate: () -> Unit) {
+private fun SleepCard(demo: Boolean, onHeartRate: () -> Unit, onSleep: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var latest by remember { mutableStateOf<com.chips.sleep.SleepEntry?>(null) }
+    LaunchedEffect(demo) {
+        if(!demo) latest = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { com.chips.sleep.SleepStore(context).use { it.entries().firstOrNull() } }.getOrNull()
+        }
+    }
+    if(!demo) {
+        DashboardCard("Latest imported sleep", trailing = latest?.wakeDate ?: "No sleep imported") {
+            Text(latest?.let { "${it.minutes / 60}h ${it.minutes % 60}m · session duration" } ?: "Connect Gadgetbridge through Health Connect", style = MaterialTheme.typography.titleMedium)
+            latest?.let { Text("Source: ${it.origin}") }
+            TextButton(onClick = onSleep) { Text("Sleep history / import") }
+            TextButton(onClick = onHeartRate, modifier = Modifier.testTag("open-heart-rate")) { Text("Heart rate") }
+        }
+        return
+    }
     DashboardCard("Last night's rest", trailing = if (demo) "Preview" else "No sleep source") {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             Box(Modifier.size(88.dp).clearAndSetSemantics {

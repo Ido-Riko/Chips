@@ -1,5 +1,8 @@
 package com.chips.ui
 
+import androidx.activity.compose.BackHandler
+import org.json.JSONObject
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -71,7 +74,40 @@ fun ChipsApp(
     var showWorkoutLog by rememberSaveable { mutableStateOf(false) }
     var focusedHr by rememberSaveable { mutableStateOf<String?>(null) }
     var focusedActivity by rememberSaveable { mutableStateOf<String?>(null) }
+    var conversations by rememberSaveable { mutableStateOf(false) }
+    var sleepHistory by rememberSaveable { mutableStateOf(false) }
+    // Save the actual previous location, including links between History and HR.
+    // ArrayList<String> is Bundle-saveable across activity/process recreation.
+    var backStack by rememberSaveable { mutableStateOf(arrayListOf<String>()) }
+    fun pushLocation() {
+        val location = JSONObject().put("destination", destination.name).put("page", practicePage)
+            .put("beat", showBeatSaber).put("hr", focusedHr ?: JSONObject.NULL)
+            .put("activity", focusedActivity ?: JSONObject.NULL)
+            .put("conversations", conversations).put("sleepHistory", sleepHistory).toString()
+        backStack = ArrayList(backStack + location)
+    }
+    val goBack: () -> Unit = {
+        if(backStack.isNotEmpty()) {
+            val previous = JSONObject(backStack.last())
+            backStack = ArrayList(backStack.dropLast(1))
+            destination = Destination.valueOf(previous.getString("destination"))
+            practicePage = previous.getString("page")
+            showBeatSaber = previous.getBoolean("beat")
+            conversations = previous.optBoolean("conversations")
+            sleepHistory = previous.optBoolean("sleepHistory")
+            focusedHr = if(previous.isNull("hr")) null else previous.getString("hr")
+            focusedActivity = if(previous.isNull("activity")) null else previous.getString("activity")
+        } else {
+            destination = Destination.DASHBOARD
+            practicePage = ""
+            showBeatSaber = false
+        }
+    }
+    // Child dialogs/sheets and feature-specific handlers take precedence.
+    BackHandler(enabled = backStack.isNotEmpty() || destination != Destination.DASHBOARD ||
+        practicePage.isNotEmpty() || showBeatSaber, onBack = goBack)
     val openFeature: (FeatureRoute) -> Unit = { feature ->
+        if(feature != FeatureRoute.WORKOUT) pushLocation()
         dashboard.setDemoMode(false)
         showVoice = false
         showWorkoutLog = false
@@ -127,7 +163,10 @@ fun ChipsApp(
                                     Modifier.weight(1f).testTag("nav-${target.name}")
                                         .clip(RoundedCornerShape(14.dp))
                                         .selectable(selected = selected, role = Role.Tab, onClick = {
-                                            if (target == Destination.DASHBOARD) { showBeatSaber = false; practicePage = "" }
+                                            if (target == Destination.DASHBOARD) {
+                                                backStack = arrayListOf()
+                                                showBeatSaber = false; practicePage = ""
+                                            } else if(target != destination) pushLocation()
                                             destination = target
                                         })
                                         .padding(vertical = 8.dp),
@@ -146,36 +185,42 @@ fun ChipsApp(
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
             when (destination) {
-                Destination.DASHBOARD -> if (practicePage == "heart_rate") com.chips.heartrate.HrScreen(onBack = { practicePage = "" }, focusSession = focusedHr,
-                    onOpenActivity = { focusedActivity = it; destination = Destination.HISTORY })
-                else if (practicePage == "pantry") PantryScreen(pantryState, pantry, onBack = { practicePage = "" })
+                Destination.DASHBOARD -> if (practicePage == "heart_rate") com.chips.heartrate.HrScreen(onBack = goBack, focusSession = focusedHr,
+                    onOpenActivity = { pushLocation(); conversations = false; sleepHistory = false; focusedActivity = it; destination = Destination.HISTORY })
+                else if (practicePage == "sleep") Column {
+                    BackHandler(onBack = goBack)
+                    TextButton(onClick = goBack) { Text("← Today") }
+                    com.chips.sleep.SleepScreen()
+                }
+                else if (practicePage == "pantry") PantryScreen(pantryState, pantry, onBack = goBack)
                 else if (practicePage == "japanese") JapaneseScreen(practiceState,
-                    onBack = { practicePage = "" }, onRate = practice::rate, onReset = practice::reset, onRefresh = practice::reload)
-                else if (practicePage == "drawing") DrawingScreen(practiceState, onBack = { practicePage = "" },
+                    onBack = goBack, onRate = practice::rate, onReset = practice::reset, onRefresh = practice::reload)
+                else if (practicePage == "drawing") DrawingScreen(practiceState, onBack = goBack,
                     onImport = practice::importDrawing, onSend = practice::send, onNotes = practice::notes, onDelete = practice::remove, onRefresh = practice::reload)
                 else if (showBeatSaber) BeatSaberScreen(beatState,
-                    onBack = { showBeatSaber = false }, onConnect = beatSaber::connect,
+                    onBack = goBack, onConnect = beatSaber::connect,
                     onRefresh = beatSaber::refresh, onReload = beatSaber::load,
                     onRemove = beatSaber::remove, onMap = beatSaber::map, onLogSession = { onLog(ActivityType.BEAT_SABER) }
                 ) else DashboardScreen(state, onShortcut, beatState,
                     onBeatSaber = { openFeature(FeatureRoute.BEAT_SABER) },
                     onPantry = { openFeature(FeatureRoute.PANTRY) }, pantryCount = pantryState.items.size,
                     onHeartRate = { openFeature(FeatureRoute.HEART_RATE) },
+                    onSleep = { pushLocation(); practicePage = "sleep" },
                     onJapanese = { openFeature(FeatureRoute.JAPANESE) }, onDrawing = { openFeature(FeatureRoute.DRAWING) },
                     japaneseDue = practiceState.due.size, drawingCount = practiceState.drawings.size,
                     drawingSummary = practiceState.drawings.firstOrNull { it.feedback.isNotEmpty() }?.feedback?.lineSequence()?.firstOrNull { it.isNotBlank() }?.take(120).orEmpty()) {
                     showVoice = true
                 }
                 Destination.HISTORY -> {
-                    var conversations by rememberSaveable { mutableStateOf(false) }
                     Column {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            FilterChip(selected = !conversations, onClick = { conversations = false }, label = { Text("Activities") })
-                            FilterChip(selected = conversations, onClick = { conversations = true }, label = { Text("Conversations") })
+                            FilterChip(selected = !conversations && !sleepHistory, onClick = { conversations = false; sleepHistory = false }, label = { Text("Activities") })
+                            FilterChip(selected = conversations && !sleepHistory, onClick = { conversations = true; sleepHistory = false }, label = { Text("Conversations") })
+                            FilterChip(selected = sleepHistory, onClick = { sleepHistory = true }, label = { Text("Sleep") })
                         }
                         Box(Modifier.weight(1f)) {
-                            if (conversations) VoiceHistoryScreen() else ActivityHistoryScreen(state, dashboard, focusedActivity,
-                                onOpenHeartRate = { focusedHr = it; practicePage = "heart_rate"; destination = Destination.DASHBOARD })
+                            if (sleepHistory) com.chips.sleep.SleepScreen() else if (conversations) VoiceHistoryScreen() else ActivityHistoryScreen(state, dashboard, focusedActivity,
+                                onOpenHeartRate = { pushLocation(); focusedHr = it; practicePage = "heart_rate"; destination = Destination.DASHBOARD })
                         }
                     }
                 }

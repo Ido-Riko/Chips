@@ -12,7 +12,6 @@ import androidx.core.content.ContextCompat
 import androidx.test.platform.app.InstrumentationRegistry
 import com.chips.MainActivity
 import org.junit.Assert.*
-import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import java.net.DatagramPacket
@@ -31,7 +30,7 @@ class HrCaptureTest {
     }
 
     @Test fun outputsChangeLiveWithoutRestartingReaderOrCapture() {
-        assumeTrue(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk"))
+        assumeEmulator()
         for(permission in HrCaptureService.permissions().toList() + listOf(android.Manifest.permission.POST_NOTIFICATIONS, android.Manifest.permission.BLUETOOTH_ADVERTISE)) {
             instrumentation.uiAutomation.grantRuntimePermission(context.packageName, permission)
         }
@@ -139,7 +138,7 @@ class HrCaptureTest {
     }
 
     @Test fun notificationRemainsThroughReconnectAndRecreationAndStopsDurableCapture() {
-        assumeTrue(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk"))
+        assumeEmulator()
         val automation = instrumentation.uiAutomation
         for(permission in HrCaptureService.permissions().toList() + android.Manifest.permission.POST_NOTIFICATIONS) {
             automation.grantRuntimePermission(context.packageName, permission)

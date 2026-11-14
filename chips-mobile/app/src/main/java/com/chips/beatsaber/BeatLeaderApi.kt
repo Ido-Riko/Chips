@@ -151,6 +151,7 @@ internal object BeatSaberParser {
             .put("mode", diff.getString("modeName")).put("diff", diff.getString("difficultyName"))
             .put("timeset", row.get("timepost")).nullable("pp", row.number("pp")).put("modifiers", row.optString("modifiers")))
             .put("key", id.toString()).put("score_id", id)
+            .nullable("play_started_at", row.optString("timeset").toLongOrNull()?.takeIf { it in 1..253402300799L })
         val modified = point.getString("modifiers").isNotEmpty()
         for ((key, field) in mapOf("stars" to "stars", "pass_rating" to "passRating", "acc_rating" to "accRating", "tech_rating" to "techRating")) {
             point.nullable(key, if (modified) null else diff.number(field))

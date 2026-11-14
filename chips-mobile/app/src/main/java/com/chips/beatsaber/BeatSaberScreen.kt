@@ -91,7 +91,9 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
     }
     val points = songs?.points.orEmpty()
     val selected = songs?.byKey?.get(selectedKey)
-    val detail = songs?.byKey?.get(detailKey)
+    // Preparation intentionally publishes null while metadata is re-sorted. Keep the
+    // sheet tied to the source identity so enrichment cannot remove/recreate it.
+    val detail = remember(BeatInput(source), detailKey) { source.firstOrNull { it.key == detailKey } }
     val ordered = remember(songs, selectedKey) {
         promoteBeatScore(songs?.ordered.orEmpty(), songs?.orderedIndex?.get(selectedKey))
     }
@@ -198,7 +200,7 @@ fun BeatSaberScreen(state: BeatSaberState, onBack: () -> Unit, onConnect: (Strin
             }
         }
     }
-    if (detail != null) ModalBottomSheet(onDismissRequest = { detailKey = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (detail != null) ModalBottomSheet(modifier = Modifier.testTag("beat-detail-sheet"), onDismissRequest = { detailKey = null }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 20.dp, end = 20.dp, bottom = 32.dp)) {
             ScoreDetails(detail, state, onMap)
         }

@@ -340,3 +340,17 @@ The owner completed the interactive phone scenarios and each stage was independe
 Revoked the actual phone device token: identity, reads and writes returned 401. The owner added two local entries and retried; the phone retained both with no server upload and reported “Device access rejected. Check enrollment in Settings.” Operator-only database reads confirmed the server snapshot stayed unchanged while enrolled API access remained rejected. Rotated the token for the same owner/device UUIDs, stored it only in the restricted enrollment file, and verified old token 401 / replacement token 200. After the owner entered the replacement and retried/reopened, both pending UUIDs arrived exactly once. The original phone database identity binding was unchanged and the earlier deleted Workout remained deleted.
 
 Final comparison: 28 records on phone and server, two active entries, zero pending/failed phone records, zero missing records and zero differing fields (including note hashes). Android/backend CI for the installed source `9f5ce142ffa0c0290d7e01fad584caf57a20d5b9` passed. Detailed non-secret [Poco evidence](evidence/m2-poco-live-acceptance.json) records each stage. M2 remains open only for real local-midnight and physical-device timezone acceptance, plus review/merge after any required latest-head checks. No midnight/timezone result is inferred from automated calendar tests or the same-day sync checks.
+
+### 14 November 2026 — sleep import and per-play HR
+
+Fixed Beat Saber details-sheet remounting during uncached BPM enrichment. Added foreground Health Connect sleep/history import, persistent source-attributed stages, dashboard summary and History → Sleep. Added local per-play Beat Saber + HR reports from saved captures, recorded-start timestamp retention, speed/time adjustment, received-sample statistics and gap-aware coverage/trace. Existing linked saves remain intact. See [setup and limits](SLEEP_AND_BEAT_HR.md).
+
+Debug assembly, 42 JVM tests, lint (zero errors) and instrumentation compilation pass. Targeted device tests could not start because the connected phone rejected test-APK installation. Real Gadgetbridge/Health Connect and timed-play acceptance remain open.
+
+### 14 November 2026 — system Back navigation and validation correction
+
+Added a saved navigation history for feature screens, bottom tabs and History/HR links. System Back and feature Back controls restore the previous location, including its History filter and focused record; explicitly choosing Today clears that navigation history. Heart rate now handles system Back, while its report and other dialogs/sheets retain their nested handling. Only the root Today screen delegates Back to Android. Added three UI regressions for tab history across recreation, Heart rate/Settings return navigation and Sleep dismissal.
+
+Debug and test APK assembly, all 42 JVM tests, and lint passed. UI regressions compile but could not execute: the separate emulator crashed during startup, including a cold-boot retry. No phone operations were performed for this navigation fix.
+
+Correction to the earlier sleep-import validation: cleanup from the failed connected test run uninstalled `com.chips` at 16:05:23, removing local app data. The owner-approved installation at 16:13:22 was a fresh installation, not a data-preserving update. Android logs confirm the removal; no Android restore sets or project/temporary-file backup were found. Do not use connected test tasks on the owner's phone. Future automated device tests must target a separate emulator explicitly.

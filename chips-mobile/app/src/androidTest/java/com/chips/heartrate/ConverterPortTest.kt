@@ -26,7 +26,7 @@ class ConverterPortTest {
     private val context get() = instrumentation.targetContext
     private fun field(instance: Any, name: String) = instance.javaClass.getDeclaredField(name).apply { isAccessible = true }
     private fun prepareBluetooth(): BluetoothAdapter {
-        assumeTrue(android.os.Build.FINGERPRINT.contains("generic") || android.os.Build.MODEL.contains("sdk"))
+        assumeEmulator()
         for(permission in HrCaptureService.permissions()) instrumentation.uiAutomation.grantRuntimePermission(context.packageName, permission)
         val adapter = context.getSystemService(BluetoothManager::class.java).adapter
         assumeTrue(adapter != null && adapter.isEnabled)

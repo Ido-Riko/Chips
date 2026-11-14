@@ -1,6 +1,6 @@
 # Smart Band live heart-rate capture
 
-Android integration, 13 November 2026. Today → Heart rate and the assistant's Heart rate shortcut open the same capture screen. No CHIPS server, enrollment, internet or Health Connect is required for BLE capture or saved sessions. This absorbs the standalone converter's input/output functions into CHIPS; it does not uninstall that app, import its preferences, implement sleep/history import or correlate Beat Saber scores yet.
+Android integration, 13 November 2026. Today → Heart rate and the assistant's Heart rate shortcut open the same capture screen. No CHIPS server, enrollment, internet or Health Connect is required for BLE capture or saved sessions. This absorbs the standalone converter's input/output functions into CHIPS; it does not uninstall that app, import its preferences, replace Gadgetbridge band synchronization. [Sleep history import and per-play Beat Saber HR reports](SLEEP_AND_BEAT_HR.md) now build on the saved local data.
 
 ## Capture
 
