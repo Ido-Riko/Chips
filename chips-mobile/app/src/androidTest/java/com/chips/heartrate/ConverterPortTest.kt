@@ -7,6 +7,9 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.chips.heartrate.converter.BleConnectionManager
 import com.chips.heartrate.converter.ConnectionStateMachine
 import com.chips.heartrate.converter.OscSender
+import com.chips.heartrate.converter.PeripheralManager
+import com.chips.heartrate.converter.PeripheralRegistration
+import java.util.concurrent.atomic.AtomicBoolean
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -29,6 +32,57 @@ class ConverterPortTest {
         assumeTrue(adapter != null && adapter.isEnabled)
         return adapter
     }
+    @Test fun peripheralCallbacksCannotReleaseAdvertisingForAStoppedOrReplacementServer() {
+        prepareBluetooth()
+        lateinit var manager: PeripheralManager
+        lateinit var oldCallback: BluetoothGattServerCallback
+        lateinit var currentCallback: BluetoothGattServerCallback
+        var ready = 0
+        val requests = mutableListOf<PeripheralRegistration.Service>()
+        val hr = BluetoothGattService(UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb"), 0)
+        val dis = BluetoothGattService(UUID.fromString("0000180a-0000-1000-8000-00805f9b34fb"), 0)
+        fun callback(registration: PeripheralRegistration): BluetoothGattServerCallback = manager.javaClass
+            .getDeclaredMethod("gattServerCallback", PeripheralRegistration::class.java).apply { isAccessible = true }
+            .invoke(manager, registration) as BluetoothGattServerCallback
+        try {
+            instrumentation.runOnMainSync {
+                manager = PeripheralManager(context)
+                val old = PeripheralRegistration({ true }, { fail("Stopped server became ready") }, { fail(it) })
+                field(manager, "serviceRegistration").set(manager, old)
+                (field(manager, "isPeripheralRunning").get(manager) as AtomicBoolean).set(true)
+                oldCallback = callback(old)
+                old.begin()
+                // Queue a callback, then stop before the handler consumes it.
+                oldCallback.onServiceAdded(BluetoothGatt.GATT_SUCCESS, hr)
+                manager.stopPeripheral(force = true)
+                val current = PeripheralRegistration({ requests.add(it); true }, { ready++ }, { fail(it) })
+                field(manager, "serviceRegistration").set(manager, current)
+                (field(manager, "isPeripheralRunning").get(manager) as AtomicBoolean).set(true)
+                currentCallback = callback(current)
+                current.begin()
+                // Exercise the actual common advertising gate while registration is pending.
+                manager.javaClass.getDeclaredMethod("startAdvertising").apply { isAccessible = true }.invoke(manager)
+                assertNull(field(manager, "advertiser").get(manager))
+                oldCallback.onServiceAdded(BluetoothGatt.GATT_SUCCESS, dis)
+                currentCallback.onServiceAdded(BluetoothGatt.GATT_SUCCESS, dis) // Wrong order.
+            }
+            instrumentation.waitForIdleSync()
+            instrumentation.runOnMainSync {
+                assertEquals(listOf(PeripheralRegistration.Service.HEART_RATE), requests)
+                assertEquals(0, ready)
+                currentCallback.onServiceAdded(BluetoothGatt.GATT_SUCCESS, hr)
+            }
+            instrumentation.waitForIdleSync()
+            instrumentation.runOnMainSync {
+                assertEquals(listOf(PeripheralRegistration.Service.HEART_RATE, PeripheralRegistration.Service.DEVICE_INFO), requests)
+                assertEquals(0, ready)
+                currentCallback.onServiceAdded(BluetoothGatt.GATT_SUCCESS, dis)
+            }
+            instrumentation.waitForIdleSync()
+            instrumentation.runOnMainSync { assertEquals(1, ready) }
+        } finally { instrumentation.runOnMainSync { manager.stopPeripheral(force = true) } }
+    }
+
     @Test fun originalStateMachineRetainsScanReconnectAndGracefulDisconnectTransitions() {
         val state = ConnectionStateMachine()
         val changes = mutableListOf<ConnectionStateMachine.State>()

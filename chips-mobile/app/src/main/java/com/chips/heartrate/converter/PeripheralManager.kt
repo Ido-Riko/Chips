@@ -19,6 +19,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 interface PeripheralCallback {
     fun onPeripheralDeviceConnected()
     fun onPeripheralDeviceDisconnected()
+    fun onPeripheralReady() {}
+    fun onPeripheralError(message: String) {}
 }
 
 class PeripheralManager(
@@ -76,6 +78,8 @@ class PeripheralManager(
     private val devices = ConcurrentHashMap<String, DeviceState>()
     private val prefs: SharedPreferences = context.getSharedPreferences("PeripheralPrefs", Context.MODE_PRIVATE)
     private var gattServer: BluetoothGattServer? = null
+    private var serviceRegistration: PeripheralRegistration? = null
+    private var registrationTimeout: Runnable? = null
     private var hrMeasurementChar: BluetoothGattCharacteristic? = null
     private var advertiser: BluetoothLeAdvertiser? = null
     private val isAdvertising = AtomicBoolean(false)
@@ -238,10 +242,16 @@ class PeripheralManager(
     }
 
     private val mAdvertiseCallback = object : AdvertiseCallback() {
+        @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
         override fun onStartSuccess(settingsInEffect: AdvertiseSettings) {
+            if (!isPeripheralRunning.get() || isShuttingDown.get() || serviceRegistration?.isReady != true) {
+                stopAdvertising()
+                return
+            }
             isAdvertising.set(true)
             advertiseRetryCount = 0
             Log.i(TAG, "✅ Advertising started successfully")
+            callback?.onPeripheralReady()
         }
 
         @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT])
@@ -299,6 +309,7 @@ class PeripheralManager(
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun startPulseMode() {
+        if (serviceRegistration?.isReady != true) return
         if (!ENABLE_PULSE_MODE) return
         if (isPulseModeEnabled) return
         if (connectedDevices.isNotEmpty()) return // Don't pulse if connected
@@ -446,11 +457,12 @@ class PeripheralManager(
         // Clear stale device state
         devices.clear()
 
-        // Start advertising
-        startAdvertising()
-        
-        // Start Pulse Mode (will only activate if no devices connected)
-        startPulseMode()
+        // Registration callbacks start advertising/pulse mode only after both services succeed.
+        // An already registered server can be reused without publishing incomplete services.
+        if (serviceRegistration?.isReady == true) {
+            startAdvertising()
+            startPulseMode()
+        }
     }
 
     @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_ADVERTISE, Manifest.permission.BLUETOOTH_CONNECT])
@@ -464,6 +476,7 @@ class PeripheralManager(
 
         isPeripheralRunning.set(false)
         isShuttingDown.set(true)
+        cancelServiceRegistration()
 
         // Cancel all pending callbacks to prevent scheduled restarts etc.
         cancelAllPendingCallbacks("stopPeripheral")
@@ -474,10 +487,10 @@ class PeripheralManager(
 
         // If Bluetooth is OFF or Force is true, we can't wait for disconnect callbacks.
         // We must clean up immediately to prevent holding onto a dead GATT server.
-        val bluetoothOff = bluetoothAdapter?.isEnabled != true
+        val bluetoothOff = force || bluetoothAdapter?.isEnabled != true
         
         // Check actual OS connections, not just our internal map
-        val osConnectedDevices = bluetoothManager.getConnectedDevices(BluetoothProfile.GATT)
+        val osConnectedDevices = if (bluetoothOff || force) emptyList() else bluetoothManager.getConnectedDevices(BluetoothProfile.GATT)
             .filterNot { it.address.equals(bandMacAddress, ignoreCase = true) }
         val hasConnections = connectedDevices.isNotEmpty() || osConnectedDevices.isNotEmpty()
         
@@ -507,10 +520,8 @@ class PeripheralManager(
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun performGattServerCleanup() {
-        if (gattServer == null) {
-            Log.d(TAG, "GATT Server already closed.")
-            return
-        }
+        cancelServiceRegistration()
+
         Log.d(TAG, "Closing GATT server...")
         try {
             gattServer?.close()
@@ -547,10 +558,7 @@ class PeripheralManager(
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun stopAdvertising() {
-        if (!isAdvertising.get()) {
-            return
-        }
-
+        // Cancel in-flight startup too; onStartSuccess may not have arrived yet.
         try {
             advertiser?.stopAdvertising(mAdvertiseCallback)
             isAdvertising.set(false)
@@ -646,7 +654,7 @@ class PeripheralManager(
         }
     }
 
-    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_ADVERTISE])
     private fun setupGattServer() {
         Log.d(TAG, "Setting up GATT server (requireBonding=$requireBonding)")
 
@@ -656,91 +664,113 @@ class PeripheralManager(
             return
         }
 
+        val registration = PeripheralRegistration(
+            add = { service ->
+                when (service) {
+                    PeripheralRegistration.Service.HEART_RATE -> addHeartRateService()
+                    PeripheralRegistration.Service.DEVICE_INFO -> addDeviceInfoService()
+                }
+            },
+            onReady = {
+                registrationTimeout?.let { handler.removeCallbacks(it) }
+                registrationTimeout = null
+                startAdvertising()
+                startPulseMode()
+            },
+            onFailure = { message ->
+                Log.e(TAG, message)
+                stopPeripheral(force = true)
+                callback?.onPeripheralError(message)
+            }
+        )
+        serviceRegistration = registration
         try {
-            gattServer = bluetoothManager.openGattServer(context, mGattServerCallback)
+            gattServer = bluetoothManager.openGattServer(context, gattServerCallback(registration))
             if (gattServer == null) {
-                Log.e(TAG, "❌ openGattServer returned null")
+                registration.fail("openGattServer returned null")
                 return
             }
 
-            // Create Heart Rate Service
-            val heartRateService = BluetoothGattService(
-                HEART_RATE_SERVICE_UUID,
-                BluetoothGattService.SERVICE_TYPE_PRIMARY
-            )
-
-            // When requireBonding is true, set encrypted permissions to trigger OS-level bonding.
-            // Use standard PERMISSION_READ. We enforce bonding manually in onCharacteristicReadRequest
-            // by returning GATT_INSUFFICIENT_AUTHENTICATION. Using PERMISSION_READ_ENCRYPTED can cause issues.
-            val hrPermissions = BluetoothGattCharacteristic.PERMISSION_READ
-
-            // CCCD permissions should be open, even when bonding.
-            // The bonding is enforced on the characteristic read, not the descriptor write.
-            // This prevents the PIN prompt on devices like the Quest 2.
-            val cccdPermissions = BluetoothGattDescriptor.PERMISSION_READ or
-                    BluetoothGattDescriptor.PERMISSION_WRITE
-
-            hrMeasurementChar = BluetoothGattCharacteristic(
-                HR_MEASUREMENT_CHAR_UUID,
-                // Add PROPERTY_READ to allow bonding to be triggered by a read attempt.
-                BluetoothGattCharacteristic.PROPERTY_NOTIFY or BluetoothGattCharacteristic.PROPERTY_READ,
-                hrPermissions
-            )
-
-            val cccd = BluetoothGattDescriptor(CCCD_UUID, cccdPermissions)
-            hrMeasurementChar?.addDescriptor(cccd)
-            heartRateService.addCharacteristic(hrMeasurementChar)
-
-            // Add service to server
-            val serviceAdded = gattServer?.addService(heartRateService) == true
-            Log.i(TAG, if (serviceAdded) {
-                "✅ Heart Rate Service added (waiting for callback to add next service)"
-            } else {
-                "❌ Failed to add Heart Rate Service"
-            })
+            registrationTimeout = Runnable { registration.timeout() }.also { handler.postDelayed(it, 15_000L) }
+            registration.begin()
         } catch (e: Exception) {
-            Log.e(TAG, "❌ Error setting up GATT server: ${e.message}", e)
+            registration.fail("Error setting up GATT server: ${e.message}")
         }
     }
 
+    private fun cancelServiceRegistration() {
+        serviceRegistration?.stop()
+        serviceRegistration = null
+        registrationTimeout?.let { handler.removeCallbacks(it) }
+        registrationTimeout = null
+    }
+
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    private fun addDeviceInfoService() {
-        if (gattServer == null) return
-        
-        try {
-             // Setup Device Information Service
-            val deviceInfoService = BluetoothGattService(
-                DEVICE_INFO_SERVICE_UUID,
-                BluetoothGattService.SERVICE_TYPE_PRIMARY
-            )
+    private fun addHeartRateService(): Boolean {
+        // Create Heart Rate Service
+        val heartRateService = BluetoothGattService(
+            HEART_RATE_SERVICE_UUID,
+            BluetoothGattService.SERVICE_TYPE_PRIMARY
+        )
 
-            // Manufacturer Name
-            val manufacturerChar = BluetoothGattCharacteristic(
-                MANUFACTURER_NAME_CHAR_UUID,
-                BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ
-            )
-            // manufacturerChar.value not set here, handled in onCharacteristicReadRequest
-            deviceInfoService.addCharacteristic(manufacturerChar)
+        // When requireBonding is true, set encrypted permissions to trigger OS-level bonding.
+        // Use standard PERMISSION_READ. We enforce bonding manually in onCharacteristicReadRequest
+        // by returning GATT_INSUFFICIENT_AUTHENTICATION. Using PERMISSION_READ_ENCRYPTED can cause issues.
+        val hrPermissions = BluetoothGattCharacteristic.PERMISSION_READ
 
-            // Model Number
-            val modelChar = BluetoothGattCharacteristic(
-                MODEL_NUMBER_CHAR_UUID,
-                BluetoothGattCharacteristic.PROPERTY_READ,
-                BluetoothGattCharacteristic.PERMISSION_READ
-            )
-            // modelChar.value not set here, handled in onCharacteristicReadRequest
-            deviceInfoService.addCharacteristic(modelChar)
+        // CCCD permissions should be open, even when bonding.
+        // The bonding is enforced on the characteristic read, not the descriptor write.
+        // This prevents the PIN prompt on devices like the Quest 2.
+        val cccdPermissions = BluetoothGattDescriptor.PERMISSION_READ or
+                BluetoothGattDescriptor.PERMISSION_WRITE
 
-            val disAdded = gattServer?.addService(deviceInfoService) == true
-            Log.i(TAG, if (disAdded) "✅ Device Information Service added" else "❌ Failed to add Device Info Service")
-        } catch (e: Exception) {
-             Log.e(TAG, "❌ Failed to add Device Info Service: ${e.message}", e)
-        }
+        hrMeasurementChar = BluetoothGattCharacteristic(
+            HR_MEASUREMENT_CHAR_UUID,
+            // Add PROPERTY_READ to allow bonding to be triggered by a read attempt.
+            BluetoothGattCharacteristic.PROPERTY_NOTIFY or BluetoothGattCharacteristic.PROPERTY_READ,
+            hrPermissions
+        )
+
+        val cccd = BluetoothGattDescriptor(CCCD_UUID, cccdPermissions)
+        hrMeasurementChar?.addDescriptor(cccd)
+        heartRateService.addCharacteristic(hrMeasurementChar)
+
+        return gattServer?.addService(heartRateService) == true
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun addDeviceInfoService(): Boolean {
+         // Setup Device Information Service
+        val deviceInfoService = BluetoothGattService(
+            DEVICE_INFO_SERVICE_UUID,
+            BluetoothGattService.SERVICE_TYPE_PRIMARY
+        )
+
+        // Manufacturer Name
+        val manufacturerChar = BluetoothGattCharacteristic(
+            MANUFACTURER_NAME_CHAR_UUID,
+            BluetoothGattCharacteristic.PROPERTY_READ,
+            BluetoothGattCharacteristic.PERMISSION_READ
+        )
+        // manufacturerChar.value not set here, handled in onCharacteristicReadRequest
+        deviceInfoService.addCharacteristic(manufacturerChar)
+
+        // Model Number
+        val modelChar = BluetoothGattCharacteristic(
+            MODEL_NUMBER_CHAR_UUID,
+            BluetoothGattCharacteristic.PROPERTY_READ,
+            BluetoothGattCharacteristic.PERMISSION_READ
+        )
+        // modelChar.value not set here, handled in onCharacteristicReadRequest
+        deviceInfoService.addCharacteristic(modelChar)
+
+        return gattServer?.addService(deviceInfoService) == true
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun startAdvertising() {
+        // Every entry point (startup, pulse, config change and retries) uses this gate.
+        if (!isPeripheralRunning.get() || isShuttingDown.get() || serviceRegistration?.isReady != true) return
         if (isAdvertising.get()) {
             Log.d(TAG, "Already advertising")
             return
@@ -945,7 +975,7 @@ class PeripheralManager(
         }
     }
 
-    private val mGattServerCallback = object : BluetoothGattServerCallback() {
+    private fun gattServerCallback(registration: PeripheralRegistration) = object : BluetoothGattServerCallback() {
         @RequiresPermission(allOf = [Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_ADVERTISE])
 // Enhanced loopback detection in onConnectionStateChange
         override fun onConnectionStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
@@ -1262,15 +1292,15 @@ class PeripheralManager(
             val statusStr = if (status == BluetoothGatt.GATT_SUCCESS) "SUCCESS" else "FAILURE ($status)"
             Log.i(TAG, "onServiceAdded: ${service?.uuid} status: $statusStr")
 
-            if (status == BluetoothGatt.GATT_SUCCESS && service?.uuid == HEART_RATE_SERVICE_UUID) {
-                // Chain the next service addition to prevent IndexOutOfBoundsException in framework
-                handler.post { 
-                    try {
-                        addDeviceInfoService() 
-                    } catch (e: SecurityException) {
-                        Log.e(TAG, "Failed to add DIS: ${e.message}")
-                    }
+            handler.post {
+                // A closed server's late callback must never advance a replacement server.
+                if (serviceRegistration !== registration || !isPeripheralRunning.get() || isShuttingDown.get()) return@post
+                val registered = when (service?.uuid) {
+                    HEART_RATE_SERVICE_UUID -> PeripheralRegistration.Service.HEART_RATE
+                    DEVICE_INFO_SERVICE_UUID -> PeripheralRegistration.Service.DEVICE_INFO
+                    else -> return@post
                 }
+                registration.complete(registered, status == BluetoothGatt.GATT_SUCCESS)
             }
         }
 

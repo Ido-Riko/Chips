@@ -1,5 +1,11 @@
 # Android implementation progress
 
+## BLE relay service registration before advertising — 14 November 2026
+
+Fixed the confirmed startup race in the ported peripheral. Heart Rate registration must succeed before requesting Device Information, whose successful callback releases advertising and pulse mode. The common advertising entry point also checks readiness for config changes, retries and disconnect/pulse restarts. Request rejection, registration failure or a 15-second timeout closes the partial server, invalidates pending callbacks and surfaces a relay error while local capture continues. Stop cancels in-flight advertising startup and makes old server callbacks inert across a replacement. Updated the audited converter diff and port hashes against the original pinned source.
+
+Debug and unsigned-release builds, 37 JVM tests, all 94 API 37 emulator tests and lint passed (zero errors, 55 warnings). Three new JVM tests cover held/out-of-order/duplicate callbacks, request rejection/permission exceptions and asynchronous failure at either stage, timeout and Stop/replacement. A new emulator test exercises the actual peripheral callback routing/common advertising gate and a callback queued before Stop followed by a replacement server. The regenerated patch reproduces all five ported source hashes exactly. Installed the verified APK on the Poco in place, preserving data; no automated phone interaction was used. Actual Quest/Poco service discovery and subscription remain physical-device acceptance.
+
 ## Beat Saber graph responsiveness — 14 November 2026
 
 Checked the explorer for the same UI-thread stalls as Find band. Moved portfolio search/sort, metric projection/bounds, public import assembly, saved snapshot decoding and learned-BPM snapshot copying to background dispatchers. Preparation shows immediate feedback and discards obsolete results. Selection uses precomputed key/index lookups and a list view; zoom/pan reuse the prepared portfolio. Cached screen positions render as one point batch, keeping the selected point on top. Exact nearest-point hit-testing runs in the background and cancels on changed chart inputs or a newer tap; no scores are sampled away.

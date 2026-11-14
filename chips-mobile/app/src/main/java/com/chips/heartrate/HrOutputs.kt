@@ -26,6 +26,8 @@ internal class HrRelay(context: Context, band: String, private val status: (Stri
     private var restartAfter = 0L
     private var pendingStart: Runnable? = null
     private val manager = PeripheralManager(context, object : PeripheralCallback {
+        override fun onPeripheralReady() { if (!closed) status("BLE relay enabled · pair your receiver") }
+        override fun onPeripheralError(message: String) { if (!closed) status("BLE relay failed · $message") }
         override fun onPeripheralDeviceConnected() { if(!closed) status("BLE relay connected") }
         override fun onPeripheralDeviceDisconnected() { if(!closed) status("BLE relay disconnected · advertising for receivers") }
     }, requireBonding = true).apply { bandMacAddress = band }
@@ -34,9 +36,9 @@ internal class HrRelay(context: Context, band: String, private val status: (Stri
         pendingStart?.let { handler.removeCallbacks(it) }
         val remaining = restartAfter - android.os.SystemClock.elapsedRealtime()
         if(remaining > 0) {
-            pendingStart = Runnable { pendingStart = null; if(!closed) { manager.startPeripheral(); status("BLE relay enabled · pair your receiver") } }
+            pendingStart = Runnable { pendingStart = null; if(!closed) { status("BLE relay starting…"); manager.startPeripheral() } }
             handler.postDelayed(pendingStart!!, remaining)
-        } else { manager.startPeripheral(); status("BLE relay enabled · pair your receiver") }
+        } else { status("BLE relay starting…"); manager.startPeripheral() }
     }
     override fun stop() {
         if(closed) return
