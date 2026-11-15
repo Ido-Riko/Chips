@@ -28,6 +28,26 @@ class VoiceControllerTest {
     }
     private fun reply(request: VoiceRequest, answer: String = "answer") = VoiceReply(request.id, "actual spoken words", answer)
 
+    @Test fun textAndVoiceFollowupsShareContextWithoutStartingMicrophoneForText() = runBlocking {
+        val recorder = Recorder()
+        val requests = mutableListOf<VoiceRequest>()
+        val saved = mutableListOf<VoiceConversation>()
+        val controller = VoiceController(recorder, this, VoiceService { request, _ ->
+            requests += request
+            VoiceReply(request.id, request.text ?: "Spoken follow-up", "Reply ${requests.size}")
+        }, { saved += it })
+        controller.sendText("First question")
+        controller.sendText("Tell me more")
+        assertEquals(0, recorder.starts)
+        assertNull(requests.first().file)
+        assertEquals(listOf(ChatMessage("user", "First question"), ChatMessage("assistant", "Reply 1")), requests[1].history)
+        controller.press(); controller.release()
+        assertEquals(4, requests[2].history.size)
+        assertEquals(6, controller.conversation.value.size)
+        assertEquals(3, saved.size)
+        controller.cancel()
+    }
+
     @Test fun failedStartAndShortRecordingNeverUploadAndCanRetry() = runBlocking {
         val recorder = Recorder().apply { failStart = true }
         var uploads = 0
@@ -111,7 +131,7 @@ class VoiceControllerTest {
         val files = mutableListOf<File>()
         val saved = mutableListOf<VoiceConversation>()
         val controller = VoiceController(recorder, this, VoiceService { r, _ ->
-            ids += r.id; files += r.file
+            ids += r.id; files += requireNotNull(r.file)
             if (ids.size == 1) throw VoiceFailure("Lost response")
             reply(r)
         }, { saved += it })

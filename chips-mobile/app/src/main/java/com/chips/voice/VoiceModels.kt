@@ -4,7 +4,9 @@ import java.io.File
 import java.io.IOException
 
 /** This ID remains stable across explicit retries, including a lost response. */
-data class VoiceRequest(val id: String, val file: File, val occurredAt: Long)
+data class VoiceRequest(val id: String, val file: File?, val occurredAt: Long, val text: String? = null, val history: List<ChatMessage> = emptyList())
+data class ChatMessage(val role: String, val content: String)
+
 data class VoiceReply(val requestId: String, val transcript: String, val answer: String)
 data class VoiceConversation(val id: String, val occurredAt: Long, val transcript: String, val answer: String)
 

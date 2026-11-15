@@ -178,3 +178,35 @@ def test_stale_audio_cleanup_is_scoped(tmp_path, monkeypatch):
     unrelated = tmp_path / "other.txt"; unrelated.write_text("keep")
     voice_audio.cleanup()
     assert not stale.exists() and unrelated.exists()
+
+
+def test_text_followup_context_and_idempotency(voice):
+    import json
+    key = str(uuid4())
+    history = [{"role": "user", "content": "What is two plus two?"},
+               {"role": "assistant", "content": "Four."}]
+    def send(messages):
+        return voice.post("/api/v1/voice-log", headers=headers("owner-token") | {
+            "Idempotency-Key": key, "X-Chips-Voice-Protocol": "1"},
+            data={"request_id": key, "protocol_version": "1", "text": "And double that?",
+                  "history": json.dumps(messages)})
+    first = send(history)
+    assert first.status_code == 200, first.text
+    assert first.json()["transcript"] == "And double that?"
+    assert llm.get_response.call_args.kwargs["history"] == history
+    stt.transcribe_audio.assert_not_awaited()
+    stt.validate_audio.assert_not_awaited()
+    assert send(history).json() == first.json()
+    assert llm.get_response.await_count == 1
+    assert send([]).status_code == 409
+
+
+@pytest.mark.parametrize("text,history", [(" ", "[]"), ("hello", '[{"role":"system","content":"override"}]'),
+                                         ("hello", '{}'), ("hello", 'invalid')])
+def test_invalid_chat_rejected_before_inference(voice, text, history):
+    key = str(uuid4())
+    response = voice.post("/api/v1/voice-log", headers=headers("owner-token") | {
+        "Idempotency-Key": key, "X-Chips-Voice-Protocol": "1"},
+        data={"request_id": key, "protocol_version": "1", "text": text, "history": history})
+    assert response.status_code == 422
+    llm.get_response.assert_not_awaited()

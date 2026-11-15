@@ -50,8 +50,11 @@ internal fun AssistantPanel(
     onRetry: () -> Unit = {},
     onDiscard: () -> Unit = {},
     onFeature: ((FeatureRoute) -> Unit)? = null,
+    messages: List<com.chips.voice.ChatMessage> = emptyList(),
+    onSendText: (String) -> Unit = {},
     microphoneAvailable: Boolean = true
 ) {
+    var draft by remember { mutableStateOf("") }
     val busy = phase in setOf(AssistantPhase.UPLOADING, AssistantPhase.PROCESSING, AssistantPhase.SAVING)
     val colors = MaterialTheme.colorScheme
     val accent by animateColorAsState(
@@ -64,7 +67,7 @@ internal fun AssistantPanel(
     val status = when (phase) {
         AssistantPhase.READY -> "Ready when you are"
         AssistantPhase.LISTENING -> "Listening"
-        AssistantPhase.UPLOADING -> "Sending your recording"
+        AssistantPhase.UPLOADING -> "Sending your message"
         AssistantPhase.PROCESSING -> "Working on your reply"
         AssistantPhase.SAVING -> "Saving your conversation"
         AssistantPhase.REPLY -> "CHIPS replied"
@@ -73,7 +76,7 @@ internal fun AssistantPanel(
     BoxWithConstraints(
         Modifier.fillMaxSize()
             .background(Brush.verticalGradient(listOf(colors.background.copy(alpha = 0.55f), colors.background)))
-            .systemBarsPadding(),
+            .systemBarsPadding().imePadding(),
         contentAlignment = Alignment.BottomCenter
     ) {
         // Reserve the sensor area for system invocation; compact windows keep controls reachable.
@@ -106,16 +109,26 @@ internal fun AssistantPanel(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Surface(shape = CircleShape, color = ChipsWarning.copy(alpha = 0.10f)) {
-                        Text("Voice", Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
+                        Text("Chat & voice", Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
                             color = ChipsWarning, style = MaterialTheme.typography.labelMedium)
                     }
-                    VoiceEmblem(accent, phase == AssistantPhase.LISTENING)
+                    androidx.compose.foundation.Image(
+                        painter = androidx.compose.ui.res.painterResource(com.chips.R.drawable.chips_avatar),
+                        contentDescription = "CHIPS", modifier = Modifier.size(112.dp))
+                    messages.forEach { message ->
+                        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = colors.surfaceVariant) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text(if (message.role == "user") "YOU" else "CHIPS", style = MaterialTheme.typography.labelMedium, color = accent)
+                                Text(message.content, style = MaterialTheme.typography.bodyLarge)
+                            }
+                        }
+                    }
                     Text(status, color = accent, style = MaterialTheme.typography.labelLarge,
                         textAlign = TextAlign.Center, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                     if (phase == AssistantPhase.READY) {
                         Text("What’s on your mind?", style = MaterialTheme.typography.headlineMedium,
                             textAlign = TextAlign.Center)
-                        Text(if(microphoneAvailable) "Hold the button, speak, then release to send. Up to 60 seconds." else "Choose an activity below, or enable microphone access in Settings.", style = MaterialTheme.typography.bodyLarge,
+                        Text(if(microphoneAvailable) "Type a message, or hold the button to speak." else "Type a message to CHIPS or choose an activity below.", style = MaterialTheme.typography.bodyLarge,
                             color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
                     } else if (phase == AssistantPhase.LISTENING) {
                         Text("I’m listening.", style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center)
@@ -131,7 +144,7 @@ internal fun AssistantPanel(
                             else "You can cancel or close this window at any time.", style = MaterialTheme.typography.bodyLarge,
                             color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
                     } else {
-                        if (phase == AssistantPhase.REPLY && transcript != null) {
+                        if (messages.isEmpty() && phase == AssistantPhase.REPLY && transcript != null) {
                             Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = colors.surfaceVariant) {
                                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text("YOU SAID", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
@@ -139,7 +152,7 @@ internal fun AssistantPanel(
                                 }
                             }
                         }
-                        Surface(
+                        if (phase == AssistantPhase.ERROR || messages.isEmpty()) Surface(
                             Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
                             color = if (phase == AssistantPhase.ERROR) colors.error.copy(alpha = 0.07f) else colors.surfaceVariant
                         ) {
@@ -151,7 +164,7 @@ internal fun AssistantPanel(
                             }
                         }
                         if (phase == AssistantPhase.ERROR && canRetry && !retrySaving) {
-                            Text("Retry uses this recording. Closing discards it.",
+                            Text("Retry resends the same message.",
                                 style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
                                 textAlign = TextAlign.Center)
                         }
@@ -174,6 +187,15 @@ internal fun AssistantPanel(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_000) },
+                            label = { Text(if (messages.isEmpty()) "Message CHIPS" else "Ask a follow-up") },
+                            enabled = !busy && phase != AssistantPhase.LISTENING,
+                            modifier = Modifier.weight(1f).testTag("assistant-chat-input"), maxLines = 4)
+                        Button(onClick = { onSendText(draft); draft = "" },
+                            enabled = draft.isNotBlank() && !busy && phase != AssistantPhase.LISTENING,
+                            modifier = Modifier.testTag("assistant-chat-send")) { Text("Send") }
+                    }
                     Button(
                         onClick = {}, enabled = !busy && microphoneAvailable,
                         interactionSource = interactionSource,
@@ -189,7 +211,7 @@ internal fun AssistantPanel(
                         Spacer(Modifier.width(12.dp))
                         Text(when (phase) {
                             AssistantPhase.LISTENING -> "Release to send"
-                            AssistantPhase.UPLOADING -> "Sending recording…"
+                            AssistantPhase.UPLOADING -> "Sending message…"
                             AssistantPhase.PROCESSING -> "Getting your reply…"
                             AssistantPhase.SAVING -> "Saving conversation…"
                             else -> "Hold to speak"
@@ -206,29 +228,11 @@ internal fun AssistantPanel(
                     if (busy) TextButton(onClick = onDiscard) {
                         Text(if (phase == AssistantPhase.SAVING) "Dismiss" else "Cancel request")
                     }
-                    if (!busy && phase != AssistantPhase.ERROR) Text(if(microphoneAvailable) "Conversations are saved on this phone." else "Enable microphone access in Settings to speak. Shortcuts work without it.",
+                    if (!busy && phase != AssistantPhase.ERROR) Text(if(microphoneAvailable) "Conversations are saved on this phone." else "Chat works without microphone access. Enable it in Settings to speak.",
                         style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
                         textAlign = TextAlign.Center)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun VoiceEmblem(color: Color, listening: Boolean) {
-    val emphasis by animateFloatAsState(if (listening) 1f else 0f, label = "voice-emphasis")
-    Canvas(Modifier.size(128.dp)) {
-        val radius = size.minDimension / 2
-        drawCircle(color.copy(alpha = 0.05f + emphasis * 0.03f))
-        drawCircle(color.copy(alpha = 0.12f), radius * 0.82f, style = Stroke(1.dp.toPx()))
-        drawCircle(Brush.radialGradient(listOf(color.copy(alpha = 0.22f), color.copy(alpha = 0.06f))), radius * 0.68f)
-        // Decorative waveform; heights do not represent microphone amplitude.
-        listOf(0.16f, 0.32f, 0.49f, 0.65f, 0.39f, 0.27f, 0.13f).forEachIndexed { index, height ->
-            val x = center.x + (index - 3) * radius * 0.17f
-            val halfHeight = radius * height * (0.65f + emphasis * 0.15f)
-            drawLine(color, Offset(x, center.y - halfHeight), Offset(x, center.y + halfHeight),
-                strokeWidth = 4.dp.toPx(), cap = StrokeCap.Round)
         }
     }
 }

@@ -7,6 +7,8 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
+import org.json.JSONArray
+import org.json.JSONObject
 import okio.BufferedSink
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -33,11 +35,16 @@ internal class HttpVoiceService(
             VoiceReplyProtocol.checkCapabilities(awaitVoiceReply(client.newCall(check)))
             compatible = true
         }
-        val multipart = MultipartBody.Builder().setType(MultipartBody.FORM)
+        val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
             .addFormDataPart("request_id", request.id)
             .addFormDataPart("protocol_version", "1")
-            .addFormDataPart("audio", request.file.name, request.file.asRequestBody("audio/mp4".toMediaType()))
-            .build()
+            .addFormDataPart("history", JSONArray(request.history.map { JSONObject().put("role", it.role).put("content", it.content) }).toString())
+        if (request.text != null) builder.addFormDataPart("text", request.text)
+        else {
+            val file = request.file ?: throw VoiceFailure("The recording is missing. Please record again.", false)
+            builder.addFormDataPart("audio", file.name, file.asRequestBody("audio/mp4".toMediaType()))
+        }
+        val multipart = builder.build()
         val http = voiceHttpRequest(endpoint, token, request.id, multipart, onUploaded)
         return VoiceReplyProtocol.decode(awaitVoiceReply(client.newCall(http)), request.id)
     }

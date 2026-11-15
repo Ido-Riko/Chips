@@ -69,6 +69,7 @@ internal fun AssistantVoiceContent(
     microphoneAvailable: Boolean = true
 ) {
     val state by controller.state.collectAsStateWithLifecycle()
+    val messages by controller.conversation.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner, controller) {
         val observer = LifecycleEventObserver { _, event ->
@@ -108,8 +109,9 @@ internal fun AssistantVoiceContent(
         controller.cancel()
         onDismiss()
     }, reserveFingerprintSpace, state.transcript, state.canRetry, state.retrySaving,
-        onRetry = { if (canUseVoice()) controller.retry() else controller.cancel() },
-        onDiscard = controller::cancel, onFeature = onFeature, microphoneAvailable = microphoneAvailable)
+        onRetry = { if (accessAllowed) controller.retry() else controller.cancel() },
+        onDiscard = controller::cancel, onFeature = onFeature, microphoneAvailable = microphoneAvailable, messages = messages,
+        onSendText = { if (accessAllowed) controller.sendText(it) })
 }
 
 @Composable

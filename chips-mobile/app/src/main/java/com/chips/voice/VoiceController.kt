@@ -38,6 +38,16 @@ class VoiceController(
     private var pending: VoiceRequest? = null
     private var received: VoiceReply? = null
 
+    private val messages = mutableListOf<ChatMessage>()
+    val conversation = MutableStateFlow<List<ChatMessage>>(emptyList())
+
+    fun sendText(text: String) {
+        if (text.isBlank() || state.value.phase in busyPhases || state.value.phase == VoicePhase.RECORDING) return
+        discardPending()
+        pending = VoiceRequest(UUID.randomUUID().toString(), null, System.currentTimeMillis(), text.trim(), messages.takeLast(20))
+        submit()
+    }
+
     init {
         recorder.onFailure { message ->
             cancel()
@@ -72,7 +82,7 @@ class VoiceController(
             error(captured.exceptionOrNull()?.message ?: "Could not record audio. Hold the button a little longer and try again.")
             return
         }
-        pending = VoiceRequest(UUID.randomUUID().toString(), file, System.currentTimeMillis())
+        pending = VoiceRequest(UUID.randomUUID().toString(), file, System.currentTimeMillis(), history = messages.takeLast(20))
         submit()
     }
 
@@ -99,7 +109,7 @@ class VoiceController(
                     throw VoiceFailure("The voice service returned an invalid reply. Update the service before trying again.", false)
                 }
                 received = reply
-                capture.file.delete()
+                if (capture.text == null) capture.file?.delete()
                 mutableState.value = VoiceState(VoicePhase.SAVING)
                 // A completed transaction is retained even if the window is dismissed during the save.
                 // A stable primary key makes retrying a lost local acknowledgement idempotent.
@@ -107,6 +117,9 @@ class VoiceController(
                     save(VoiceConversation(capture.id, capture.occurredAt, reply.transcript, reply.answer))
                 }
                 if (generation == session) {
+                    messages.add(ChatMessage("user", reply.transcript))
+                    messages.add(ChatMessage("assistant", reply.answer))
+                    conversation.value = messages.toList()
                     mutableState.value = VoiceState(VoicePhase.REPLY, reply.answer, reply.transcript)
                     discardPending()
                 }
@@ -122,7 +135,7 @@ class VoiceController(
                         retryable, saving)
                 }
             } finally {
-                if (generation != session) capture.file.delete()
+                if (generation != session && capture.text == null) capture.file?.delete()
             }
         }
     }
@@ -141,7 +154,7 @@ class VoiceController(
     }
 
     private fun discardPending() {
-        pending?.file?.delete()
+        pending?.let { if (it.text == null) it.file?.delete() }
         pending = null
         received = null
     }
