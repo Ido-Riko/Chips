@@ -1,8 +1,10 @@
 # CHIPS (Conversational Humanlike Intelligence for Programming Simplification)
 
+**15 November server update:** the owner's real drawing reached the PC with completed AI feedback, and real-phone voice requests returned answers. An intermittent answer-service error remains undiagnosed after a subsequent successful request. See [startup instructions and current server status](docs/PC_SERVER.md#everyday-startup).
+
 **CHIPS** is a personal Android dashboard and Digital Assistant in development. The app opens to Today, with History and Settings navigation. Assistant enrollment is optional for browsing; voice can also be opened in the app. Assistant voice and feature access are enabled on the lockscreen by default, with an owner-controlled Settings switch to require unlocking. Physical Poco lockscreen acceptance remains open.
 
-Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity logging, History and streaks now use local SQLite, with an authenticated background sync path. The M3 Android voice client is implemented and locally verified, including saved conversations. Full M3 remains open for a compatible service, real inference and physical Poco acceptance; Japanese study and the drawing sketchbook are implemented locally; drawing server deployment/real AI analysis and the remaining M4 integrations are still open.
+Start with the [Android build and test guide](chips-mobile/README.md), [implementation roadmap](ANDROID_ROADMAP.md), and [current progress](docs/ANDROID_PROGRESS.md). Dashboard previews are fictional and opt-in. Activity logging, History and streaks now use local SQLite, with an authenticated background sync path. The M3 Android voice client is implemented and locally verified, including saved conversations. The PC server now implements compatible voice and real local inference; full M3 remains open for owner/Poco acceptance; Japanese study and the drawing sketchbook are implemented locally; drawing/receipt inference is deployed on the PC; personal-data and hardware acceptance remain open. See [PC server setup and readiness](docs/PC_SERVER.md).
 
 ## Repository Structure
 
@@ -12,7 +14,7 @@ The first [Beat Saber integration](docs/BEAT_SABER.md) reads public BeatLeader/B
 
 [Japanese and drawing](docs/JAPANESE_DRAWING.md) add offline kanji reviews and a local sketchbook with queued server analysis. Drawing images are retained in PostgreSQL; real feedback requires the updated server and an explicitly configured vision model.
 
-[Pantry](docs/PANTRY.md) adds offline groceries, barcode lookup, editable receipt drafts, stock adjustments and server-backed inventory. Meal recommendations belong to the main AI; the backend supplies owner-scoped inventory context. Production deployment and real receipt inference remain pending.
+[Pantry](docs/PANTRY.md) adds offline groceries, barcode lookup, editable receipt drafts, stock adjustments and server-backed inventory. Meal recommendations belong to the main AI; the backend supplies owner-scoped inventory context. PC deployment and synthetic real receipt inference are verified; owner receipt quality and phone acceptance remain pending.
 
 The single Activities card, streak rings and digital assistant open the implemented activity features. The duplicate pinned Quick Log bar has been removed. Japanese reviews/drawing imports update real completions; Workout and Beat Saber retain explicit manual logging.
 
@@ -21,7 +23,7 @@ The single Activities card, streak rings and digital assistant open the implemen
 This is a mono-repo containing both the mobile client and the Python backend services.
 
 - **`chips-mobile/`**: The Android project built with Kotlin and Jetpack Compose. Contains the `VoiceInteractionService` to register as the default device assistant.
-- **`chips-backend/`**: A Python FastAPI service with PostgreSQL storage, stubbed transcription, configurable answer providers, and a plain-text voice response. The repository includes an OpenRC service definition and a deployment script.
+- **`chips-backend/`**: A Python FastAPI service with PostgreSQL storage, local Whisper or an explicitly selected transcription API, independently configured answer providers, and versioned JSON voice responses with durable deduplication. The repository includes PC systemd/Podman provisioning and legacy OpenRC deployment support.
 
 ## Setup & Architecture
 
@@ -40,16 +42,20 @@ This is a mono-repo containing both the mobile client and the Python backend ser
 - **Language**: Python 3.12 (validated)
 - **Framework**: FastAPI (Served via Uvicorn)
 - **Database**: PostgreSQL via SQLAlchemy
-- **LLM Integration**: Anthropic, OpenAI, or Gemini, selected from backend configuration
-- **Deployment**: OpenRC service definition; no Docker Compose setup is checked in
+- **LLM Integration**: Explicit local or API chat-completions endpoint/model; PC deployment uses Ollama qwen3.5:9b
+- **Deployment**: Bazzite PC user services, rootless PostgreSQL and private Tailscale HTTPS; legacy OpenRC templates retained
 
 ## Getting Started
 
 1. **Mobile App**: Follow [chips-mobile/README.md](chips-mobile/README.md). The dashboard works without a backend or device-assistant enrollment.
-2. **Existing backend**: Install `chips-backend/requirements.txt` in a virtual environment, follow [deployment preparation](chips-backend/DEPLOYMENT.md) and [service setup](docs/ACTIVITY_SYNC.md) to apply the additive migration, enroll a revocable device, and run the service behind HTTPS. Activity synchronization is supported. Its current demo/plain-text voice implementation is incompatible with the M3 Android client; the deferred service update must implement the [voice contract](docs/VOICE_CONTRACT.md).
+2. **Existing backend**: Install `chips-backend/requirements.txt` in a virtual environment, follow [deployment preparation](chips-backend/DEPLOYMENT.md) and [service setup](docs/ACTIVITY_SYNC.md) to apply the additive migration, enroll a revocable device, and run the service behind HTTPS. Activity synchronization is supported. The PC deployment implements the [voice contract](docs/VOICE_CONTRACT.md); see [connection, operations and readiness](docs/PC_SERVER.md).
 
 ---
 
-M1 is complete. M2 code is merged; real-midnight/timezone acceptance remains open. M3 Android implementation and local acceptance are complete; the compatible server, real STT/LLM quality and physical Poco acceptance remain open. The M3 plan requires independently configurable PC-hosted STT and LLM inference with explicitly selected API alternatives; those service adapters are deferred, not implemented by the client. See the [canonical milestone plan](ANDROID_ROADMAP.md) and [Android acceptance evidence](docs/evidence/m3-android-client-acceptance.json).
+M1 is complete. M2 code is merged; real-midnight/timezone acceptance remains open. M3 Android implementation and local acceptance are complete; the compatible PC server and synthetic real-inference checks are complete; owner STT/LLM quality and physical Poco acceptance remain open. The M3 plan requires independently configurable PC-hosted STT and LLM inference with explicitly selected API alternatives; those adapters are implemented on the server, with no implicit cloud fallback. See the [canonical milestone plan](ANDROID_ROADMAP.md) and [Android acceptance evidence](docs/evidence/m3-android-client-acceptance.json).
 
 Wake-word detection remains outside the first release. Backend personal-data routes require an enrolled device credential.
+
+## Start the PC server
+
+Run `./chips-backend/deploy/start-pc.sh` from this repository. It starts/connects Tailscale, starts Ollama and the Chips database/API, and checks private HTTPS. Run as your desktop user, without sudo; the script requests administrative access only if Tailscale needs it. See [the server guide](docs/PC_SERVER.md#everyday-startup).

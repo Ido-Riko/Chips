@@ -39,7 +39,8 @@ async def analyze(image: bytes, goal: str, system_prompt: str | None = None) -> 
                 {"type": "text", "text": "Practice goal: " + (goal or "General drawing practice")},
                 {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(image).decode()}}
             ]}
-        ], "max_tokens": 700, "stream": False
+        ], "max_tokens": 1200, "stream": False,
+        **({"reasoning_effort": settings.drawing_reasoning_effort} if settings.drawing_reasoning_effort else {})
     }
     try:
         async with httpx.AsyncClient(timeout=90, follow_redirects=False) as client:

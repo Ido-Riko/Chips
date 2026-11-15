@@ -1,5 +1,7 @@
 # M4 integration planning
 
+**Server checkpoint, 14 November 2026:** the owner’s PC now hosts a fresh authenticated PostgreSQL service, compatible M3 voice with real local STT/LLM, and M4 drawing/receipt inference and storage. See [PC readiness and remaining physical acceptance](PC_SERVER.md). Earlier deferred-server statements below describe their dated checkpoints, not the current deployment. M1 remains closed; M2–M4 physical/owner acceptance is still open.
+
 Updated 13 November 2026. This is the saved M4 integration plan: owner-confirmed inputs and authorizations are identified below; technical implementation choices remain proposals until validated. It does not claim M4 implementation or acceptance. The milestone scope remains in [the roadmap](../ANDROID_ROADMAP.md).
 
 ## Agreed scope and delivery

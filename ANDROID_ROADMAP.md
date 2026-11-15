@@ -1,5 +1,9 @@
 # CHIPS Android: demo to daily-use app
 
+**15 November server update:** the owner's real drawing reached the PC with completed AI feedback, and real-phone voice requests returned answers. An intermittent answer-service error remains undiagnosed after a subsequent successful request. See [startup instructions and current server status](docs/PC_SERVER.md#everyday-startup).
+
+**Server checkpoint, 14 November 2026:** the owner’s PC now hosts a fresh authenticated PostgreSQL service, compatible M3 voice with real local STT/LLM, and M4 drawing/receipt inference and storage. See [PC readiness and remaining physical acceptance](docs/PC_SERVER.md). Earlier deferred-server statements below describe their dated checkpoints, not the current deployment. M1 remains closed; M2–M4 physical/owner acceptance is still open.
+
 Prepared 19 October 2026. Updated 12 November 2026. M1 is complete. M2 was merged on 21 October; server/Poco sync and recovery are accepted, with real-midnight/timezone acceptance still open. M3 Android client implementation and local acceptance are complete against the version-1 service contract; server inference and physical-phone acceptance remain deferred/open.
 
 ## Outcome and scope

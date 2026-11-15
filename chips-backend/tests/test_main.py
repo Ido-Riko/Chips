@@ -27,24 +27,13 @@ def test_health_check():
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
-@patch("app.routers.voice.stt_service.transcribe_audio", new_callable=AsyncMock)
-@patch("app.routers.voice.llm_service.get_response", new_callable=AsyncMock)
-def test_process_voice_log(mock_claude, mock_stt):
-    # Setup mocks
-    mock_stt.return_value = "This is a test transcription"
-    mock_claude.return_value = "This is Claude's response"
+def test_legacy_voice_requires_versioned_identity():
+    response = client.post("/api/v1/voice-log", files={"audio": ("test.m4a", b"audio", "audio/mp4")})
+    assert response.status_code == 422
 
-    # Create dummy audio file content
-    files = {"audio": ("test.m4a", b"dummy audio content", "audio/mp4")}
 
-    response = client.post("/api/v1/voice-log", files=files)
-    
-    # Check outcomes
-    assert response.status_code == 200
-    assert response.text == "This is Claude's response"
-    
-    mock_stt.assert_called_once()
-    mock_claude.assert_called_once()
+def test_voice_capabilities():
+    assert client.get("/api/v1/voice-capabilities").json() == {"protocol_version": 1, "idempotency": True}
 
 
 def test_voice_rejects_missing_device_credentials():

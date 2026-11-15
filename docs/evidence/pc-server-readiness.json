@@ -1,0 +1,187 @@
+{
+  "date": "2026-11-14",
+  "baseline_commit": "57109cfefb70cd93d7ef3152e94dec7dc54aebe0",
+  "working_tree_changes": true,
+  "fresh_database_explicitly_authorized": true,
+  "old_server_modified": false,
+  "android_device_operations": false,
+  "deployment": {
+    "os": "Bazzite 45",
+    "database": "PostgreSQL 17 / rootless Podman",
+    "migration_versions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "api_workers": 1,
+    "tls": "Tailscale Serve / tailnet only / trusted HTTPS / 8443",
+    "raw_ports_loopback_only": [
+      8000,
+      55432,
+      11434
+    ],
+    "linger_enabled": true,
+    "services_enabled": [
+      "chips-api",
+      "chips-db (Quadlet default.target)",
+      "ollama",
+      "chips-backup.timer"
+    ],
+    "actual_reboot_test": false,
+    "local_stt": "Whisper small / CPU int8",
+    "local_llm_and_vision": "qwen3.5:9b / Ollama / RTX 5080",
+    "cloud_inference_used": false,
+    "llm_reasoning_effort": "low",
+    "llm_max_tokens": 2400
+  },
+  "validation": {
+    "backend_suite": {
+      "passed": 62,
+      "skipped": 4,
+      "skip_reason": "PowerShell unavailable; existing deployment-script tests"
+    },
+    "deployment_packaging": {
+      "passed": 5,
+      "skipped": 4,
+      "archive_contains_no_credentials": true
+    },
+    "postgresql_tests": "isolated disposable schema; concurrent voice/activity/pantry/HR operations and repeat migrations",
+    "https_unauthenticated_device_status": 401,
+    "http_personal_data_status": 403,
+    "backup_restore": "isolated database restored successfully, migration version 6 verified, temporary database removed",
+    "test_enrollment_revoked": true,
+    "phone_owner_has_no_synthetic_records": true,
+    "live_checks": {
+      "capabilities": true,
+      "voice": {
+        "seconds": 4.14,
+        "response": {
+          "protocol_version": 1,
+          "request_id": "bfed7c48-4ac3-4655-861c-b57079eae610",
+          "is_demo": false,
+          "transcript": "What is 2 plus 2? Please answer briefly.",
+          "answer": "2 plus 2 equals 4."
+        }
+      },
+      "replay_after_restart": true,
+      "drawing_feedback": "Based on the image provided, here is an assessment of your line drawing work.\n\n**Visible Evidence & Accuracy:**\nThe rectangular frame shows some wobble in its vertical walls and a noticeable dip at the top-left corner. The diagonal line is strong and consistent but deviates from the true midline; it slopes downward to the left by about 10°. These visible shifts indicate your hand pressure or wrist alignment needs attention for this straight-line practice.\n\n**Strengths:**\n*   **Confident Line Weight:** You maintain a solid, uninterrupted stroke without hesitation.\n*   **Closure Control:** The four corners of the rectangle are fully closed, showing reliable endpoint control.\n\n**Areas for Improvement:**\n1.  **Reduce Vertical Wobble:** Your vertical sides are not perfectly parallel—particularly on the right side where it leans inward toward the bottom. Try to keep your forearm perpendicular to the paper edge, using only shoulder movement for long vertical lines.\n2.  **Correct Diagonal Pitch:** The diagonal should bisect the rectangle symmetrically; currently, it’s steeper at the bottom-left. Align this by sighting down from the top-right corner and drawing with minimal wrist rotation.\n\n**Concrete 10-Minute Drill:**  \nDraw three identical rectangles in a row. For each one:\n*   Left side: Use shoulder-led motion to keep the right wall straight.\n*   Middle side: Slowly guide your arm along a faintly imagined midline for the diagonal.\n*   Right side: Stop after 20 seconds and compare how much less wobble you’ve built in the final corner.",
+      "drawing_delete": true,
+      "receipt_draft": {
+        "draft": "Milk | 2 | item  \nRice | 1 | item"
+      },
+      "receipt_did_not_change_stock": true
+    },
+    "unavailable_llm_recovery": {
+      "unavailable_local_llm": true,
+      "old_key_not_reexecuted": true,
+      "new_recording_recovers": true
+    },
+    "synthetic_utterances": {
+      "synthetic_not_owner_acceptance": true,
+      "results": [
+        {
+          "spoken_text": "What is two plus two? Please answer briefly.",
+          "transcript": "What is 2 plus 2? Please answer briefly.",
+          "answer": "2 plus 2 equals 4.",
+          "seconds": 2.86
+        },
+        {
+          "spoken_text": "How do I say good morning in Japanese?",
+          "transcript": "How do I say good morning in Japanese?",
+          "answer": "Good morning in Japanese is \"おはようございます\" (O-ha-you go-zai-mas-u) for polite situations or \"おはよう\" (o-ha-you) for casual settings. Note: My pantry data is empty [], so I cannot provide any meal suggestions related to your request.",
+          "seconds": 1.86
+        },
+        {
+          "spoken_text": "Give me one simple exercise to practice drawing straight lines.",
+          "transcript": "Give me one simple exercise to practice drawing straight lines.",
+          "answer": "Try the \"Clock Hands\" drill: Hold your pencil loosely in your fingers (not tight) and draw a smooth circle like the hands of a clock moving continuously from 12 to 1, then 2, completing the loop without lifting the pen. This forces wrist rotation rather than finger jitter, helping establish straightness.\n\n**Note:** My pantry data is currently empty ([ ]), so I cannot check for ingredients or suggest food-related exercises. Please refer to your physical notes or sync your devices for inventory updates.",
+          "seconds": 2.25
+        },
+        {
+          "spoken_text": "What ingredients would I need to make vegetable soup?",
+          "transcript": "What ingredients would I need to make vegetable soup?",
+          "answer": "I don't have any pantry data available because your reference list was empty (`[]`). Therefore, I cannot tell you exactly what you have on hand to use for soup.\n\nTo make a basic vegetable soup, you generally need:\n*   **Liquid:** Vegetable broth, water, or stock.\n*   **Base:** Onions, carrots, celery (the \"mirepoix\"), and garlic.\n*   **Vegetables:** Any leftovers like potatoes, tomatoes, greens (spinach/kale), corn, or beans.\n*   **Pantry staples:** Oil for sautéing, salt, pepper, and herbs (like thyme or bay leaves).\n\nCould you let me know what specific items you actually have available? I can only check my inventory if there is valid data to reference; otherwise, the freshness of any ingredients is unknown.",
+          "seconds": 2.81
+        },
+        {
+          "spoken_text": "Explain the difference between a count and a package size.",
+          "transcript": "Explain the difference between account and the package size.",
+          "answer": "I cannot find an \"account\" or \"package size\" mentioned in my pantry data; the list is currently empty. Please note that \"package size\" usually refers to how much of an ingredient you have (e.g., 1 lb vs. 500g), so it can never be exactly equal to the amount needed for a recipe without leftovers or shortfalls. Check your physical records for details on those items, as I only work with data you supply in the pantry list.",
+          "seconds": 2.2
+        },
+        {
+          "spoken_text": "Can you see my sleep records? Tell me if you cannot.",
+          "transcript": "Can you see my sleep records? Tell me if you cannot.",
+          "answer": "No, I cannot see your sleep records. My available context is limited strictly to pantry data, which is currently empty for you. I only have access to the food and stock information you provide directly in this chat, along with that specific reference list.",
+          "seconds": 1.85
+        },
+        {
+          "spoken_text": "How many minutes are in two hours?",
+          "transcript": "How many minutes are in two hours?",
+          "answer": "There are 120 minutes in two hours.",
+          "seconds": 1.43
+        },
+        {
+          "spoken_text": "What is the Japanese word for water?",
+          "transcript": "What is the Japanese word for water?",
+          "answer": "The Japanese word for water is \"mizu\" (水).",
+          "seconds": 1.43
+        },
+        {
+          "spoken_text": "Give me a short encouraging sentence for learning a new skill.",
+          "transcript": "Give me a short encouraging sentence for learning a new skill.",
+          "answer": "Start small today, and let each step be part of your progress; remember that mastering anything takes time and patience.",
+          "seconds": 1.55
+        },
+        {
+          "spoken_text": "What can I cook with rice and milk?",
+          "transcript": "What can I cook with rice and milk?",
+          "answer": "Based on your current pantry data, there is no inventory recorded. Consequently, **I cannot verify if you have rice or milk**, though you mentioned having them in your request. Please confirm these items are available before proceeding, as I cannot assume their presence or check quantities without updated stock information.\n\nIf we assume you *do* have both ingredients but lack others:\n*   **Rice Pudding**: A classic sweet dish requiring sugar, vanilla extract, spices (cinnamon/nutmeg), and optional fruits or nuts.\n*   **Rice Porridge (Congee)**: Usually requires water or broth instead of milk, unless making a creamy variation with added dairy.\n*   **Risotto** (Dairy-style): Often uses butter/milk for finishing, but primarily relies on the rice absorbing stock/water.\n\n**Missing Information**: I don't know if your specific stocks of **rice** and **milk** include necessary companions like sugar, butter, or salt. Please provide a list of what else you have so I can suggest the right dish without changing any records.",
+          "seconds": 3.13
+        }
+      ],
+      "configuration": "Initial no-reasoning setting; final voice setting changed to low reasoning after quality review"
+    },
+    "low_reasoning_language_recheck": {
+      "seconds": 7.94,
+      "answer": "You can say おはよう (ohayō) casually. In formal situations, use おはようございます (ohayo gozaimasu).",
+      "quality_gate_closed": false
+    },
+    "live_checks_configuration": "Final: low reasoning / 2400-token voice budget; no reasoning for vision",
+    "final_suite_seconds": 3.3
+  },
+  "quality_findings": [
+    "Ten synthetic utterances returned real non-demo transcripts/answers; this is transport/runtime evidence, not owner acceptance.",
+    "One transcription confused a count with account.",
+    "Some initial general answers included irrelevant pantry context; prompt tightened afterward.",
+    "Local model can produce incorrect language explanations and unsupported drawing observations; owner-quality acceptance remains open."
+  ],
+  "remaining": [
+    "M2: full new-host activity sync/recovery and real midnight/timezone",
+    "M3: ten owner utterances, physical lockscreen/interruption, live optional API provider acceptance",
+    "M4: actual drawings/receipts and phone/band/Gadgetbridge/Health Connect/Quest end-to-end acceptance",
+    "Actual reboot acceptance and off-disk disaster-recovery backup",
+    "Investigate intermittent answer-service failure if it recurs; later success is not proof of a fix"
+  ],
+  "application_source_sha256": "2a094d568ecd0e4edfe5c4e53ad01c45ddecc436bfb24be159e59cc2fe9a23cc",
+  "owner_followup_2026_11_15": {
+    "drawing_received_and_feedback_saved": "verified by owner-scoped database metadata on 2026-11-14",
+    "voice_answer_received": "owner reported",
+    "intermittent_answer_service_error": "owner reported; unresolved",
+    "subsequent_new_voice_request_succeeded": "owner reported on 2026-11-15",
+    "possible_cause": "Nearby model generation exhausted 2400 tokens with HTTP 200; exact failed response not captured, causality unconfirmed",
+    "configuration_changed_for_incident": false,
+    "full_phone_acceptance_complete": false
+  },
+  "startup_script_2026_11_15": {
+    "path": "chips-backend/deploy/start-pc.sh",
+    "actual_pc_execution": "passed",
+    "backend_suite_passed": 65,
+    "backend_suite_skipped": 4,
+    "merged_baseline": "2330ac54c55c881daef13c532fbdc4fd880f0320",
+    "default_branch": "master"
+  }
+}

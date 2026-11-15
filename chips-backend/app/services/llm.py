@@ -1,51 +1,31 @@
-import anthropic
+"""Explicit compatible endpoint/model selection; never implicit API-key fallback."""
+import json
 import httpx
+from fastapi import HTTPException
 from app.config import settings
 
-anthropic_client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key) if settings.anthropic_api_key else None
 
 async def get_response(user_message: str, system_prompt: str) -> str:
-    # 1. Anthropic (Primary Choice if available)
-    if settings.anthropic_api_key and anthropic_client:
-        message = await anthropic_client.messages.create(
-            model="claude-4-5-haiku-latest",
-            max_tokens=256,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}]
-        )
-        return message.content[0].text
-        
-    # 2. OpenAI
-    elif settings.openai_api_key:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {settings.openai_api_key}"},
-                json={
-                    "model": "gpt-5.4-nano",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_message}
-                    ],
-                    "max_tokens": 256
-                }
-            )
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
-            
-    # 3. Gemini
-    elif settings.gemini_api_key:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={settings.gemini_api_key}",
-                json={
-                    "system_instruction": {"parts": [{"text": system_prompt}]},
-                    "contents": [{"parts": [{"text": user_message}]}],
-                    "generationConfig": {"maxOutputTokens": 256}
-                }
-            )
-            resp.raise_for_status()
-            return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-            
-    else:
-        raise ValueError("No API Key configured for any LLM provider (Anthropic, OpenAI, or Gemini)")
+    if not settings.llm_url or not settings.llm_model:
+        raise HTTPException(503, detail={"code": "llm_unavailable"})
+    headers = {"Authorization": f"Bearer {settings.llm_api_key}"} if settings.llm_api_key else {}
+    try:
+        async with httpx.AsyncClient(timeout=70, follow_redirects=False) as client:
+            async with client.stream("POST", settings.llm_url, headers=headers, json={
+                "model": settings.llm_model, "stream": False, "max_tokens": settings.llm_max_tokens,
+                **({"reasoning_effort": settings.llm_reasoning_effort} if settings.llm_reasoning_effort else {}),
+                "messages": [{"role": "system", "content": system_prompt},
+                             {"role": "user", "content": user_message}],
+            }) as response:
+                response.raise_for_status()
+                body = bytearray()
+                async for chunk in response.aiter_bytes():
+                    body.extend(chunk)
+                    if len(body) > 256 * 1024:
+                        raise ValueError()
+        result = json.loads(body)["choices"][0]["message"]["content"]
+        if not isinstance(result, str) or not result.strip() or len(result) > 64000 or len(result.encode("utf-8")) > 200 * 1024:
+            raise ValueError()
+        return result.strip()
+    except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError):
+        raise HTTPException(503, detail={"code": "llm_unavailable"})

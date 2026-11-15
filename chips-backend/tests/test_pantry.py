@@ -75,9 +75,12 @@ def test_main_assistant_receives_only_owners_inventory(pantry_api, monkeypatch):
     async def transcribe(_): return "What can I eat?"
     async def respond(message, prompt):
         assert "Milk" in prompt and "Private other owner" not in prompt
-        assert "Never change stock automatically" in prompt
+        assert "Never change stock" in prompt
         return "Use your milk."
     monkeypatch.setattr(stt, "transcribe_audio", transcribe)
     monkeypatch.setattr(llm, "get_response", respond)
-    response = c.post("/api/v1/voice-log", headers=headers(), files={"audio": ("audio.aac", b"test audio")})
+    from unittest.mock import AsyncMock
+    from test_voice import submit
+    monkeypatch.setattr(stt, "validate_audio", AsyncMock())
+    response = submit(c, str(uuid4()))
     assert response.status_code == 200, response.text

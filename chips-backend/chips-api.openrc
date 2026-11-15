@@ -6,7 +6,7 @@ description="CHIPS authenticated API (loopback upstream for HTTPS proxy)"
 directory="${chips_directory:-/home/idori/chips-backend}"
 command_user="${chips_user:-idori}"
 command="${directory}/.venv/bin/uvicorn"
-command_args="app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --forwarded-allow-ips 127.0.0.1"
+command_args="app.main:app --host 127.0.0.1 --port 8000 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1"
 pidfile="/run/chips-api.pid"
 command_background=true
 output_log="/var/log/chips-api/stdout.log"
@@ -23,7 +23,7 @@ start_pre() {
         eerror "Install backend dependencies in ${directory}/.venv before starting chips-api."
         return 1
     fi
-    if [ ! -r "${directory}/migrations/001_activity_sync.sql" ] || [ ! -r "${directory}/migrations/002_beat_saber.sql" ] || [ ! -r "${directory}/migrations/003_drawings.sql" ] || [ ! -r "${directory}/migrations/004_pantry.sql" ] || [ ! -r "${directory}/migrations/005_heart_rate.sql" ]; then
+    if [ ! -r "${directory}/migrations/001_activity_sync.sql" ] || [ ! -r "${directory}/migrations/002_beat_saber.sql" ] || [ ! -r "${directory}/migrations/003_drawings.sql" ] || [ ! -r "${directory}/migrations/004_pantry.sql" ] || [ ! -r "${directory}/migrations/005_heart_rate.sql" ] || [ ! -r "${directory}/migrations/006_voice_requests.sql" ]; then
         eerror "Backend migration files are missing. Extract the complete release archive."
         return 1
     fi

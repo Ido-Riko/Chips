@@ -1,5 +1,7 @@
 # CHIPS Android
 
+**Server checkpoint, 14 November 2026:** the owner’s PC now hosts a fresh authenticated PostgreSQL service, compatible M3 voice with real local STT/LLM, and M4 drawing/receipt inference and storage. See [PC readiness and remaining physical acceptance](../docs/PC_SERVER.md). Earlier deferred-server statements below describe their dated checkpoints, not the current deployment. M1 remains closed; M2–M4 physical/owner acceptance is still open.
+
 The app opens to Today, with History and Settings available from the bottom navigation. Assistant enrollment and microphone access are optional for browsing. Settings can enable fictional dashboard previews; preview taps never persist or contact the backend.
 
 ## Build

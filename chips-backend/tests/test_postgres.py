@@ -20,7 +20,7 @@ from app.routers.heart_rate import router as hr_router
 
 
 @pytest.mark.skipif(not os.environ.get("TEST_POSTGRES_URL"), reason="Disposable PostgreSQL not configured")
-def test_migration_and_concurrent_sync():
+def test_migration_and_concurrent_sync(monkeypatch):
     schema = "chips_test_" + uuid4().hex
     url = os.environ["TEST_POSTGRES_URL"]
     admin = create_async_engine(url, poolclass=NullPool)
@@ -34,7 +34,7 @@ def test_migration_and_concurrent_sync():
             await conn.execute(text(f'CREATE SCHEMA "{schema}"'))
         # Demonstrate upgrade of an existing voice table and preservation of its rows.
         async with engine.begin() as conn:
-            await conn.execute(text("CREATE TABLE voice_logs (id SERIAL PRIMARY KEY, transcription TEXT)"))
+            await conn.execute(text("CREATE TABLE voice_logs (id SERIAL PRIMARY KEY, transcription TEXT, response TEXT, confidence DOUBLE PRECISION, received_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP)"))
             await conn.execute(text("INSERT INTO voice_logs(transcription) VALUES ('preserved')"))
             for _ in range(2):
                 for sql in migration.split(';'):
@@ -54,6 +54,8 @@ def test_migration_and_concurrent_sync():
     app.include_router(drawing_router)
     app.include_router(pantry_router)
     app.include_router(hr_router)
+    from app.routers.voice import router as voice_router
+    app.include_router(voice_router)
     async def database():
         async with sessions() as db: yield db
     app.dependency_overrides[get_db] = database
@@ -70,6 +72,23 @@ def test_migration_and_concurrent_sync():
             assert len(records) == 1 and records[0]["revision"] == 5
             assert client.delete(path, headers=auth).json()["deleted"]
             assert client.put(path, json=body | dict(revision=99), headers=auth).json()["deleted"]
+        from unittest.mock import AsyncMock
+        from app.services import stt, llm
+        from test_voice import submit
+        monkeypatch.setattr(stt, "validate_audio", AsyncMock())
+        monkeypatch.setattr(stt, "transcribe_audio", AsyncMock(return_value="Real protocol test"))
+        monkeypatch.setattr(llm, "get_response", AsyncMock(return_value="Stored answer"))
+        voice_id = str(uuid4())
+        with TestClient(app, base_url="https://testserver") as voice_client:
+            with ThreadPoolExecutor(max_workers=4) as pool:
+                results = list(pool.map(lambda _: submit(voice_client, voice_id, token="postgres-token"), range(4)))
+            assert {r.status_code for r in results} <= {200, 429}
+            assert submit(voice_client, voice_id, token="postgres-token").status_code == 200
+        # A new client/session still reads the persisted result without invoking providers.
+        with TestClient(app, base_url="https://testserver") as voice_client:
+            assert submit(voice_client, voice_id, token="postgres-token").json()["answer"] == "Stored answer"
+            assert submit(voice_client, voice_id, b"changed", token="postgres-token").status_code == 409
+        assert stt.transcribe_audio.await_count == llm.get_response.await_count == 1
         # The same additive migration must store/retrieve actual JPEG BYTEA, not just metadata.
         from test_drawings import jpeg
         drawing_id = str(uuid4())

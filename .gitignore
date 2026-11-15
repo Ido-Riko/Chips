@@ -26,3 +26,6 @@ chips-backend/dist/
 # Local credentials and private notes
 /secret.md
 /chips-mobile/.idea
+
+# Private server state, enrollment, models and backups
+/chips-backend/.runtime/

@@ -1,5 +1,7 @@
 # Personal backend deployment
 
+**Current PC deployment (14 November 2026):** use [PC server setup, enrollment, operations and M1–M4 readiness](../docs/PC_SERVER.md). This PC runs systemd user services with rootless PostgreSQL and Tailscale HTTPS. The OpenRC instructions below remain for the former host. Apply all migrations through **006_voice_requests.sql**; run exactly one API worker. Local STT additionally requires `requirements-local-stt.txt`, FFmpeg/ffprobe and a downloaded model.
+
 These files prepare the existing FastAPI/PostgreSQL/OpenRC service for M2. Packaging is offline by default. Uploading an archive does not install it, modify the database, restart services or enroll a device. The actual host, installed version, database state and HTTPS access still need inspection when the server is available.
 
 ## 1. Prepare the archive without a server

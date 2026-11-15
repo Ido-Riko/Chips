@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture
 def source(tmp_path):
     copy = tmp_path / "backend source"
-    shutil.copytree(ROOT, copy, ignore=shutil.ignore_patterns(".env", ".venv", "__pycache__", ".pytest_cache", "dist"))
+    shutil.copytree(ROOT, copy, ignore=shutil.ignore_patterns(".env", ".venv", "__pycache__", ".pytest_cache", ".runtime", "dist"))
     (copy / ".env").write_text("SECRET=must-not-ship")
     (copy / "app/__pycache__").mkdir(exist_ok=True)
     (copy / "app/__pycache__/secret.pyc").write_text("cached secret")
@@ -32,6 +32,8 @@ def test_release_contains_migration_and_service_without_secrets_or_caches(source
         assert "migrations/003_drawings.sql" in names
         assert "migrations/004_pantry.sql" in names
         assert "migrations/005_heart_rate.sql" in names
+        assert "migrations/006_voice_requests.sql" in names
+        assert not any(".runtime" in name for name in names)
         assert "app/scripts/migrate.py" in names
         assert "app/scripts/devices.py" in names
         assert "chips-api.openrc" in names and "deploy/Caddyfile.example" in names
@@ -99,6 +101,8 @@ start_pre
     (migration.parent / "004_pantry.sql").touch()
     assert start().returncode != 0
     (migration.parent / "005_heart_rate.sql").touch()
+    assert start().returncode != 0
+    (migration.parent / "006_voice_requests.sql").touch()
     assert start().returncode == 0
 
 

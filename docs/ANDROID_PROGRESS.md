@@ -354,3 +354,28 @@ Added a saved navigation history for feature screens, bottom tabs and History/HR
 Debug and test APK assembly, all 42 JVM tests, and lint passed. UI regressions compile but could not execute: the separate emulator crashed during startup, including a cold-boot retry. No phone operations were performed for this navigation fix.
 
 Correction to the earlier sleep-import validation: cleanup from the failed connected test run uninstalled `com.chips` at 16:05:23, removing local app data. The owner-approved installation at 16:13:22 was a fresh installation, not a data-preserving update. Android logs confirm the removal; no Android restore sets or project/temporary-file backup were found. Do not use connected test tasks on the owner's phone. Future automated device tests must target a separate emulator explicitly.
+
+### 14 November 2026 — PC server from M1 review through M4 readiness
+
+The owner requested this PC become the server and explicitly chose a fresh database. Reviewed the canonical roadmap, Android progress, M3 contract and M4 integrations; did not repeat completed M1 work or mark physical milestones complete. The old offline server was untouched. No phone was connected and no Android installation, instrumentation or data changes were performed.
+
+Bazzite now runs rootless PostgreSQL 17 (migrations 001–006), a single-worker authenticated API, existing Ollama qwen3.5:9b persisted as a user service, local multilingual Whisper small, tailnet-only trusted HTTPS on port 8443 and daily database backups. Existing ComfyUI HTTPS routes were preserved. The private phone enrollment and operations are described in [PC_SERVER.md](PC_SERVER.md).
+
+Replaced the stub/plain-text voice route with version-1 capabilities/JSON, independent STT/LLM selection, audio validation/limits, cancellation and permanent owner-scoped request deduplication. Concurrent retries join; completed results survive restart; uncertain failures are terminal rather than rerunning inference. Actual local STT/LLM and synthetic drawing/receipt inference passed through HTTPS. Receipt drafts did not mutate stock; drawing deletion removed retrievable media. PostgreSQL migration/concurrent activity/pantry/HR checks and backup restoration passed. Ten generated English utterances traversed real local models; these are synthetic server tests, not the owner's ten-utterance acceptance.
+
+M2 still needs new-host phone enrollment and midnight/timezone acceptance. M3 still needs owner speech quality, live optional API acceptance and physical lockscreen/interruption checks. M4 still needs real phone/receipt/drawing/band/Gadgetbridge/Quest acceptance. See the machine-readable [server evidence](evidence/pc-server-readiness.json). Do not run connected test tasks against the owner's Poco.
+
+
+### 15 November 2026 — real-phone server use and startup guide
+
+Following the 14 November PC deployment, the owner's drawing reached the enrolled owner account and had both stored image bytes and completed Qwen 3.5 9B feedback. The owner reported a successful voice answer, a later “answer service is unavailable” error, and another successful new request. Initial real-phone enrollment/transport and inference are therefore demonstrated. Full activity-sync recovery, voice quality/interruption/lockscreen and band checks are still open.
+
+The intermittent voice error remains undiagnosed. Inspection found the model running and a nearby HTTP 200 generation consuming the full 2400-token budget; a reasoning-only/empty final response is a possible explanation, not a confirmed cause. No fix or model configuration change is claimed. Record the time if it recurs; use a new recording because failed request identities are retained.
+
+Updated [PC_SERVER.md](PC_SERVER.md) with automatic startup behavior, manual start/status/restart commands, Tailscale requirements on the phone and PC, and the distinction between initial real use and remaining checks. These are documentation updates; no service restart, phone operation or server configuration change was performed for this update.
+
+### 15 November 2026 — one-command PC startup and merged baseline
+
+Added executable `chips-backend/deploy/start-pc.sh` to start/connect Tailscale, start Ollama/PostgreSQL/Chips and the backup timer, and verify local services plus private HTTPS. The script preserves other Tailscale Serve ports and never resets the database/enrollment. Actual execution on this PC passed. Three isolated command tests cover already-running services, a stopped VPN and failed service readiness; the full backend suite passed 65 tests, with four existing PowerShell-only checks skipped.
+
+Before committing the server work, verified GitHub's default branch is `master`, no PRs are open, and PR #8 is merged at `2330ac54c55c881daef13c532fbdc4fd880f0320`. Command-line Git lacked HTTPS credentials; the connected GitHub app supplied the two missing commit objects, whose exact Git SHA-1 hashes were verified before fast-forwarding. Existing local server changes were restored, and the progress-log append conflict was resolved while retaining upstream Android history. Private runtime files and unrelated Android Studio settings are excluded from the server commit.

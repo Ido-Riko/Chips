@@ -1,0 +1,10 @@
+[Unit]
+Description=Local Ollama for Chips and ComfyUI
+After=network-online.target
+[Service]
+ExecStart=/usr/local/bin/ollama serve
+Environment=OLLAMA_HOST=127.0.0.1:11434
+Restart=on-failure
+RestartSec=5
+[Install]
+WantedBy=default.target
