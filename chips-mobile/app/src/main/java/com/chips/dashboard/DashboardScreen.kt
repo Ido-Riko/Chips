@@ -76,10 +76,12 @@ fun DashboardScreen(state: DashboardUiState, onOpenActivity: (ActivityType) -> U
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                IconTile(ChipsSymbol.VOICE, ChipsAccent, 44)
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(com.chips.R.drawable.chips_avatar),
+                    contentDescription = null, modifier = Modifier.size(44.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text("Ask CHIPS", style = MaterialTheme.typography.titleMedium)
-                    Text("A little space to think out loud.", style = MaterialTheme.typography.bodyMedium, color = Color(0xFFC5BFD7))
+                    Text("Chat or speak with your assistant.", style = MaterialTheme.typography.bodyMedium, color = Color(0xFFC5BFD7))
                 }
                 ChipsIcon(ChipsSymbol.ARROW, ChipsAccent)
             }

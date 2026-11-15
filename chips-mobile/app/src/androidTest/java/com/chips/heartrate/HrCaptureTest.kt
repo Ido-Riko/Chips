@@ -145,12 +145,12 @@ class HrCaptureTest {
         }
         var emit: ((Int, Long, Long) -> Unit)? = null
         var closed = false
-        var reconnects = 0
+        val reconnects = java.util.concurrent.atomic.AtomicInteger()
         HrCaptureService.transportFactory = { _, _, state, received ->
             emit = received
             object : HrTransport {
                 override fun start() { state("Waiting for HR") }
-                override fun reconnect() { reconnects++; state("Band disconnected · reconnect 1/5") }
+                override fun reconnect() { reconnects.incrementAndGet(); state("Band disconnected · reconnect 1/5") }
                 override fun close() { closed = true }
             }
         }
@@ -193,7 +193,12 @@ class HrCaptureTest {
             compose.onNodeWithTag("heart-rate-screen").assertIsDisplayed()
             assertTrue(HrCaptureService.state.value.active)
             notification.actions.first { it.title == "Reconnect" }.actionIntent.send()
-            compose.waitUntil(5000) { reconnects == 1 }
+            // PendingIntent delivery runs on the service thread. Entering reconnect()
+            // does not mean its connection callback has published the new state yet.
+            compose.waitUntil(5000) {
+                val state = HrCaptureService.state.value
+                reconnects.get() == 1 && state.status == "Band disconnected · reconnect 1/5" && state.bpm == null
+            }
             assertNull(HrCaptureService.state.value.bpm)
             assertTrue(manager.activeNotifications.any { it.id == HrCaptureService.NOTIFICATION_ID })
             // Duplicate Start must not create a second session or reset capture.

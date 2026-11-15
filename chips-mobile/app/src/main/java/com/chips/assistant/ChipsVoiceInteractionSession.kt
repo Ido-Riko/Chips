@@ -55,6 +55,7 @@ class ChipsVoiceInteractionSession(context: Context) : VoiceInteractionSession(c
     }
 
     override fun onCreateContentView(): View {
+        window?.window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
         return ComposeView(context).apply {
             setViewTreeLifecycleOwner(this@ChipsVoiceInteractionSession)
             setViewTreeSavedStateRegistryOwner(this@ChipsVoiceInteractionSession)

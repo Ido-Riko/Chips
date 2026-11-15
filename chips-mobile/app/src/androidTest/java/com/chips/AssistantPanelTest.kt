@@ -23,6 +23,28 @@ import org.junit.Test
 class AssistantPanelTest {
     @get:Rule val compose = createComposeRule()
 
+    @Test fun keyboardKeepsTypedMessageAndSendFullyVisible() {
+        var sent: String? = null
+        compose.setContent {
+            ChipsTheme {
+                AssistantPanel(AssistantPhase.READY, null, remember { MutableInteractionSource() }, {},
+                    onSendText = { sent = it })
+            }
+        }
+        val input = compose.onNodeWithTag("assistant-chat-input")
+        input.performScrollTo().performClick().performTextInput("Help me plan today")
+        input.performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("assistant-chat-send").performScrollTo().assertIsDisplayed()
+        compose.waitForIdle()
+        val full = input.getUnclippedBoundsInRoot()
+        val visible = input.fetchSemanticsNode().boundsInRoot
+        val fullHeight = with(compose.density) { (full.bottom - full.top).toPx() }
+        assertTrue("The keyboard must not clip the message field", visible.height >= fullHeight - 1f)
+        compose.onNodeWithTag("assistant-chat-send").performClick()
+        compose.runOnIdle { assertTrue(sent == "Help me plan today") }
+        androidx.test.espresso.Espresso.pressBack()
+    }
+
     @Test
     fun compactWindowKeepsVoiceControlAndCloseReachableAcrossStates() {
         val phase = mutableStateOf(AssistantPhase.READY)

@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from app.config import settings
 
 
-async def get_response(user_message: str, system_prompt: str) -> str:
+async def get_response(user_message: str, system_prompt: str, history: list | None = None) -> str:
     if not settings.llm_url or not settings.llm_model:
         raise HTTPException(503, detail={"code": "llm_unavailable"})
     headers = {"Authorization": f"Bearer {settings.llm_api_key}"} if settings.llm_api_key else {}
@@ -15,7 +15,7 @@ async def get_response(user_message: str, system_prompt: str) -> str:
                 "model": settings.llm_model, "stream": False, "max_tokens": settings.llm_max_tokens,
                 **({"reasoning_effort": settings.llm_reasoning_effort} if settings.llm_reasoning_effort else {}),
                 "messages": [{"role": "system", "content": system_prompt},
-                             {"role": "user", "content": user_message}],
+                             *(history or []), {"role": "user", "content": user_message}],
             }) as response:
                 response.raise_for_status()
                 body = bytearray()
