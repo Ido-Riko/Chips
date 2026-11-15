@@ -169,6 +169,15 @@ internal fun AssistantPanel(
                                 textAlign = TextAlign.Center)
                         }
                     }
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_000) },
+                            label = { Text(if (messages.isEmpty()) "Message CHIPS" else "Ask a follow-up") },
+                            enabled = !busy && phase != AssistantPhase.LISTENING,
+                            modifier = Modifier.weight(1f).testTag("assistant-chat-input"), maxLines = 4)
+                        Button(onClick = { onSendText(draft); draft = "" },
+                            enabled = draft.isNotBlank() && !busy && phase != AssistantPhase.LISTENING,
+                            modifier = Modifier.testTag("assistant-chat-send")) { Text("Send") }
+                    }
                     if(onFeature != null && !busy && phase != AssistantPhase.LISTENING) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             FeatureRoute.entries.chunked(2).forEach { pair ->
@@ -187,15 +196,6 @@ internal fun AssistantPanel(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = draft, onValueChange = { draft = it.take(10_000) },
-                            label = { Text(if (messages.isEmpty()) "Message CHIPS" else "Ask a follow-up") },
-                            enabled = !busy && phase != AssistantPhase.LISTENING,
-                            modifier = Modifier.weight(1f).testTag("assistant-chat-input"), maxLines = 4)
-                        Button(onClick = { onSendText(draft); draft = "" },
-                            enabled = draft.isNotBlank() && !busy && phase != AssistantPhase.LISTENING,
-                            modifier = Modifier.testTag("assistant-chat-send")) { Text("Send") }
-                    }
                     Button(
                         onClick = {}, enabled = !busy && microphoneAvailable,
                         interactionSource = interactionSource,
