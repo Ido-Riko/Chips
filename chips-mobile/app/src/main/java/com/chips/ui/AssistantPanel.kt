@@ -55,6 +55,7 @@ internal fun AssistantPanel(
     microphoneAvailable: Boolean = true
 ) {
     var draft by remember { mutableStateOf("") }
+    val keyboardVisible = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
     val busy = phase in setOf(AssistantPhase.UPLOADING, AssistantPhase.PROCESSING, AssistantPhase.SAVING)
     val colors = MaterialTheme.colorScheme
     val accent by animateColorAsState(
@@ -190,47 +191,49 @@ internal fun AssistantPanel(
                         }
                     }
                 }
-                HorizontalDivider(Modifier.padding(horizontal = 24.dp), color = Color.White.copy(alpha = 0.06f))
-                Column(
-                    Modifier.fillMaxWidth().padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = {}, enabled = !busy && microphoneAvailable,
-                        interactionSource = interactionSource,
-                        colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = colors.onPrimary),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)
+                if (!keyboardVisible) {
+                    HorizontalDivider(Modifier.padding(horizontal = 24.dp), color = Color.White.copy(alpha = 0.06f))
+                    Column(
+                        Modifier.fillMaxWidth().padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        if (busy) {
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        } else {
-                            ChipsIcon(ChipsSymbol.VOICE, colors.onPrimary)
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Text(when (phase) {
-                            AssistantPhase.LISTENING -> "Release to send"
-                            AssistantPhase.UPLOADING -> "Sending message…"
-                            AssistantPhase.PROCESSING -> "Getting your reply…"
-                            AssistantPhase.SAVING -> "Saving conversation…"
-                            else -> "Hold to speak"
-                        }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    }
-                    if (phase == AssistantPhase.ERROR) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            if (canRetry) OutlinedButton(onClick = onRetry) {
-                                Text(if (retrySaving) "Retry saving" else "Retry request")
+                        Button(
+                            onClick = {}, enabled = !busy && microphoneAvailable,
+                            interactionSource = interactionSource,
+                            colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = colors.onPrimary),
+                            shape = RoundedCornerShape(20.dp),
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)
+                        ) {
+                            if (busy) {
+                                CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                ChipsIcon(ChipsSymbol.VOICE, colors.onPrimary)
                             }
-                            TextButton(onClick = onDiscard) { Text("Discard") }
+                            Spacer(Modifier.width(12.dp))
+                            Text(when (phase) {
+                                AssistantPhase.LISTENING -> "Release to send"
+                                AssistantPhase.UPLOADING -> "Sending message…"
+                                AssistantPhase.PROCESSING -> "Getting your reply…"
+                                AssistantPhase.SAVING -> "Saving conversation…"
+                                else -> "Hold to speak"
+                            }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         }
+                        if (phase == AssistantPhase.ERROR) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                if (canRetry) OutlinedButton(onClick = onRetry) {
+                                    Text(if (retrySaving) "Retry saving" else "Retry request")
+                                }
+                                TextButton(onClick = onDiscard) { Text("Discard") }
+                            }
+                        }
+                        if (busy) TextButton(onClick = onDiscard) {
+                            Text(if (phase == AssistantPhase.SAVING) "Dismiss" else "Cancel request")
+                        }
+                        if (!busy && phase != AssistantPhase.ERROR) Text(if(microphoneAvailable) "Conversations are saved on this phone." else "Chat works without microphone access. Enable it in Settings to speak.",
+                            style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
+                            textAlign = TextAlign.Center)
                     }
-                    if (busy) TextButton(onClick = onDiscard) {
-                        Text(if (phase == AssistantPhase.SAVING) "Dismiss" else "Cancel request")
-                    }
-                    if (!busy && phase != AssistantPhase.ERROR) Text(if(microphoneAvailable) "Conversations are saved on this phone." else "Chat works without microphone access. Enable it in Settings to speak.",
-                        style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant,
-                        textAlign = TextAlign.Center)
                 }
             }
         }
