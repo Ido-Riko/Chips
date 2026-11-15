@@ -38,7 +38,7 @@ class AssistantPanelTest {
         compose.waitForIdle()
         val full = input.getUnclippedBoundsInRoot()
         val visible = input.fetchSemanticsNode().boundsInRoot
-        val fullHeight = with(compose.density) { full.height.toPx() }
+        val fullHeight = with(compose.density) { (full.bottom - full.top).toPx() }
         assertTrue("The keyboard must not clip the message field", visible.height >= fullHeight - 1f)
         compose.onNodeWithTag("assistant-chat-send").performClick()
         compose.runOnIdle { assertTrue(sent == "Help me plan today") }
