@@ -24,22 +24,57 @@ function Invoke-Step {
             throw "Stopped by user; no later steps were run."
         }
     }
+    $global:LASTEXITCODE = 0
     & $Action
     if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
         throw "Step failed with exit code $LASTEXITCODE."
     }
 }
 
+$requiredFeatures = @("Microsoft-Windows-Subsystem-Linux", "VirtualMachinePlatform")
+$featuresToEnable = @(
+    foreach ($feature in $requiredFeatures) {
+        if ((Get-WindowsOptionalFeature -Online -FeatureName $feature).State -ne "Enabled") {
+            $feature
+        }
+    }
+)
+if ($featuresToEnable.Count -gt 0) {
+    $enableResults = Invoke-Step "Enable the Windows features required by WSL2 (a reboot may be required)" {
+        $results = @()
+        foreach ($feature in $featuresToEnable) {
+            $results += Enable-WindowsOptionalFeature -Online -FeatureName $feature -All -NoRestart
+        }
+        $results
+    }
+    $restartNeeded = @($enableResults | Where-Object { $_.RestartNeeded }).Count -gt 0
+    $stillDisabled = @(
+        foreach ($feature in $requiredFeatures) {
+            if ((Get-WindowsOptionalFeature -Online -FeatureName $feature).State -ne "Enabled") {
+                $feature
+            }
+        }
+    )
+    if ($restartNeeded -or $stillDisabled.Count -gt 0) {
+        Write-Host "Reboot Windows, then rerun this script to continue installing WSL."
+        exit 0
+    }
+}
+
 if (-not (Get-Command wsl.exe -ErrorAction SilentlyContinue)) {
-    throw "WSL is unavailable. Use a supported Windows 11 installation and run this script from an elevated PowerShell window."
+    throw "wsl.exe is unavailable after enabling the Windows features. Reboot Windows and rerun this script."
+}
+
+Invoke-Step "Install or update the WSL platform without installing a Linux distribution" {
+    wsl.exe --install --no-distribution
 }
 
 $installedDistros = @(wsl.exe --list --quiet | ForEach-Object { ($_ -replace "`0", "").Trim() } | Where-Object { $_ })
 if ($installedDistros -notcontains $Distro) {
-    Invoke-Step "Install WSL2 and Ubuntu (Windows may ask to reboot)" {
+    Invoke-Step "Install the Ubuntu distribution in WSL" {
         wsl.exe --install --distribution $Distro
     }
-    Write-Host "If Windows requests a reboot, reboot, complete Ubuntu's first-run username/password setup, then rerun this script."
+    Write-Host "If Windows requests a reboot, reboot. Complete Ubuntu's first-run username/password setup, then rerun this script."
     exit 0
 }
 
