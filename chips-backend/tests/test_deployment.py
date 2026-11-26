@@ -37,6 +37,14 @@ def test_release_contains_migration_and_service_without_secrets_or_caches(source
         assert "app/scripts/migrate.py" in names
         assert "app/scripts/devices.py" in names
         assert "chips-api.openrc" in names and "deploy/Caddyfile.example" in names
+        assert all(name in names for name in (
+            "deploy/provision-pc.sh",
+            "deploy/uninstall-pc.sh",
+            "deploy/provision-pc.ps1",
+            "deploy/uninstall-pc.ps1",
+        ))
+        assert (bundle.getmember("deploy/provision-pc.sh").mode & 0o777) == 0o755
+        assert (bundle.getmember("deploy/uninstall-pc.sh").mode & 0o777) == 0o755
         assert ".env.example" in names and ".env" not in names
         assert all(not name.startswith("/") and ".." not in Path(name).parts for name in names)
         assert not any("__pycache__" in name or ".venv" in name or name.endswith(".pyc") for name in names)
