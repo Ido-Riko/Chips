@@ -84,7 +84,29 @@ journalctl --user -u chips-api -n 50 --no-pager
 
 For an update: take a backup, stop the API, install reviewed dependencies in `.venv`, run `.venv/bin/python -m app.scripts.migrate`, then start the API and verify HTTPS. Never run multiple API workers: startup recovery deliberately makes unfinished voice requests terminal. Migrations are explicit and additive, not automatically run at service start.
 
-The initial PC provisioning script is `deploy/install-pc.py`. It creates private database/API configuration only when `.env` is absent, installs database/API user units and starts the database; migration, API activation, trusted HTTPS, model download and enrollment are explicit subsequent steps. It also installs backup unit files; enable them with `systemctl --user enable --now chips-backup.timer`. For a new Ollama installation, inspect/adapt `deploy/ollama.service.example` and install it as `~/.config/systemd/user/ollama.service`; preserve an existing working service. It never migrates the old host. Install `requirements-local-stt.txt` for local Whisper, including the verified PyAV pin; newer unpinned PyAV broke the older Whisper decoder interface during preparation.
+The guided first-run provisioner is `deploy/provision-pc.sh` (or `deploy/provision-pc.ps1` on Windows); `deploy/install-pc.py` is its lower-level service setup step. The lower-level installer creates private database/API configuration only when `.env` is absent, installs database/API user units and starts the database. Migration, API activation, trusted HTTPS, model download and enrollment remain explicit steps. The guided flow also installs backup unit files and enables the timer. Existing Ollama services are preserved; the new-install flow installs and configures a user service. It never migrates another host. Local Whisper uses `requirements-local-stt.txt`, including the verified PyAV pin; newer unpinned PyAV broke the older Whisper decoder interface during preparation.
+
+### New PC provisioning
+
+The guided provisioners run each step only after confirmation and print what they are doing. `--yes` (`-Yes` in PowerShell) auto-confirms while still displaying every step. They prepare a fresh database and device enrollment; they do not import another PC's database or credentials.
+
+On Bazzite/Fedora, from the repository root, run:
+
+```sh
+bash chips-backend/deploy/provision-pc.sh
+```
+
+On Windows 11, open PowerShell as Administrator and run:
+
+```powershell
+.\chips-backend\deploy\provision-pc.ps1
+```
+
+The Windows entry point installs WSL2 with Ubuntu if needed. Complete Ubuntu's first-run username/password setup and reboot if Windows requests it, then rerun the script. WSL2 is a Linux environment integrated with Windows; Chips' server services run in Ubuntu, not as native Windows services. The installer enables systemd, clones the repository into Ubuntu's Linux home, and invokes the same Linux provisioner. It installs Tailscale on Windows (not inside WSL2, to avoid running two Tailscale clients), configures Windows Tailscale Serve to proxy HTTPS to the WSL API, and starts Ubuntu at Windows sign-in. `-Yes` also auto-confirms Linux steps but cannot bypass Windows' reboot, Ubuntu's first-run prompts, sudo authentication, or Tailscale sign-in.
+
+The Linux provisioner installs the API and local Whisper Python dependencies, downloads Whisper small and Ollama's configured `qwen3.5:9b` model, prepares the private PostgreSQL database and user services, applies migrations, configures HTTPS and enrolls a device. In Ubuntu/WSL it installs Python, FFmpeg and Podman; Ollama is installed from its official vendor installer when absent. On Bazzite, install any missing tools (including Python, FFmpeg, Podman, Ollama and Tailscale) using the OS-supported method first; the script will not replace or reset pre-existing service configuration. The model downloads require internet access and several GB of storage. Windows GPU inference requires the PC's supported GPU driver; the model can run on CPU but will be slower. The phone and server each need Tailscale access.
+
+To remove the server services, run `bash chips-backend/deploy/uninstall-pc.sh` on Linux/Bazzite or `.\chips-backend\deploy\uninstall-pc.ps1` on Windows. By default the database volume, `.env`, `.runtime` (including backups and enrollment), and downloaded models remain. Add `--purge-data` (`-PurgeData` in PowerShell) only when you intend to permanently delete the Chips configuration and database. Shared Tailscale/Ollama installations and shared Ollama models are not removed. The Windows uninstaller removes the logon task but leaves WSL/Ubuntu and Tailscale Serve configuration installed.
 
 Backups are private and never pruned automatically. A backup was restored into an isolated temporary database and migration version 6 verified; that temporary database was removed afterward. Same-disk backups protect against some application mistakes, **not disk loss**. Arrange an owner-selected second-disk/encrypted backup destination before treating this as disaster recovery. Monitor free disk space and backup growth. Config/enrollment files are separate from database dumps and should be retained privately too.
 

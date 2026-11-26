@@ -19,6 +19,10 @@ REQUIRED_FILES = (
     "requirements-local-stt.txt",
     "deploy/install-pc.py",
     "deploy/start-pc.sh",
+    "deploy/provision-pc.sh",
+    "deploy/uninstall-pc.sh",
+    "deploy/provision-pc.ps1",
+    "deploy/uninstall-pc.ps1",
     "deploy/backup-pc.py",
     "deploy/chips-backup.timer",
     "deploy/ollama.service.example",
@@ -61,7 +65,12 @@ def build_archive(source: Path, destination: Path) -> Path:
                         entry = archive.gettarinfo(str(path), arcname=name)
                         entry.uid = entry.gid = entry.mtime = 0
                         entry.uname = entry.gname = ""
-                        entry.mode = 0o755 if name in ("chips-api.openrc", "deploy/start-pc.sh") else 0o644
+                        entry.mode = 0o755 if name in (
+                            "chips-api.openrc",
+                            "deploy/start-pc.sh",
+                            "deploy/provision-pc.sh",
+                            "deploy/uninstall-pc.sh",
+                        ) else 0o644
                         with path.open("rb") as content:
                             archive.addfile(entry, content)
         os.replace(temporary, destination)
